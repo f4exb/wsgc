@@ -1,0 +1,38 @@
+1. To configure with CUDA use options as in this example. Use -g -O2 options for g++:
+
+CXXFLAGS="-g -O2" NVCCFLAGS=-arch=sm_20 /shared/development/wsgc/cpp_proto/configure --prefix=/opt/install/wsgc_test --enable-cuda --with-cuda=/opt/install/cuda-5.0 --with-cuda-sdk=/opt/cudaSDK
+
+--enable-cuda:
+    Enables CUDA compilation and specific code
+    
+--with-cuda: 
+    Path to the CUDA installation directory
+    
+--with-cuda-sdk:
+    Path to the CUDA SDK installation directory
+
+Note 1: To avoid nasty compile warnings on Fermi architecture cards (streaming "Warning: Cannot tell what pointer points to, assuming global memory space") 
+use -arch=sm_20 option like this:
+NVCCFLAGS=-arch=sm_20 /shared/development/wsgc/cpp_proto/configure --prefix=/opt/install/wsgc_test --enable-cuda --with-cuda=/opt/install/cuda-5.0 --with-cuda-sdk=/opt/cudaSDK
+
+Another possibility is to use --with-cuda-arch=sm_20 option. Don't use both possibilities at the same time or the compilator will refuse to work.
+
+Note 2: From CUDA 5.0 Thrust is part of the CUDA install in $CUDA_INSTALL_PATH/include/thrust so there is no need for a specific path. To compile with earlier versions
+you need to symlink to your installed Thrust includes directory
+
+Note 3: Please note that CUDA, CUDA SDK and Thrust are all necessary to compile CUDA specific code
+
+
+2. To build programs with CUDA support
+
+install g++ 4.5 (nvcc does not compile with 4.6 and higher):
+sudo apt-get install g++-4.5
+
+just do make and make install
+
+
+3. to run programs with CUDA support
+
+Adapt the setenv_cuda script to your installation
+Then do: source setenv_cuda
+You can then run CUDA programs in the same shell

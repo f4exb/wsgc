@@ -1,0 +1,2 @@
+To get the graphs in the doc:
+sudo apt-get install graphviz

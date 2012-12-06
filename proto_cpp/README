@@ -1,0 +1,41 @@
+This project is based on autotools. To build and install:
+
+1. You must have autotools installed
+
+2. Go to where you installed the source root, say /opt/code/wsgc/proto_cpp
+do ./bootstrap.sh
+
+3. Make yourself a build directory, say: /opt/build/wsgc_test
+
+4. Run configure that is in the source root, with above example paths, installing into /opt/install/wsgc_test:
+CXXFLAGS="-g -O2" /opt/code/wsgc/proto_cpp/configure --prefix=/opt/install/wsgc_test (release with optimization)
+CXXFLAGS="-g -O0" /opt/code/wsgc/proto_cpp/configure --prefix=/opt/install/wsgc_test (debug without optimization)
+
+5. Run make
+Hint: Use make -j<2*n> where n is the number of machine threads to speed up. For example on a core i7 (4 cores 2 threads each, you do: make -j16)
+
+6. Run make install
+
+7. The programs are ready to use in /opt/install/wsgc_test/bin
+
+- wsgc_test: runs an execution on simulated samples
+             run wsgc_test -h to list all options
+             example command line using some defaults: wsgc_test -s 4096 -c 1023 -C 1020 -t 2.125 -r 0.0 -N 4 -I 0 -R 16 -P 1 -B 4 -n -24 -F 63 --cuda
+             -s 4096: sample rate 4096 (in arbitrary frequency units, if you make it Hz times are in seconds)
+             -c 1023: chip rate 1023
+             -C 1020: Gold Code sequence delay of 1020 samples (there are 4096 samples for one full Gold Code length)
+             -t 2.125: Transmission frequency 2.215
+             -r 0.0: Initial reception frequency - unused
+             -N 4: Number of PRNs per symbol
+             -I 0: PRN shift in symbol
+             -R 16: Generate 16 symbols (hence 64 PRNs) in message
+             -P 1: Use only one pilot PRN (two are necessary to make message synchronisation but it is not yet implemented)
+             -B 4: Process 4 PRNs in one correlation batch
+             -n -24 Superimpose noise so that S/N is -24 dB
+             -F 63 Use 63 frequency bins for exploration around zero IF
+             --cuda Use CUDA GPU acceleration. Needs to be compiled with CUDA options, see README.cuda
+             
+- wsgc_generator: generates and saves zero IF simulated samples into a file as complex (I/Q) float numbers (4 bytes) real (I) part first. 
+                  You may use this file as input to a GNU Radio graph to generate actual signal (more on this later)
+                  
+
