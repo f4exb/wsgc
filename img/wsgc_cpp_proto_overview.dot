@@ -1,0 +1,12 @@
+digraph G {
+    rankdir=LR 
+    
+    source_generator [shape=box, label="Source generator"];
+    fading_model [shape=box, label="Fading model"];
+    correlator [shape=box, label="Correlator"];
+    decision_box [shape=box, label="Decision box"];
+    
+    source_generator -> fading_model;
+    fading_model -> correlator [label="samples"];
+    correlator -> decision_box [label="correlation records"];
+}
