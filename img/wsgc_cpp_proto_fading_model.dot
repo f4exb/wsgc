@@ -1,0 +1,16 @@
+digraph G {
+    rankdir=LR 
+    
+    fading_model [shape=box, label="Fading model"];
+    fading_model_none [shape=box, label="Fading model none"];
+    fading_model_Clarke [shape=box, label="Fading model Clarke"];
+    fading_model_Watterson [shape=box, label="Fading model Watterson"];
+    path [shape=box, label="Path"];
+    gauss_fir [shape=box, label="Gaussian FIR filter"];
+    
+    fading_model_none -> fading_model [arrowhead=empty];
+    fading_model_Clarke -> fading_model [arrowhead=empty];
+    fading_model_Watterson -> fading_model [arrowhead=empty];
+    path -> fading_model_Watterson [arrowhead=ediamond, label="1..n"];
+    gauss_fir -> path [arrowhead=ediamond];
+}
