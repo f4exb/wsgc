@@ -93,22 +93,20 @@ class PilotCorrelator
 public:
 	/**
 	* Runs on a source samples batch (one PRN length)
-	* \param gc_generator Gold Code generator used to build the codes
-	* \param code_modulator Modulator used to build the codes
 	* \param f_sampling Sampling frequency
 	* \param f_chip Chip rate (frequency)
-	* \param _pilot_symbols Reference to the list of pilot symbol PRNs
+	* \param fft_N FFT/IFFT size or number of samples per PRN
+	* \param pilot_symbols Reference to the list of pilot symbol PRNs
 	* \param prn_per_symbol Number of PRNs per symbol thus per averaging block
 	* \param nb_pilot_f_bins Number of frequency bins explored for pilot acquisition and tracking
 	* \param nb_batch_prns Number of PRNs processed in one batch ("PRN batch factor")
 	* \param freq_step_division Frequency step division
 	*/
 	PilotCorrelator(
-			GoldCodeGenerator& gc_generator,
-			CodeModulator& code_modulator,
 			wsgc_float f_sampling,
 			wsgc_float f_chip,
-			std::vector<unsigned int>& _pilot_symbols,
+			unsigned int fft_N,
+			std::vector<unsigned int>& pilot_symbols,
 			unsigned int prn_per_symbol=4,
 			unsigned int nb_pilot_f_bins=3,
 			unsigned int nb_batch_prns=3,
@@ -177,8 +175,6 @@ public:
 
 
 protected:
-	GoldCodeGenerator& _gc_generator; //!< Reference to the Gold Code generator being used
-	CodeModulator& _code_modulator; //!< Reference to the code modulator being used
 	wsgc_float _f_sampling; //!< Sampling frequency
 	wsgc_float _f_chip; //!< Chip rate
 	std::vector<unsigned int>& _pilot_symbols; //!< Reference to the list of pilot symbol PRNs

@@ -39,23 +39,20 @@
 
 
 PilotCorrelator::PilotCorrelator(
-			GoldCodeGenerator& gc_generator,
-			CodeModulator& code_modulator,
 			wsgc_float f_sampling,
 			wsgc_float f_chip,
+			unsigned int fft_N,
 			std::vector<unsigned int>& pilot_symbols,
 			unsigned int prn_per_symbol,
 			unsigned int nb_pilot_f_bins,
 			unsigned int nb_batch_prns,
 			unsigned int freq_step_division) :
-    _gc_generator(gc_generator),
-    _code_modulator(code_modulator),
     _f_sampling(f_sampling),
     _f_chip(f_chip),
     _pilot_symbols(pilot_symbols),
     _prn_per_symbol(prn_per_symbol),
     _freq_step_division(freq_step_division),
-    _fft_N(gc_generator.get_nb_code_samples(f_sampling,f_chip)),
+    _fft_N(fft_N	),
     _nb_batch_prns(nb_batch_prns),
     _result_available(false),
     _new_batch_processed(false),

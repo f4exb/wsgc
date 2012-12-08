@@ -2,3 +2,10 @@
 .cproject
 .project
 .settings
+
+# autotools bullshit
+autom4te.cache
+depcomp
+install-sh
+Makefile.in
+missing

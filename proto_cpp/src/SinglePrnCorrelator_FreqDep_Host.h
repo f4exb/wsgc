@@ -57,14 +57,22 @@ class SinglePrnCorrelator_FreqDep_Host : public SinglePrnCorrelator_FreqDep
 public:
 	/**
 	* Runs on a source samples batch (one PRN length)
-	* \param local_codes Local copy of pilot PRNs conjugate FFT codes
+	* \param gc_generator Gold Code generator used to build the codes
+	* \param code_modulator Modulator used to build the codes
+	* \param f_sampling Sampling frequency
+	* \param f_chip Chip rate (frequency)
+    * \param _pilot_symbols Reference to the list of pilot symbol PRNs
 	* \param nb_f_bins Number of frequency bins explored around IF=0
 	* \param prn_per_block Number of PRNs per (symbol) block
 	* \param nb_batch_prns Number of PRNs processed in one batch ("PRN batch factor")
 	* \param frequency_step_division Frequency step division
 	*/
 	SinglePrnCorrelator_FreqDep_Host(
-			LocalCodesFFT_Host& local_codes,
+			GoldCodeGenerator& gc_generator,
+			CodeModulator& code_modulator,
+			wsgc_float f_sampling,
+			wsgc_float f_chip,
+			std::vector<unsigned int>& pilot_symbols,
 			unsigned int nb_f_bins,
 			unsigned int prn_per_block=4,
 			unsigned int nb_batch_prns=3,
@@ -94,7 +102,7 @@ public:
 
 
 protected:
-	LocalCodesFFT_Host& _local_codes; //!< Reference to the PRN signals local copy. These are the conjugated FFTs in fact.
+	LocalCodesFFT_Host _local_codes;  //!< PRN signals local copy. These are the conjugated FFTs in fact.
 	wsgc_fftw_plan _ifft_plan;        //!< FFTW plan for inverse FFT.
 	wsgc_complex *_ifft_code_in;      //!< Input samples for inverse FFT
 	wsgc_complex *_ifft_code_out;     //!< Inverse FFT output samples. This is the result of correlation.

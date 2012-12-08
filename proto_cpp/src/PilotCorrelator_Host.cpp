@@ -48,10 +48,9 @@ PilotCorrelator_Host::PilotCorrelator_Host(
 			unsigned int nb_pilot_f_bins,
 			unsigned int nb_batch_prns,
 			unsigned int freq_step_division) :
-	PilotCorrelator(gc_generator, code_modulator, f_sampling, f_chip, pilot_symbols, prn_per_symbol, nb_pilot_f_bins, nb_batch_prns, freq_step_division),
-	_local_codes(code_modulator, gc_generator, f_sampling, f_chip, pilot_symbols),
+	PilotCorrelator(f_sampling, f_chip, gc_generator.get_nb_code_samples(f_sampling,f_chip), pilot_symbols, prn_per_symbol, nb_pilot_f_bins, nb_batch_prns, freq_step_division),
 	_source_fft(f_sampling, f_chip, _fft_N, freq_step_division),
-	_ifft_correlator_pilot(_local_codes, nb_pilot_f_bins, prn_per_symbol, nb_batch_prns, freq_step_division)
+	_ifft_correlator_pilot(gc_generator, code_modulator, f_sampling, f_chip, pilot_symbols, nb_pilot_f_bins, prn_per_symbol, nb_batch_prns, freq_step_division)
 {
 }
 
@@ -63,7 +62,7 @@ PilotCorrelator_Host::~PilotCorrelator_Host()
 
 void PilotCorrelator_Host::execute(PilotCorrelationAnalyzer& pilot_correlation_analyzer, unsigned int pilot_prn_code_index)
 {
-	unsigned int prn = _local_codes.get_prns()[pilot_prn_code_index];
+	unsigned int prn = _pilot_symbols[pilot_prn_code_index];
     unsigned int pilot_prn_index = pilot_correlation_analyzer.get_prn_index();
     unsigned int batch_number = pilot_prn_index / _nb_batch_prns;
     wsgc_float magnitude_sum;

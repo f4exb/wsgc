@@ -127,7 +127,6 @@ public:
 	virtual void execute(PilotCorrelationAnalyzer& pilot_correlation_analyzer, unsigned int pilot_prn_index);
 
     protected:
-		LocalCodesFFT_Cuda _local_codes; //!< Local copy of pilot PRNs conjugate FFTs
         SourceFFT_Cuda _source_fft; //!< Source samples FFT manager
         SinglePrnCorrelator_FreqDep_Cuda _ifft_correlator_pilot; //!< IFFT correlator for pilot
 };
