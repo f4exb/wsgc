@@ -1,0 +1,67 @@
+digraph G {
+    rankdir=LR 
+    
+    subgraph cluster_0
+    {
+        label = "Pilot Correlator CUDA/Host"
+        
+        pilot_correlator_xxx [shape=box, label="Pilot correlator XXX"];
+        single_prn_correlator [shape=box, label="Single PRN correlator XXX"];
+        source_fft [shape=box, label="Source FFT processor XXX"];
+        local_codes_fft [shape=box, label="Local codes FFT* copy XXX"];
+        
+        source_fft -> pilot_correlator_xxx [arrowhead=ediamond];
+        single_prn_correlator -> pilot_correlator_xxx [arrowhead=ediamond];
+        local_codes_fft -> single_prn_correlator [arrowhead=ediamond];
+    }
+    
+    subgraph cluster_1
+    {
+        label = "Message Correlator CUDA/Host"
+        
+        message_correlator_xxx [shape=box, label="Message correlator XXX"];
+        local_codes [shape=box, label="Local codes copy XXX"];
+        local_oscillator [shape=box, label="Local oscillator NCO XXX"];
+
+        local_oscillator -> message_correlator_xxx [arrowhead=ediamond];
+        local_codes -> message_correlator_xxx [arrowhead=ediamond];
+    }
+    
+    gold_code_generator [shape=box, label="Gold Code generator"];
+    code_modulator [shape=box, label="Code modulator"];
+    
+    gold_code_generator -> local_codes_fft [arrowhead=ediamond];
+    code_modulator -> local_codes_fft [arrowhead=ediamond];
+    
+    pilot_correlator [shape=box, label="Pilot correlator"];
+    pilot_correlator_host [shape=box, label="Pilot correlator Host"];
+    pilot_correlator_cuda [shape=box, label="Pilot correlator CUDA"];
+    pilot_correlator_host -> pilot_correlator [arrowhead=empty];
+    pilot_correlator_cuda -> pilot_correlator [arrowhead=empty];
+
+    message_correlator [shape=box, label="Message correlator"];
+    message_correlator_host [shape=box, label="Message correlator Host"];
+    message_correlator_cuda [shape=box, label="Message correlator CUDA"];
+    message_correlator_host -> message_correlator [arrowhead=empty];
+    message_correlator_cuda -> message_correlator [arrowhead=empty];
+
+    gold_code_generator -> local_codes [arrowhead=ediamond];
+    code_modulator -> local_codes [arrowhead=ediamond];
+
+    piloted_multi_correlator [shape=box, label="Piloted multi PRN correlator"];
+    pilot_correlation_analyzer [shape=box, label="Pilot correlation analyzer"];
+    pilot_correlation_analyzer -> piloted_multi_correlator [arrowhead=ediamond];
+    pilot_correlator -> piloted_multi_correlator [arrowhead=ediamond];
+    message_correlator -> piloted_multi_correlator [arrowhead=ediamond];
+    
+    source_samples [shape=box, label="Source samples", color=blue];
+    pilot_correlation_records [shape=box, label="Pilot correlation records", color=darkgreen];
+    message_correlation_records [shape=box, label="Message correlation records", color=darkgreen];
+    
+    source_samples -> pilot_correlation_analyzer [arrowhead=ediamond, label="1..Na", fontcolor=blue];
+    pilot_correlation_records -> pilot_correlation_analyzer [arrowhead=ediamond, label="1..Ns", fontcolor=darkgreen];
+    message_correlation_records -> pilot_correlation_analyzer [arrowhead=ediamond, label="1..Ns", fontcolor=darkgreen];
+    
+    pilot_correlation_analyzer -> pilot_correlator [dir=both, label="data exchange", color=blue, fontcolor=blue];
+    pilot_correlation_analyzer -> message_correlator [dir=both, label="data exchange", color=blue, fontcolor=blue];
+}
