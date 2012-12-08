@@ -1,0 +1,14 @@
+digraph G {
+    rankdir=LR 
+    
+    source_generator [shape=box, label="Source generator"];
+    gold_code_generator [shape=box, label="Gold Code generator"];
+    code_modulator [shape=box, label="Code modulator"];
+    bpsk_modulator [shape=box, label="BPSK modulator"];
+    ook_modulator [shape=box, label="OOK modulator"];
+    
+    gold_code_generator -> source_generator [dir=both, arrowtail=ediamond, arrowhead=none];
+    code_modulator -> source_generator [dir=both, arrowtail=ediamond, arrowhead=none];
+    bpsk_modulator -> code_modulator [arrowhead=empty];
+    ook_modulator -> code_modulator [arrowhead=empty];
+}
