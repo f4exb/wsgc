@@ -36,7 +36,6 @@
 #include "MessageCorrelationMatrices.h"
 #include <vector>
 
-class GoldCodeGenerator ;
 class LocalCodes;
 class PilotCorrelationAnalyzer;
 
@@ -64,7 +63,6 @@ public:
 	void execute(PilotCorrelationAnalyzer& pilot_correlation_analyzer);
     
 protected:
-    const GoldCodeGenerator& _gc_generator; //!< Reference to the Gold Code generator being used
     LocalCodes& _local_codes; //!< Reference to the PRN signals local copy.
     ContinuousPhaseCarrier _local_oscillator; //!< Local oscillator for receiving frequency adjustment
     wsgc_float _f_sampling; //!< Sampling frequency
