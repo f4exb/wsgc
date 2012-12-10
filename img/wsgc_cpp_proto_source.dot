@@ -7,8 +7,8 @@ digraph G {
     bpsk_modulator [shape=box, label="BPSK modulator"];
     ook_modulator [shape=box, label="OOK modulator"];
     
-    gold_code_generator -> source_generator [dir=both, arrowtail=ediamond, arrowhead=none];
-    code_modulator -> source_generator [dir=both, arrowtail=ediamond, arrowhead=none];
+    gold_code_generator -> source_generator [arrowhead=ediamond];
+    code_modulator -> source_generator [arrowhead=ediamond];
     bpsk_modulator -> code_modulator [arrowhead=empty];
     ook_modulator -> code_modulator [arrowhead=empty];
 }

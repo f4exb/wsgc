@@ -25,19 +25,23 @@
      
 */
 #include "SinglePrnCorrelator_FreqDep_Host.h"
-#include "WsgcTypes.h"
+#include "GoldCodeGenerator.h"
 #include "WsgcUtils.h"
 #include "LocalCodesFFT.h"
 #include <iostream>
 
 SinglePrnCorrelator_FreqDep_Host::SinglePrnCorrelator_FreqDep_Host(
-			LocalCodesFFT_Host& local_codes,
+			GoldCodeGenerator& gc_generator,
+			CodeModulator& code_modulator,
+			wsgc_float f_sampling,
+			wsgc_float f_chip,
+			std::vector<unsigned int>& pilot_symbols,
 			unsigned int nb_f_bins,
 			unsigned int prn_per_block,
 			unsigned int nb_batch_prns,
 			unsigned int freq_step_division) :
-    SinglePrnCorrelator_FreqDep::SinglePrnCorrelator_FreqDep(local_codes.get_nb_code_samples(), nb_f_bins, prn_per_block, nb_batch_prns, freq_step_division),
-	_local_codes(local_codes)
+    SinglePrnCorrelator_FreqDep::SinglePrnCorrelator_FreqDep(gc_generator.get_nb_code_samples(f_sampling,f_chip), nb_f_bins, prn_per_block, nb_batch_prns, freq_step_division),
+	_local_codes(code_modulator, gc_generator, f_sampling, f_chip, pilot_symbols)
 {
     // IFFT items
     _ifft_code_out = (wsgc_complex *) WSGC_FFTW_MALLOC(_fft_N*_nb_f_bins*_freq_step_division*_storage_depth*sizeof(wsgc_fftw_complex));

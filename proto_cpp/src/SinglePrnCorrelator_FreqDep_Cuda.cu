@@ -25,6 +25,7 @@
      
 */
 #include "SinglePrnCorrelator_FreqDep_Cuda.h"
+#include "GoldCodeGenerator.h"
 #include "WsgcTypes.h"
 #include "WsgcUtils.h"
 #include "WsgcException.h"
@@ -42,17 +43,21 @@
 
 
 SinglePrnCorrelator_FreqDep_Cuda::SinglePrnCorrelator_FreqDep_Cuda(
-		LocalCodesFFT_Cuda& local_codes,
+		GoldCodeGenerator& gc_generator,
+		CodeModulator& code_modulator,
+		wsgc_float f_sampling,
+		wsgc_float f_chip,
+		std::vector<unsigned int>& pilot_symbols,
 		unsigned int nb_f_bins,
 		unsigned int prn_per_block,
 		unsigned int nb_batch_prns,
 		unsigned int freq_step_division,
 		unsigned int cuda_device) :
-    SinglePrnCorrelator_FreqDep::SinglePrnCorrelator_FreqDep(local_codes.get_nb_code_samples(), nb_f_bins, prn_per_block, nb_batch_prns, freq_step_division),
-    _local_codes(local_codes),
+    SinglePrnCorrelator_FreqDep::SinglePrnCorrelator_FreqDep(gc_generator.get_nb_code_samples(f_sampling,f_chip), nb_f_bins, prn_per_block, nb_batch_prns, freq_step_division),
+    _local_codes(code_modulator, gc_generator, f_sampling, f_chip, pilot_symbols),
     _d_ifft_in(2*nb_batch_prns*_fft_N*freq_step_division*nb_f_bins),
     _d_ifft_out(2*nb_batch_prns*_fft_N*freq_step_division*nb_f_bins),
-    _nb_pilot_prns(local_codes.get_nb_codes()),
+    _nb_pilot_prns(_local_codes.get_nb_codes()),
     _cuda_device(cuda_device),
     _pilot_correlation_analyzer(0)
 {

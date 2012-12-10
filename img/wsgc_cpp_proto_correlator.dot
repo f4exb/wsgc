@@ -4,12 +4,20 @@ digraph G {
     subgraph cluster_0
     {
         label = "Pilot Correlator CUDA/Host"
+<<<<<<< HEAD
         color = "#8f0000"
         
         pilot_correlator_xxx [shape=box, label="Pilot correlator CUDA/Host"];
         single_prn_correlator [shape=box, label="Single PRN correlator CUDA/Host"];
         source_fft [shape=box, label="Source FFT processor CUDA/Host"];
         local_codes_fft [shape=box, label="Local codes FFT* copy CUDA/Host"];
+=======
+        
+        pilot_correlator_xxx [shape=box, label="Pilot correlator XXX"];
+        single_prn_correlator [shape=box, label="Single PRN correlator XXX"];
+        source_fft [shape=box, label="Source FFT processor XXX"];
+        local_codes_fft [shape=box, label="Local codes FFT* copy XXX"];
+>>>>>>> origin
         
         source_fft -> pilot_correlator_xxx [arrowhead=ediamond];
         single_prn_correlator -> pilot_correlator_xxx [arrowhead=ediamond];
@@ -19,11 +27,18 @@ digraph G {
     subgraph cluster_1
     {
         label = "Message Correlator CUDA/Host"
+<<<<<<< HEAD
         color = "#8f0000"
         
         message_correlator_xxx [shape=box, label="Message correlator CUDA/Host"];
         local_codes [shape=box, label="Local codes copy CUDA/Host"];
         local_oscillator [shape=box, label="Local oscillator NCO CUDA/Host"];
+=======
+        
+        message_correlator_xxx [shape=box, label="Message correlator XXX"];
+        local_codes [shape=box, label="Local codes copy XXX"];
+        local_oscillator [shape=box, label="Local oscillator NCO XXX"];
+>>>>>>> origin
 
         local_oscillator -> message_correlator_xxx [arrowhead=ediamond];
         local_codes -> message_correlator_xxx [arrowhead=ediamond];
@@ -36,14 +51,24 @@ digraph G {
     code_modulator -> local_codes_fft [arrowhead=ediamond];
     
     pilot_correlator [shape=box, label="Pilot correlator"];
+<<<<<<< HEAD
     pilot_correlator_host [shape=box, label="Pilot correlator Host", color = "#8f0000"];
     pilot_correlator_cuda [shape=box, label="Pilot correlator CUDA", color = "#8f0000"];
+=======
+    pilot_correlator_host [shape=box, label="Pilot correlator Host"];
+    pilot_correlator_cuda [shape=box, label="Pilot correlator CUDA"];
+>>>>>>> origin
     pilot_correlator_host -> pilot_correlator [arrowhead=empty];
     pilot_correlator_cuda -> pilot_correlator [arrowhead=empty];
 
     message_correlator [shape=box, label="Message correlator"];
+<<<<<<< HEAD
     message_correlator_host [shape=box, label="Message correlator Host", color = "#8f0000"];
     message_correlator_cuda [shape=box, label="Message correlator CUDA", color = "#8f0000"];
+=======
+    message_correlator_host [shape=box, label="Message correlator Host"];
+    message_correlator_cuda [shape=box, label="Message correlator CUDA"];
+>>>>>>> origin
     message_correlator_host -> message_correlator [arrowhead=empty];
     message_correlator_cuda -> message_correlator [arrowhead=empty];
 

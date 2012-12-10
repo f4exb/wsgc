@@ -40,14 +40,13 @@ MessageCorrelator::MessageCorrelator(
 		wsgc_float f_sampling,
 		wsgc_float f_chip,
 		unsigned int prn_per_symbol) :
-	_gc_generator(local_codes.get_gc_generator()),
 	_local_codes(local_codes),
-    _local_oscillator(f_sampling, _gc_generator.get_nb_code_samples(f_sampling, f_chip)),
+    _local_oscillator(f_sampling, _local_codes.get_gc_generator().get_nb_code_samples(f_sampling, f_chip)),
 	_f_sampling(f_sampling),
 	_f_chip(f_chip),
-    _nb_msg_prns(_gc_generator.get_nb_message_codes()+1), // +1 for noise PRN
+    _nb_msg_prns(_local_codes.get_gc_generator().get_nb_message_codes()+1), // +1 for noise PRN
 	_prn_per_symbol(prn_per_symbol),
-	_fft_N(_gc_generator.get_nb_code_samples(f_sampling,f_chip)),
+	_fft_N(_local_codes.get_gc_generator().get_nb_code_samples(f_sampling,f_chip)),
     _delta_f(0.0)
 {
     static const wsgc_complex c_zero(0.0,0.0);

@@ -29,6 +29,7 @@
 
 #include "SinglePrnCorrelator_FreqDep.h"
 #include "WsgcTypes.h"
+#include "LocalCodesFFT_Cuda.h"
 
 #include <cufft.h>
 #include <thrust/device_vector.h>
@@ -86,7 +87,11 @@ public:
 	* - Isf is the number of sub-frequency steps or sub-frequencies
 	* - Ihf is the number of frequency steps or harmonic frequencies
 	*
-	* \param local_codes Local copy of pilot PRNs conjugate FFT codes
+	* \param gc_generator Gold Code generator used to build the codes
+	* \param code_modulator Modulator used to build the codes
+	* \param f_sampling Sampling frequency
+	* \param f_chip Chip rate (frequency)
+    * \param _pilot_symbols Reference to the list of pilot symbol PRNs
 	* \param nb_f_bins Number of frequency bins explored around IF=0
 	* \param prn_per_block Number of PRNs per (symbol) block
 	* \param nb_batch_prns Number of PRNs processed in one batch ("PRN batch factor")
@@ -94,7 +99,11 @@ public:
 	* \param cuda_device CUDA device number to use
 	*/
 	SinglePrnCorrelator_FreqDep_Cuda(
-			LocalCodesFFT_Cuda& _local_codes,
+			GoldCodeGenerator& gc_generator,
+			CodeModulator& code_modulator,
+			wsgc_float f_sampling,
+			wsgc_float f_chip,
+			std::vector<unsigned int>& pilot_symbols,
 			unsigned int nb_f_bins,
 			unsigned int prn_per_block=4,
 			unsigned int nb_batch_prns=3,
@@ -123,10 +132,10 @@ public:
 	}
 
 protected:
-	LocalCodesFFT_Cuda& _local_codes;                //!< Local copy of pilot PRNs conjugate FFT codes
+	LocalCodesFFT_Cuda _local_codes;                //!< Local copy of pilot PRNs conjugate FFT codes
 	unsigned int _frequency_step_di;
-	cufftHandle _ifft_plan;                          //!< CUFFT transform plan for IFFT
-	int _n[1];                                       //!< CUFFT Plan FFT size parameter
+	cufftHandle _ifft_plan;                         //!< CUFFT transform plan for IFFT
+	int _n[1];                                      //!< CUFFT Plan FFT size parameter
 	int _inembed[1];                                 //!< CUFFT Plan parameter
 	int _onembed[1];                                 //!< CUFFT Plan parameter
 	thrust::device_vector<cuComplex> _d_ifft_in;     //!< Input area for IFFT
