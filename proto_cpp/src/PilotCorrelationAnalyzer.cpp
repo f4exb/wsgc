@@ -116,7 +116,7 @@ wsgc_complex *PilotCorrelationAnalyzer::get_samples(unsigned int global_prn_inde
 
 
 //=================================================================================================
-wsgc_complex *PilotCorrelationAnalyzer::get_last_samples()
+const wsgc_complex *PilotCorrelationAnalyzer::get_last_samples() const
 {
 	return &_samples[(_prn_index - 1)*_fft_N];
 }

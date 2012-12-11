@@ -116,6 +116,18 @@ struct cmulc_functor
 };
 
 /**
+ * \brief Complex member to member multiplication
+ */
+struct cmulc_functor2
+{
+    __host__ __device__
+    cuComplex operator()(const cuComplex& a, const cuComplex& b)
+    {
+        return cuCmulf(a, b);
+    }
+};
+
+/**
  * \brief Complex conjugate functor
  */
 struct conj_functor

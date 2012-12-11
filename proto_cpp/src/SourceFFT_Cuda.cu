@@ -62,7 +62,7 @@ SourceFFT_Cuda::~SourceFFT_Cuda()
 }
 
 
-const thrust::device_vector<cuComplex>& SourceFFT_Cuda::do_fft(wsgc_complex *source_block)
+thrust::device_vector<cuComplex>& SourceFFT_Cuda::do_fft(const wsgc_complex *source_block)
 {
     wsgc_float freq_interstep = _f_sampling / (_fft_N * _freq_step_division);
 

@@ -73,7 +73,7 @@ SourceFFT_Host::~SourceFFT_Host()
 }
 
 
-const wsgc_complex *SourceFFT_Host::get_fft_samples(wsgc_complex *source_block) const
+const wsgc_complex *SourceFFT_Host::get_fft_samples(const wsgc_complex *source_block) const
 {
 	wsgc_float freq_interstep = _f_sampling / (_fft_N * _freq_step_division);
 

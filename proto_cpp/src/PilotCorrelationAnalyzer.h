@@ -87,7 +87,7 @@ class PilotCorrelationAnalyzer
          * Get a pointer to the last entered source samples
          * \return Pointer to the first sample of PRN of the last PRN signal source entered in the analyzer
          */
-        wsgc_complex *get_last_samples();
+        const wsgc_complex *get_last_samples() const;
 
         /*
          * Append a new pilot correlation record

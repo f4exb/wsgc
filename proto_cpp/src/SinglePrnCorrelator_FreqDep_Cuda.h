@@ -132,10 +132,9 @@ public:
 	}
 
 protected:
-	LocalCodesFFT_Cuda _local_codes;                //!< Local copy of pilot PRNs conjugate FFT codes
-	unsigned int _frequency_step_di;
-	cufftHandle _ifft_plan;                         //!< CUFFT transform plan for IFFT
-	int _n[1];                                      //!< CUFFT Plan FFT size parameter
+	LocalCodesFFT_Cuda _local_codes;                 //!< Local copy of pilot PRNs conjugate FFT codes
+	cufftHandle _ifft_plan;                          //!< CUFFT transform plan for IFFT
+	int _n[1];                                       //!< CUFFT Plan FFT size parameter
 	int _inembed[1];                                 //!< CUFFT Plan parameter
 	int _onembed[1];                                 //!< CUFFT Plan parameter
 	thrust::device_vector<cuComplex> _d_ifft_in;     //!< Input area for IFFT

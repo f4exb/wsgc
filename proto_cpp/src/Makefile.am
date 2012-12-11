@@ -3,7 +3,11 @@ bin_PROGRAMS = wsgc_test wsgc_generator
 AM_CXXFLAGS = $(FFTW3F_CFLAGS) 
 
 if HAS_CUDA
+
+bin_PROGRAMS += wsgc_cuda
+
 AM_CXXFLAGS += $(CUDA_CFLAGS)
+
 # ls *.cpp -1 | awk '{printf "%s \\\n", $1}'
 wsgc_test_SOURCES = CodeModulator_BPSK.cpp \
     CodeModulator_OOK.cpp \
@@ -49,8 +53,25 @@ wsgc_test_SOURCES = CodeModulator_BPSK.cpp \
     PilotCorrelator_Cuda.cu \
     SinglePrnCorrelator_FreqDep_Cuda.cu \
     SourceFFT_Cuda.cu
+
 wsgc_test_LDADD = -lrt $(FFTW3F_LIBS) $(NVLDFLAGS)
+
+wsgc_cuda_SOURCES = CudaManager.cu \
+	ContinuousPhaseCarrier.cpp \
+	SourceFFT.cpp \
+	SourceFFT_Cuda.cu \
+	SimulatedSource.cpp \
+	GoldCodeGenerator.cpp \
+	CodeModulator_BPSK.cpp \
+	LocalCodesFFT.cpp \
+	LocalCodesFFT_Cuda.cu \
+	test_cuda.cu \
+	wsgc_cuda.cpp
+	
+wsgc_cuda_LDADD = -lrt $(FFTW3F_LIBS) $(NVLDFLAGS)
+
 else
+
 wsgc_test_SOURCES = CodeModulator_BPSK.cpp \
     CodeModulator_OOK.cpp \
     ContinuousPhaseCarrier.cpp \
@@ -90,7 +111,9 @@ wsgc_test_SOURCES = CodeModulator_BPSK.cpp \
     SourceMixer.cpp \
     wsgc_test.cpp \
     WsgcUtils.cpp
+
 wsgc_test_LDADD = -lrt $(FFTW3F_LIBS)
+
 endif
                     
 wsgc_generator_SOURCES = wsgc_generator.cpp CodeModulator_BPSK.cpp ContinuousPhaseCarrier.cpp GoldCodeGenerator.cpp \

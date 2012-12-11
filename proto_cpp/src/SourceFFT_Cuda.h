@@ -66,7 +66,7 @@ public:
     /**
      * Do the FFT
      */
-    const thrust::device_vector<cuComplex>& do_fft(wsgc_complex *source_block);
+    thrust::device_vector<cuComplex>& do_fft(const wsgc_complex *source_block);
 
     /**
      * Get the vector of source sub-frequency multiplied FFT samples

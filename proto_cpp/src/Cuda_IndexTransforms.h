@@ -71,11 +71,9 @@ struct transpose_index_B : public thrust::unary_function<size_t,size_t>
 	__host__ __device__
 	size_t operator()(size_t linear_index)
 	{
-		size_t t = linear_index % _T;
-		size_t ihfn = (linear_index / _T) / _Isf;
-		int ihf = ihfn - (_Ihf/2);
-		// Host: int lci = (ffti + _fft_N + fpi) % _fft_N;
-		return (t + ihf + _T) % _T;
+		unsigned int fhi = linear_index / (_Isf * _T);
+		unsigned int t = linear_index % _T;
+		return (t + fhi - (_Ihf/2)) % _T;
 	}
 };
 
@@ -195,7 +193,8 @@ struct transpose_index_skipping_stride : public thrust::unary_function<size_t,si
 	__host__ __device__
 	size_t operator()(size_t linear_index)
 	{
-		return ((_ais + linear_index) % (2*_B)) + ((linear_index / (2*_B))*2*_B);
+		//return ((_ais + linear_index) % (2*_B)) + ((linear_index / (2*_B))*2*_B);
+        return ((_ais + (linear_index % _B)) % (2*_B)) + ((linear_index/_B)*2*_B);
 	}
 };
 

@@ -63,7 +63,7 @@ public:
 	 * \param source Source samples
 	 * \return Pointer to the first element of the resulting FFT samples (one FFT by sub-frequency in sequence)
 	 */
-	const wsgc_complex *get_fft_samples(wsgc_complex *source) const;
+	const wsgc_complex *get_fft_samples(const wsgc_complex *source) const;
 
     
     protected:

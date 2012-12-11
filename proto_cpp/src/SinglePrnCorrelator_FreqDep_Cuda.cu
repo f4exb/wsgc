@@ -147,7 +147,7 @@ void SinglePrnCorrelator_FreqDep_Cuda::multiply_and_ifft(const thrust::device_ve
     }
 
     // Debug
-    /*
+
     int cublas_max_index;
 
 	cublasStatus_t stat = cublasIcamax(_cublas_handle, (_fft_N*_freq_step_division*_nb_f_bins),
@@ -162,9 +162,16 @@ void SinglePrnCorrelator_FreqDep_Cuda::multiply_and_ifft(const thrust::device_ve
 		throw WsgcException(err_os.str());
 	}
 
+	cublas_max_index--;
+
+	unsigned int ffti = cublas_max_index % _fft_N;
+	unsigned int fi = cublas_max_index / _fft_N;
+	unsigned int fsi = fi % _freq_step_division;
+	unsigned int fhi = fi / _freq_step_division;
+
     cuComplex z = _d_ifft_out[prn_position + cublas_max_index*2*_nb_batch_prns];
-    std::cout << prn_position << ": IFFT max: " << cublas_max_index << " : " << mag_algebraic_functor()(z) << std::endl;
-    */
+    std::cout << prn_position << ": FFTi: " << ffti << " Fi: " << fhi << "." << fsi << " IFFT max: " << cublas_max_index << " : " << mag_algebraic_functor()(z) << std::endl;
+
 }
 
 
