@@ -28,6 +28,7 @@
 
 #include <cutil_inline.h>    // includes cuda.h and cuda_runtime_api.h
 #include <thrust/tuple.h>
+#include <thrust/functional.h>
 #include <cuComplex.h>
 
 #include <math.h>
@@ -169,10 +170,11 @@ struct mag_estim_functor
 /**
  * \brief Exact squared magnitude
  */
-struct mag_squared_functor
+template<typename T2, typename T>
+struct mag_squared_functor : thrust::unary_function<T2, T>
 {
     __host__ __device__
-    float operator()(cuComplex z)
+    T operator()(T2 z)
     {
         return z.x*z.x + z.y*z.y;
     }
@@ -193,6 +195,20 @@ struct mag_algebraic_functor
 
 
 /**
+ * \brief Compare squared magnitudes (less)
+ */
+template<typename T2>
+struct lesser_mag_squared : thrust::binary_function<T2, T2, bool>
+{
+    __host__ __device__
+    bool operator()(T2 zl, T2 zr)
+    {
+        return (zl.x*zl.x + zl.y*zl.y) < (zr.x*zr.x + zr.y*zr.y);
+    }
+};
+
+
+/**
  * \brief Returns <complex, int> tuple of maximum magnitude using exact squaring
  */
 struct bigger_mag_tuple
@@ -200,7 +216,7 @@ struct bigger_mag_tuple
     __host__ __device__
     thrust::tuple<cuComplex, int> operator()(thrust::tuple<cuComplex, int>& t_l, thrust::tuple<cuComplex, int>& t_r)
     {
-        if (mag_squared_functor()(thrust::get<0>(t_l)) > mag_squared_functor()(thrust::get<0>(t_r)))
+        if (mag_squared_functor<cuComplex, float>()(thrust::get<0>(t_l)) > mag_squared_functor<cuComplex, float>()(thrust::get<0>(t_r)))
         {
             return t_l;
         }

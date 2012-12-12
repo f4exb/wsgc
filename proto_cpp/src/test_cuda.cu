@@ -8,6 +8,7 @@
 #include "Cuda_Operators.h"
 #include "Cuda_IndexTransforms.h"
 #include "WsgcException.h"
+#include "Cuda_StridedRange.h"
 
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
@@ -15,6 +16,7 @@
 #include <thrust/transform.h>
 #include <thrust/iterator/counting_iterator.h>
 #include <thrust/iterator/transform_iterator.h>
+#include <thrust/transform_reduce.h>
 #include <cufft.h>
 #include <cublas_v2.h>
 #include <cutil_inline.h>    // includes cuda.h and cuda_runtime_api.h
@@ -249,3 +251,126 @@ void test_cuda::test3(wsgc_complex *message_samples, GoldCodeGenerator& gc_gener
     cufftDestroy(ifft_plan);
     cublasDestroy(cublas_handle);
 }
+
+
+void test_cuda::test4(wsgc_complex *message_samples, GoldCodeGenerator& gc_generator, CodeModulator_BPSK& code_modulator)
+{
+	SourceFFT_Cuda source_fft(_options.f_sampling, _options.f_chip, _options.fft_N, _options.freq_step_division);
+	thrust::device_vector<cuComplex>& d_source_block = source_fft.do_fft(message_samples);
+
+	LocalCodesFFT_Cuda local_codes(code_modulator, gc_generator, _options.f_sampling, _options.f_chip, _options.prn_list);
+	const thrust::device_vector<cuComplex>& d_local_codes = local_codes.get_local_codes();
+
+	thrust::device_vector<cuComplex> d_ifft_in(_options.fft_N*_options.nb_f_bins*_options.freq_step_division*2*_options.nb_batch_prns);
+	thrust::device_vector<cuComplex> d_ifft_out(_options.fft_N*_options.nb_f_bins*_options.freq_step_division*2*_options.nb_batch_prns);
+	thrust::host_vector<cuComplex> h_ifft_out(_options.fft_N*_options.nb_f_bins*_options.freq_step_division*2*_options.nb_batch_prns);
+
+	unsigned int pilot_prn_index = 0;
+	unsigned int prn_position = 1;
+
+    thrust::for_each(
+        thrust::make_zip_iterator(
+            thrust::make_tuple(
+                thrust::make_permutation_iterator(d_source_block.begin(), thrust::make_transform_iterator(thrust::make_counting_iterator(0), transpose_index_A(_options.fft_N, _options.freq_step_division))),
+                thrust::make_permutation_iterator(d_local_codes.begin() + pilot_prn_index*_options.fft_N, thrust::make_transform_iterator(thrust::make_counting_iterator(0), transpose_index_B(_options.fft_N, _options.freq_step_division, _options.nb_f_bins))),
+                thrust::make_permutation_iterator(d_ifft_in.begin(), thrust::make_transform_iterator(thrust::make_counting_iterator(0), transpose_index_C(_options.nb_batch_prns, prn_position)))
+            )
+        ),
+        thrust::make_zip_iterator(
+            thrust::make_tuple(
+				thrust::make_permutation_iterator(d_source_block.begin(), thrust::make_transform_iterator(thrust::make_counting_iterator(0)+(_options.fft_N*_options.freq_step_division*_options.nb_f_bins), transpose_index_A(_options.fft_N, _options.freq_step_division))),
+				thrust::make_permutation_iterator(d_local_codes.begin() + (pilot_prn_index+1)*_options.fft_N, thrust::make_transform_iterator(thrust::make_counting_iterator(0)+(_options.fft_N*_options.freq_step_division*_options.nb_f_bins), transpose_index_B(_options.fft_N, _options.freq_step_division, _options.nb_f_bins))),
+				thrust::make_permutation_iterator(d_ifft_in.begin(), thrust::make_transform_iterator(thrust::make_counting_iterator(0)+(_options.fft_N*_options.freq_step_division*_options.nb_f_bins), transpose_index_C(_options.nb_batch_prns, prn_position)))
+            )
+        ),
+        cmulc_functor()
+    );
+
+    cufftHandle ifft_plan;
+
+	int n[1];                                       //!< CUFFT Plan FFT size parameter
+	int inembed[1];                                 //!< CUFFT Plan parameter
+	int onembed[1];                                 //!< CUFFT Plan parameter
+
+    n[0] = _options.fft_N;
+    inembed[0] = _options.fft_N;
+    onembed[0] = _options.fft_N;
+
+    cufftResult_t fft_stat = cufftPlanMany(&ifft_plan, 1, n,
+		inembed, 2*_options.nb_batch_prns, 2*_options.nb_batch_prns*_options.fft_N,
+		onembed, 2*_options.nb_batch_prns, 2*_options.nb_batch_prns*_options.fft_N,
+		CUFFT_C2C, _options.nb_f_bins*_options.freq_step_division);
+
+    if (fft_stat != CUFFT_SUCCESS)
+    {
+    	std::ostringstream err_os;
+    	err_os << "CUFFT Error: Unable to create plan for pilot IFFT RC=" << fft_stat;
+    	throw WsgcException(err_os.str());
+    }
+
+    if (cufftExecC2C(ifft_plan,
+    		         thrust::raw_pointer_cast(&d_ifft_in[prn_position]),
+    		         thrust::raw_pointer_cast(&d_ifft_out[prn_position]),
+    		         CUFFT_INVERSE) != CUFFT_SUCCESS)
+    {
+    	throw WsgcException("CUFFT Error: Failed to execute IFFT");
+    }
+
+    thrust::copy(d_ifft_out.begin(), d_ifft_out.end(), h_ifft_out.begin());
+
+    std::cout << "--- IFFT result :" << std::endl;
+
+	unsigned int bi;
+	unsigned int ffti;
+	unsigned int fsi;
+	unsigned int fhi;
+
+    for (unsigned int i=0; i < _options.fft_N*_options.nb_f_bins*_options.freq_step_division*2*_options.nb_batch_prns; i++)
+    {
+    	decomp_full_index(i, bi, ffti, fsi, fhi);
+    	std::cout << i << ":" << bi << ":" << ffti << ":" << fsi << ":" << fhi << ": (" << h_ifft_out[i].x << "," << h_ifft_out[i].y << ")" << std::endl;
+    }
+
+    std::cout << "--- straight:" << std::endl;
+
+    float max_mag = thrust::transform_reduce(d_ifft_out.begin(), d_ifft_out.end(), mag_squared_functor<cuComplex, float>(), 0.0, thrust::maximum<float>());
+    thrust::device_vector<cuComplex>::iterator max_element = thrust::max_element(d_ifft_out.begin(), d_ifft_out.end(), lesser_mag_squared<cuComplex>());
+    cuComplex z = *max_element;
+
+    std::cout << max_mag << std::endl;
+    unsigned int max_full_index = max_element - d_ifft_out.begin();
+    decomp_full_index(max_full_index, bi, ffti, fsi, fhi);
+	std::cout << max_full_index << ":" << bi << ":" << ffti << ":" << fsi << ":" << fhi << ": (" << z.x << "," << z.y << ") " << mag_squared_functor<cuComplex, float>()(z) << std::endl;
+
+	std::cout << "--- gay stride:" << std::endl;
+
+	strided_range<thrust::device_vector<cuComplex>::iterator> strided_ifft_out(d_ifft_out.begin()+prn_position, d_ifft_out.end(), 2*_options.nb_batch_prns);
+
+	strided_range<thrust::device_vector<cuComplex>::iterator>::iterator strided_max_element_it = thrust::max_element(strided_ifft_out.begin(), strided_ifft_out.end(), lesser_mag_squared<cuComplex>());
+	z = *strided_max_element_it;
+	unsigned int max_strided_index = strided_max_element_it - strided_ifft_out.begin();
+	decomp_strided_index(max_strided_index,ffti, fsi, fhi);
+	std::cout << max_full_index << ":" << ffti << ":" << fsi << ":" << fhi << ": (" << z.x << "," << z.y << ") " << mag_squared_functor<cuComplex, float>()(z) << std::endl;
+
+
+    cufftDestroy(ifft_plan);
+}
+
+
+void test_cuda::decomp_full_index(unsigned int full_index, unsigned int& bi, unsigned int& ffti, unsigned int& fsi, unsigned int& fhi)
+{
+	bi = full_index % (2*_options.nb_batch_prns);
+	ffti = (full_index / (2*_options.nb_batch_prns)) % _options.fft_N;
+	unsigned int fi = (full_index / (2*_options.nb_batch_prns)) / _options.fft_N;
+	fsi = fi % _options.freq_step_division;
+	fhi = fi / _options.freq_step_division;
+}
+
+void test_cuda::decomp_strided_index(unsigned int strided_index, unsigned int& ffti, unsigned int& fsi, unsigned int& fhi)
+{
+	ffti = strided_index % _options.fft_N;
+	unsigned int fi = strided_index / _options.fft_N;
+	fsi = fi % _options.freq_step_division;
+	fhi = fi / _options.freq_step_division;
+}
+

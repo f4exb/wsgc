@@ -34,7 +34,11 @@ int main(int argc, char *argv[])
 
     test_cuda_instance.test3(message_source.get_samples(), gc_generator, code_modulator);
 
-	return 0;
+    std::cout << "-- test4 : zob --" << std::endl;
+
+    test_cuda_instance.test4(message_source.get_samples(), gc_generator, code_modulator);
+
+    return 0;
 }
 
 
