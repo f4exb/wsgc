@@ -35,13 +35,13 @@ PilotCorrelationRecord::PilotCorrelationRecord()
 PilotCorrelationRecord::~PilotCorrelationRecord()
 {}
         
-void PilotCorrelationRecord::dump(std::ostringstream& os) const
+void PilotCorrelationRecord::dump(std::ostringstream& os, wsgc_float mag_display_factor) const
 {
     os << std::setiosflags(std::ios_base::fixed);
     os << "Bi ...........: " << std::setw(2) << block_count << std::endl
        << " PRNi ........: " << std::setw(3) << prn_index << std::endl
        << " PRN .........: " << std::setw(3) << std::setfill('0') << pilot_index << std::endl
-       << " Max .........: " << std::setw(7) << std::setprecision(1) << magnitude_max << std::endl
+       << " Max .........: " << std::setw(7) << std::setprecision(1) << magnitude_max/mag_display_factor << std::endl
        << " Phase @ max .: " << std::setw(5) << std::setprecision(2) << std::setfill(' ') << phase_at_max << std::endl
        << " Ti ..........: " << std::setw(4) << t_index_max << std::endl
        << " Fi ..........: " << std::setw(4) << f_index_max << std::endl
@@ -49,13 +49,13 @@ void PilotCorrelationRecord::dump(std::ostringstream& os) const
        << " Selected ....: " << std::setw(2) << (selected ? "Y" : "N") << std::endl;
 }
 
-void PilotCorrelationRecord::dump_oneline(std::ostringstream& os) const
+void PilotCorrelationRecord::dump_oneline(std::ostringstream& os, wsgc_float mag_display_factor) const
 {
     os << std::setiosflags(std::ios_base::fixed);
     os << std::setw(2) << block_count  
        << " " << std::setw(3) << prn_index 
        << " " << std::setw(3) << std::setfill('0') << pilot_index
-       << " " << std::setw(7) << std::setprecision(1) << magnitude_max
+       << " " << std::setw(7) << std::setprecision(1) << magnitude_max/mag_display_factor
        << " " << std::setw(5) << std::setprecision(2) << std::setfill(' ') << phase_at_max
        << " " << std::setw(4) << t_index_max
        << " " << std::setw(4) << f_index_max

@@ -94,6 +94,8 @@ int main(int argc, char *argv[])
         SourceMixer *source_mixer = 0;
         std::vector<unsigned int> pilot_prns;
 
+        unsigned int fft_N = gc_generator.get_nb_code_samples(options.f_sampling, options.f_chip);
+        
         // Allocate appropriate objects depending on modulation options
                                       
         // create code modulator                                      
@@ -252,7 +254,7 @@ int main(int argc, char *argv[])
             bool input_samples_available = false;           // input samples (length of one PRN) are available for processing  
             bool process_next_output = false;
             
-            SampleSequencer sample_sequencer(faded_source_samples, nb_faded_source_samples, gc_generator.get_nb_code_samples(options.f_sampling, options.f_chip));
+            SampleSequencer sample_sequencer(faded_source_samples, nb_faded_source_samples, fft_N);
             unsigned int prn_i = 0;
 
             while ((input_samples_available = sample_sequencer.get_next_code_samples(&signal_samples)) || process_next_output) // pseudo real time loop, one PRN length at a time
@@ -289,7 +291,6 @@ int main(int argc, char *argv[])
             clock_gettime(time_option, &time2);
             std::cout << "Message correlation time: " << std::setw(12) << std::setprecision(9) << WsgcUtils::get_time_difference(time2,time1) << " s" << std::endl << std::endl;
             
-            /*
             if (pilot_correlation_analyzer != 0)
             {
                 std::ostringstream corr_os;
@@ -299,7 +300,6 @@ int main(int argc, char *argv[])
 
                 std::cout << corr_os.str() << std::endl;
             }
-            */
 
             // Do the decoding with the decision box
             std::cout << "Do the decoding with the decision box..." << std::endl;
@@ -313,6 +313,9 @@ int main(int argc, char *argv[])
             	pilot_correlation_analyzer->dump_histo_time_shift_occurences(corr_os);
             	corr_os << std::endl;
 
+#ifdef _CUDA
+                pilot_correlation_analyzer->set_mag_display_factor((fft_N/2)*(fft_N/2));
+#endif
                 corr_os << "--- pilot correlation records:" << std::endl;
                 pilot_correlation_analyzer->dump_pilot_correlation_records(corr_os);
                 corr_os << std::endl << "--- correlation records:" << std::endl;
@@ -320,14 +323,14 @@ int main(int argc, char *argv[])
 
                 std::cout << corr_os.str() << std::endl;
                 
-                decision_box = new DecisionBox_Piloted(options.nb_prns_per_symbol, gc_generator.get_nb_code_samples(options.f_sampling, options.f_chip), *pilot_correlation_analyzer);
+                decision_box = new DecisionBox_Piloted(options.nb_prns_per_symbol, fft_N, *pilot_correlation_analyzer);
             }
             else if (mprn_correlator != 0) // Correlation without pilot PRN - legacy process
             {
                 prn_shift_occurences = &mprn_correlator->get_shift_occurences();
 
-                decision_box = new DecisionBox_Unpiloted(options.nb_prns_per_symbol, gc_generator.get_nb_code_samples(options.f_sampling, options.f_chip), correlation_records, *prn_shift_occurences);
-				decision_box->set_mag_display_adj_factor(options.nb_prns_per_symbol * gc_generator.get_nb_code_samples(options.f_sampling, options.f_chip));
+                decision_box = new DecisionBox_Unpiloted(options.nb_prns_per_symbol, fft_N, correlation_records, *prn_shift_occurences);
+				decision_box->set_mag_display_adj_factor(options.nb_prns_per_symbol * fft_N);
             }
 
             if (decision_box)

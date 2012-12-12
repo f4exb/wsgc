@@ -34,6 +34,7 @@
 
 #include "Cuda_Averagers.h"
 #include "CudaManager.h"
+#include "Cuda_StridedRange.h"
 
 #include <thrust/iterator/counting_iterator.h>
 #include <thrust/iterator/transform_iterator.h>
@@ -147,7 +148,7 @@ void SinglePrnCorrelator_FreqDep_Cuda::multiply_and_ifft(const thrust::device_ve
     }
 
     // Debug
-
+    /*
     int cublas_max_index;
 
 	cublasStatus_t stat = cublasIcamax(_cublas_handle, (_fft_N*_freq_step_division*_nb_f_bins),
@@ -171,6 +172,7 @@ void SinglePrnCorrelator_FreqDep_Cuda::multiply_and_ifft(const thrust::device_ve
 
     cuComplex z = _d_ifft_out[prn_position + cublas_max_index*2*_nb_batch_prns];
     std::cout << prn_position << ": FFTi: " << ffti << " Fi: " << fhi << "." << fsi << " IFFT max: " << cublas_max_index << " : " << mag_algebraic_functor()(z) << std::endl;
+    */
 
 }
 
@@ -238,7 +240,14 @@ void SinglePrnCorrelator_FreqDep_Cuda::execute_averaging(bool first_half)
     {
     	int cublas_max_index;
     	unsigned int shift = pi+(first_half ? 0 : ad._B);
-
+        
+        strided_range<thrust::device_vector<cuComplex>::iterator> strided_ifft_out(_d_ifft_out.begin()+shift, _d_ifft_out.end(), 2*ad._B);
+        strided_range<thrust::device_vector<cuComplex>::iterator>::iterator max_element_it = thrust::max_element(strided_ifft_out.begin(), strided_ifft_out.end(), lesser_mag_squared<cuComplex>());    
+        cuComplex z = *max_element_it;
+        unsigned int max_index = max_element_it - strided_ifft_out.begin();
+        _batch_max_composite_indexes[pi] = max_index;
+        
+        /*
     	cublasStatus_t stat = cublasIcamax(_cublas_handle, (ad._T*ad._Ifs*ad._Ifh),
     			thrust::raw_pointer_cast(&_d_ifft_out[shift]),
     			2*ad._B, &cublas_max_index);
@@ -250,9 +259,10 @@ void SinglePrnCorrelator_FreqDep_Cuda::execute_averaging(bool first_half)
     		std::cout << err_os.str() << std::endl;
     		throw WsgcException(err_os.str());
     	}
+        */
 
-    	_batch_max_composite_indexes[pi] = cublas_max_index-1; // CUBLAS indexes are 1-based
     	/*
+    	_batch_max_composite_indexes[pi] = cublas_max_index-1; // CUBLAS indexes are 1-based
     	_batch_max_magnitudes[pi] = mag_squared_functor()(_d_ifft_out[]);
     	cuComplex z = _d_ifft_out[absolute_max_index+shift];
     	_batch_complex_values_max[pi].real() = z.x;
@@ -300,9 +310,8 @@ void SinglePrnCorrelator_FreqDep_Cuda::execute_averaging(bool first_half)
     	*/
     	unsigned int shift = pi+(first_half ? 0 : ad._B);
 
-    	//cuComplex z = _d_ifft_out[t_max_index + fs_max_index*ad._T + fh_max_index *ad._T *ad._Ifs + shift];
     	cuComplex z = _d_ifft_out[shift + _batch_max_composite_indexes[pi]*2*ad._B];
-    	_batch_max_magnitudes[pi] = mag_algebraic_functor()(z);
+    	_batch_max_magnitudes[pi] = mag_squared_functor<cuComplex, float>()(z);
     	//std::cout << "_batch_max_magnitude=" << _batch_max_magnitudes[pi] << std::endl;
     	_batch_complex_values_max[pi].real() = z.x;
     	_batch_complex_values_max[pi].imag() = z.y;

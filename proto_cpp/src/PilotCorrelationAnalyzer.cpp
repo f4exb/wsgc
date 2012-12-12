@@ -57,7 +57,8 @@ PilotCorrelationAnalyzer::PilotCorrelationAnalyzer(
     _sum_max_pilot2(0),
     _start_message_correlation_records_index(0),
     _validate_count(0),
-    _analysis_index(0)
+    _analysis_index(0),
+    _mag_display_factor(1.0)
 {
     _samples = (wsgc_complex *) WSGC_FFTW_MALLOC(analysis_window_size*prn_per_symbol*fft_N*2*sizeof(wsgc_fftw_complex));
 }
@@ -441,7 +442,7 @@ void PilotCorrelationAnalyzer::dump_pilot_correlation_records(std::ostringstream
 
 	for (; it != it_end; ++it)
 	{
-		it->dump_oneline(os);
+		it->dump_oneline(os, _mag_display_factor);
 	}
 }
 

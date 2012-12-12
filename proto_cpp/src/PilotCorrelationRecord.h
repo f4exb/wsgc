@@ -43,14 +43,15 @@ class PilotCorrelationRecord
         /**
          * Dumps the data to a string stream in frame form
          * \param os The output string stream
+         * \param mag_display_factor Magnitudes are divided by thos factor for display
          */
-        void dump(std::ostringstream& os) const;
+        void dump(std::ostringstream& os, wsgc_float mag_display_factor = 1.0) const;
 
         /**
          * Dumps the data to a string stream in one line form
          * \param os The output string stream
          */
-        void dump_oneline(std::ostringstream& os) const;
+        void dump_oneline(std::ostringstream& os, wsgc_float mag_display_factor = 1.0) const;
 
         /**
          * Dumps a banner used when the data is printed in one line form

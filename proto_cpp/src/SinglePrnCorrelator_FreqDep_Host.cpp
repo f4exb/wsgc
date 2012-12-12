@@ -147,8 +147,8 @@ void SinglePrnCorrelator_FreqDep_Host::execute_averaging(bool first_half)
             }
 
             // take magnitude of the complex sum
-     		//WsgcUtils::magnitude_estimation(&_ifft_code_out[iffti*_storage_depth + prn_position], &sum_mag);
-     		WsgcUtils::magnitude_algebraic(&_ifft_code_out[iffti*_storage_depth + prn_position], &sum_mag);
+     		WsgcUtils::magnitude_estimation(&_ifft_code_out[iffti*_storage_depth + prn_position], &sum_mag);
+     		//WsgcUtils::magnitude_algebraic(&_ifft_code_out[iffti*_storage_depth + prn_position], &sum_mag);
 
 			if (sum_mag > _batch_max_magnitudes[pi])
 			{

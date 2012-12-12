@@ -261,6 +261,15 @@ class PilotCorrelationAnalyzer
          * \param os Output string stream
          */
         void dump_timings(std::ostringstream& os);
+        
+        /**
+         * Sets the magnitude display factor. Magnitudes are divided by this factor for display.
+         * \param mag_display_factor The magnitude display factor.
+         */
+        void set_mag_display_factor(wsgc_float mag_display_factor)
+        {
+            _mag_display_factor = mag_display_factor;
+        }
 
         std::vector<timings_t> _pilot_mul_ifft_times;
         std::vector<timings_t> _pilot_avg_times;
@@ -310,7 +319,7 @@ class PilotCorrelationAnalyzer
         std::vector<CorrelationRecord> _message_correlation_records; //!< Message correlation records filled by the message correlator
         unsigned int _start_message_correlation_records_index; //!< Index at start of message correlation records analysis window
         unsigned int _validate_count; //!< Counter of number of pilot correlation records validated
-        
+        wsgc_float _mag_display_factor; //!< Magnitudes are divided by this factor for display
 
         static const wsgc_float _best_time_margin_threshold;  //<! selected correlation time delta difference with next / number of correlations ratio threshold
 
