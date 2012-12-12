@@ -27,11 +27,15 @@
 
 */
 
-#ifndef __LOCAL_CODES_H__
-#define __LOCAL_CODES_H__
+#ifndef __LOCAL_CODES_CUDA_H__
+#define __LOCAL_CODES_CUDA_H__
 
 #include "WsgcTypes.h"
+#include "LocalCodes.h"
 #include <vector>
+#include <cuComplex.h>
+#include <thrust/device_vector.h>
+#include <thrust/sequence.h>
 
 class CodeModulator;
 class GoldCodeGenerator;
@@ -43,7 +47,7 @@ class GoldCodeGenerator;
  * Creates a local copy of all symbols gold codes
  *
  */
-class LocalCodes
+class LocalCodes_Cuda : public LocalCodes
 {
 public:
     /**
@@ -53,57 +57,44 @@ public:
     * \param f_chip Chip rate
 	* \param symbols List of symbols to be processed
     */
-	LocalCodes(
+	LocalCodes_Cuda(
             CodeModulator& code_modulator, 
             GoldCodeGenerator& gc_generator, 
             wsgc_float f_sampling, 
             wsgc_float f_chip,
             std::vector<unsigned int>& symbols);
 
-	virtual ~LocalCodes();
-    
+	virtual ~LocalCodes_Cuda();
+
     /**
-     * Get Gold Code generator reference
+     * Get the vector of the local copy of the code corresponding to PRN index
+     * \param prni PRN index
+     * \return Reference to the vector of the local copy of the codes
      */
-    const GoldCodeGenerator& get_gc_generator() const
+    const thrust::device_vector<cuComplex>& get_local_code(unsigned int prni) const
     {
-    	return _gc_generator;
+        return _codes_matrix[prni];
     }
 
-	/**
-	 * Get the number of samples per code (corresponds to FFT length)
-	 * \return Pointer to the first element of the local copy of the code
-	 */
-	unsigned int get_nb_code_samples() const
-	{
-		return _nb_code_samples;
-	}
-
-	/**
-	 * Get the number of codes
-	 * \return The number of stored PNR codes
-	 */
-	unsigned int get_nb_codes() const
-	{
-		return _symbols.size();
-	}
-
-	/**
-	 * Get the vector of PRN symbols
-	 * \return The vector of PRN symbols
-	 */
-	const std::vector<unsigned int>& get_prns() const
-	{
-		return _symbols;
-	}
+    /**
+     * Get the vector of the local copy of the codes
+     * \return Reference to the vector of the local copy of the codes
+     */
+    const std::vector<thrust::device_vector<cuComplex> >& get_local_code() const
+    {
+        return _codes_matrix;
+    }
 
 protected:
-    CodeModulator& _code_modulator; //!< Reference to the code modulator
-    GoldCodeGenerator& _gc_generator; //!< Reference to the Gold Code generator
-    wsgc_float _f_sampling; //!< Sampling frequency
-    wsgc_float _f_chip; //!< Chip rate
-    std::vector<unsigned int>& _symbols; //!< List of symbols to be processed
-	unsigned int _nb_code_samples; //!< Number of samples in one code length
+    unsigned int _nb_codes;
+    std::vector<thrust::device_vector<cuComplex> > _codes_matrix; //!< Matrix holding the local copy of the codes    
+    wsgc_complex *_h_fft_code_in; //!< This is the modulated code on the host
+
+    /**
+     * Internal method to fill the matrix holding the local copy of the codes at construction time
+     */
+    void fill_codes_matrix();
+
 };
 
-#endif /* __LOCAL_CODES_H__ */
+#endif /* __LOCAL_CODES_CUDA_H__ */

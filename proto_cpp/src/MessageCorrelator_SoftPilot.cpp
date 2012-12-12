@@ -29,12 +29,12 @@
 
 #include "MessageCorrelator_SoftPilot.h"
 #include "GoldCodeGenerator.h"
-#include "LocalCodes.h"
+#include "LocalCodes_Host.h"
 #include "WsgcUtils.h"
 #include <cmath>
 #include <cstring>
 
-MessageCorrelator_SoftPilot::MessageCorrelator_SoftPilot(GoldCodeGenerator& gc_generator, LocalCodes& local_codes, wsgc_float f_sampling, wsgc_float f_chip, unsigned int prn_per_symbol, unsigned int nb_batch_prns) :
+MessageCorrelator_SoftPilot::MessageCorrelator_SoftPilot(GoldCodeGenerator& gc_generator, LocalCodes_Host& local_codes, wsgc_float f_sampling, wsgc_float f_chip, unsigned int prn_per_symbol, unsigned int nb_batch_prns) :
 	_gc_generator(gc_generator),
 	_local_codes(local_codes),
     _local_oscillator(f_sampling, gc_generator.get_nb_code_samples(f_sampling, f_chip)),

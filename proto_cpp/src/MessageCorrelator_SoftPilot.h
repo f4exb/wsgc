@@ -37,7 +37,7 @@
 #include <vector>
 
 class GoldCodeGenerator ;
-class LocalCodes;
+class LocalCodes_Host;
 
 /**
  * \brief Correlator engine to acquire and track message PRN(s) using the frequency
@@ -55,7 +55,7 @@ public:
     * \param prn_per_symbol Number of PRNs per symbol or averaging block
     * \param nb_batch_prns Number of PRNs processed in one batch ("PRN batch factor")
     */
-	MessageCorrelator_SoftPilot(GoldCodeGenerator& gc_generator, LocalCodes& local_codes, wsgc_float f_sampling, wsgc_float f_chip, unsigned int prn_per_symbol, unsigned int nb_batch_prns);
+	MessageCorrelator_SoftPilot(GoldCodeGenerator& gc_generator, LocalCodes_Host& local_codes, wsgc_float f_sampling, wsgc_float f_chip, unsigned int prn_per_symbol, unsigned int nb_batch_prns);
 	~MessageCorrelator_SoftPilot();
 
 	/**
@@ -74,7 +74,7 @@ public:
     
 protected:
     GoldCodeGenerator& _gc_generator; //!< Reference to the Gold Code generator being used
-    LocalCodes& _local_codes; //!< Reference to the PRN signals local copy.
+    LocalCodes_Host& _local_codes; //!< Reference to the PRN signals local copy.
     ContinuousPhaseCarrier _local_oscillator; //!< Local oscillator for receiving frequency adjustment
     wsgc_float _f_sampling; //!< Sampling frequency
     wsgc_float _f_chip; //!< Chip rate

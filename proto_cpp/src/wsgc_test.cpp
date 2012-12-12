@@ -34,7 +34,7 @@
 #include "SimulatedSource.h"
 #include "CodeModulator_BPSK.h"
 #include "CodeModulator_OOK.h"
-#include "LocalCodes.h"
+#include "LocalCodes_Host.h"
 #include "WsgcUtils.h"
 #include "PilotCorrelationRecord.h"
 #include "MultiplePrnCorrelator.h"
@@ -92,7 +92,12 @@ int main(int argc, char *argv[])
         CodeModulator *codeModulator = 0;
         SimulatedSource *message_source = 0;
         SourceMixer *source_mixer = 0;
+        std::vector<unsigned int> message_prn_numbers;
+        std::vector<unsigned int> pilot_prn_numbers;
         std::vector<unsigned int> pilot_prns;
+        
+        generate_message_prn_list(message_prn_numbers, gc_generator);
+        generate_pilot_prn_list(pilot_prn_numbers, gc_generator, 1);
 
         unsigned int fft_N = gc_generator.get_nb_code_samples(options.f_sampling, options.f_chip);
         
@@ -115,7 +120,7 @@ int main(int argc, char *argv[])
             std::cout << "Produce signal samples..." << std::endl;
 
             LocalCodesFFT_Host *local_codes_fft = 0;
-            LocalCodes *local_codes = 0;
+            LocalCodes_Host *local_codes = 0;
             wsgc_complex *source_samples = 0;
             unsigned int nb_source_samples = 0;
             
@@ -191,10 +196,8 @@ int main(int argc, char *argv[])
             DecisionBox *decision_box = 0;
             std::vector<CorrelationRecord> correlation_records;
             static const CorrelationRecord tmp_correlation_record;
-            std::vector<unsigned int> message_prns;
-            std::vector<unsigned int> pilot_prns;
 
-            local_codes = new LocalCodes(*codeModulator, gc_generator, options.f_sampling, options.f_chip); // make local codes time domain
+            local_codes = new LocalCodes_Host(*codeModulator, gc_generator, options.f_sampling, options.f_chip, message_prn_numbers); // make local codes time domain
 
             // if using pilot PRN(s)
             // - Modulation should support code division
@@ -207,20 +210,19 @@ int main(int argc, char *argv[])
                 {
                     std::cout << "Creating piloted multiple PRN correlator" << std::endl;
                     pilot_correlation_analyzer = new PilotCorrelationAnalyzer(options.analysis_window_size, options.nb_prns_per_symbol, options.nb_samples_per_code);
-                    generate_pilot_prn_list(pilot_prns, gc_generator, 1); // Only pilot 1 is used in this simulation
 #ifdef _CUDA
                     if (options.use_cuda)
                     {
                     	std::cout << "!!! USING CUDA !!!" << std::endl;
                         unsigned int cuda_device = cuda_manager.get_pilot_device(false);
-                        pilot_correlator = new PilotCorrelator_Cuda(gc_generator, *codeModulator, options.f_sampling, options.f_chip, pilot_prns, options.nb_prns_per_symbol, options.df_steps, options.batch_size, options.f_step_division, cuda_device);
+                        pilot_correlator = new PilotCorrelator_Cuda(gc_generator, *codeModulator, options.f_sampling, options.f_chip, pilot_prn_numbers, options.nb_prns_per_symbol, options.df_steps, options.batch_size, options.f_step_division, cuda_device);
                     }
                     else
                     {
-                    	pilot_correlator = new PilotCorrelator_Host(gc_generator, *codeModulator, options.f_sampling, options.f_chip, pilot_prns, options.nb_prns_per_symbol, options.df_steps, options.batch_size, options.f_step_division);
+                    	pilot_correlator = new PilotCorrelator_Host(gc_generator, *codeModulator, options.f_sampling, options.f_chip, pilot_prn_numbers, options.nb_prns_per_symbol, options.df_steps, options.batch_size, options.f_step_division);
                     }
 #else
-                    pilot_correlator = new PilotCorrelator_Host(gc_generator, *codeModulator, options.f_sampling, options.f_chip, pilot_prns, options.nb_prns_per_symbol, options.df_steps, options.batch_size, options.f_step_division);
+                    pilot_correlator = new PilotCorrelator_Host(gc_generator, *codeModulator, options.f_sampling, options.f_chip, pilot_prn_numbers, options.nb_prns_per_symbol, options.df_steps, options.batch_size, options.f_step_division);
 #endif
                     message_correlator = new MessageCorrelator(*local_codes, options.f_sampling, options.f_chip, options.nb_prns_per_symbol);
                     piloted_mprn_correlator = new PilotedMultiplePrnCorrelator(*pilot_correlation_analyzer, correlation_records, *pilot_correlator, *message_correlator);
@@ -229,16 +231,14 @@ int main(int argc, char *argv[])
             else if (options.modulation.isFrequencyDependant())
             {
                 std::cout << "Creating legacy multiple PRN correlator (frequency dependant)" << std::endl;
-                generate_message_prn_list(message_prns, gc_generator);
-                local_codes_fft = new LocalCodesFFT_Host(*codeModulator, gc_generator, options.f_sampling, options.f_chip, message_prns); // make local codes frequency domain
+                local_codes_fft = new LocalCodesFFT_Host(*codeModulator, gc_generator, options.f_sampling, options.f_chip, message_prn_numbers); // make local codes frequency domain
                 mprn_correlator = new MultiplePrnCorrelator_FreqDep(gc_generator, *local_codes_fft, options.f_sampling, options.f_chip, options.f_init_rx, options.nb_prns_per_symbol,
                                                                  options.prn_shift, options.tracking_phase_average_cycles, options.file_debugging);
             }
             else
             {
                 std::cout << "Creating legacy multiple PRN correlator (frequency independant)" << std::endl;
-                generate_message_prn_list(message_prns, gc_generator);
-                local_codes_fft = new LocalCodesFFT_Host(*codeModulator, gc_generator, options.f_sampling, options.f_chip, message_prns); // make local codes frequency domain
+                local_codes_fft = new LocalCodesFFT_Host(*codeModulator, gc_generator, options.f_sampling, options.f_chip, message_prn_numbers); // make local codes frequency domain
                 mprn_correlator = new MultiplePrnCorrelator_FreqIndep(gc_generator, *local_codes_fft, options.f_sampling, options.f_chip, options.nb_prns_per_symbol,
                                                                       options.prn_shift, options.file_debugging);
             }
@@ -445,7 +445,7 @@ void generate_message_prn_list(std::vector<unsigned int>& prn_list, GoldCodeGene
 
 void generate_pilot_prn_list(std::vector<unsigned int>& prn_list, GoldCodeGenerator& gc_generator, unsigned int nb_pilots)
 {
-	unsigned int i=0;
+    unsigned int i = 0;
 
 	for (unsigned int prni=gc_generator.get_nb_message_codes()+1; i<nb_pilots; prni++, i++)
 	{

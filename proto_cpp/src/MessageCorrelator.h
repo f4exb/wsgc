@@ -36,7 +36,7 @@
 #include "MessageCorrelationMatrices.h"
 #include <vector>
 
-class LocalCodes;
+class LocalCodes_Host;
 class PilotCorrelationAnalyzer;
 
 /**
@@ -53,7 +53,7 @@ public:
     * \param f_chip Chip rate (frequency)
     * \param prn_per_symbol Number of PRNs per symbol or averaging block
     */
-	MessageCorrelator(LocalCodes& local_codes, wsgc_float f_sampling, wsgc_float f_chip, unsigned int prn_per_symbol);
+	MessageCorrelator(LocalCodes_Host& local_codes, wsgc_float f_sampling, wsgc_float f_chip, unsigned int prn_per_symbol);
 	~MessageCorrelator();
 
 	/**
@@ -63,7 +63,7 @@ public:
 	void execute(PilotCorrelationAnalyzer& pilot_correlation_analyzer);
     
 protected:
-    LocalCodes& _local_codes; //!< Reference to the PRN signals local copy.
+    LocalCodes_Host& _local_codes; //!< Reference to the PRN signals local copy.
     ContinuousPhaseCarrier _local_oscillator; //!< Local oscillator for receiving frequency adjustment
     wsgc_float _f_sampling; //!< Sampling frequency
     wsgc_float _f_chip; //!< Chip rate

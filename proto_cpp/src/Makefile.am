@@ -23,6 +23,8 @@ wsgc_test_SOURCES = CodeModulator_BPSK.cpp \
     GaussFIR.cpp \
     GoldCodeGenerator.cpp \
     LocalCodes.cpp \
+    LocalCodes_Cuda.cu \
+    LocalCodes_Host.cpp \
     LocalCodesFFT.cpp \
     LocalCodesFFT_Host.cpp \
     MessageCorrelationMatrices.cpp \
@@ -86,6 +88,7 @@ wsgc_test_SOURCES = CodeModulator_BPSK.cpp \
     GaussFIR.cpp \
     GoldCodeGenerator.cpp \
     LocalCodes.cpp \
+    LocalCodes_Host.cpp \
     LocalCodesFFT.cpp \
     LocalCodesFFT_Host.cpp \
     MessageCorrelationMatrices.cpp \

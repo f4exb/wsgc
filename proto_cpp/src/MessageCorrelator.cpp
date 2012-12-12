@@ -30,13 +30,13 @@
 #include "MessageCorrelator.h"
 #include "GoldCodeGenerator.h"
 #include "PilotCorrelationAnalyzer.h"
-#include "LocalCodes.h"
+#include "LocalCodes_Host.h"
 #include "WsgcUtils.h"
 #include <cmath>
 #include <cstring>
 
 MessageCorrelator::MessageCorrelator(
-		LocalCodes& local_codes,
+		LocalCodes_Host& local_codes,
 		wsgc_float f_sampling,
 		wsgc_float f_chip,
 		unsigned int prn_per_symbol) :
