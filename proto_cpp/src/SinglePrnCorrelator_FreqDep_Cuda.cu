@@ -238,7 +238,6 @@ void SinglePrnCorrelator_FreqDep_Cuda::execute_averaging(bool first_half)
 
     for (unsigned int pi=0; pi < _nb_batch_prns; pi++)
     {
-    	int cublas_max_index;
     	unsigned int shift = pi+(first_half ? 0 : ad._B);
         
         strided_range<thrust::device_vector<cuComplex>::iterator> strided_ifft_out(_d_ifft_out.begin()+shift, _d_ifft_out.end(), 2*ad._B);
@@ -246,53 +245,6 @@ void SinglePrnCorrelator_FreqDep_Cuda::execute_averaging(bool first_half)
         cuComplex z = *max_element_it;
         unsigned int max_index = max_element_it - strided_ifft_out.begin();
         _batch_max_composite_indexes[pi] = max_index;
-        
-        /*
-    	cublasStatus_t stat = cublasIcamax(_cublas_handle, (ad._T*ad._Ifs*ad._Ifh),
-    			thrust::raw_pointer_cast(&_d_ifft_out[shift]),
-    			2*ad._B, &cublas_max_index);
-
-    	if (stat != CUBLAS_STATUS_SUCCESS)
-    	{
-    		std::ostringstream err_os;
-    		err_os << "CUBLAS Error: cublasIcamax failed with RC=" << stat;
-    		std::cout << err_os.str() << std::endl;
-    		throw WsgcException(err_os.str());
-    	}
-        */
-
-    	/*
-    	_batch_max_composite_indexes[pi] = cublas_max_index-1; // CUBLAS indexes are 1-based
-    	_batch_max_magnitudes[pi] = mag_squared_functor()(_d_ifft_out[]);
-    	cuComplex z = _d_ifft_out[absolute_max_index+shift];
-    	_batch_complex_values_max[pi].real() = z.x;
-    	_batch_complex_values_max[pi].real() = z.y;
-    	*/
-
-    	/*
-        max_tuple = thrust::reduce(    
-            thrust::make_zip_iterator(
-                thrust::make_tuple(
-                    thrust::make_permutation_iterator(_d_ifft_out.begin(), thrust::make_transform_iterator(thrust::make_counting_iterator(0), transpose_index_avgC(ad._B, ad._T, ad._Ifs, ad._Ifh, 0, first_half))),
-                    thrust::make_transform_iterator(thrust::make_counting_iterator(0), transpose_index_avgC(ad._B, ad._T, ad._Ifs, ad._Ifh, 0, first_half))
-                )
-            ),
-            thrust::make_zip_iterator(
-                thrust::make_tuple(
-                    thrust::make_permutation_iterator(_d_ifft_out.begin(), thrust::make_transform_iterator(thrust::make_counting_iterator(0)+(ad._T*ad._Ifs*ad._Ifh*ad._B), transpose_index_avgC(ad._B, ad._T, ad._Ifs, ad._Ifh, 0, first_half))),
-                    thrust::make_transform_iterator(thrust::make_counting_iterator(0)+(ad._T*ad._Ifs*ad._Ifh*ad._B), transpose_index_avgC(ad._B, ad._T, ad._Ifs, ad._Ifh, 0, first_half))
-                )
-            ),
-            init,
-            bigger_mag_tuple()
-        );
-        unsigned int absolute_max_index = thrust::get<1>(max_tuple);
-        
-        _batch_max_composite_indexes[pi] = absolute_max_index / ad._B;
-        _batch_max_magnitudes[pi] = mag_squared_functor()(thrust::get<0>(max_tuple));
-        _batch_complex_values_max[pi].real() = thrust::get<0>(max_tuple).x;
-        _batch_complex_values_max[pi].imag() = thrust::get<0>(max_tuple).y;
-        */
     }
 
     if (cudaThreadSynchronize() != cudaSuccess)
