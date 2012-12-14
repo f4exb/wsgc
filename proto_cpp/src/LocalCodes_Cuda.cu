@@ -44,7 +44,8 @@ LocalCodes_Cuda::LocalCodes_Cuda(CodeModulator& code_modulator,
             wsgc_float f_chip,
             std::vector<unsigned int>& symbols) :
     LocalCodes(code_modulator, gc_generator, f_sampling, f_chip, symbols),
-    _nb_codes(symbols.size())
+    _nb_codes(symbols.size()),
+    _codes_matrix(_nb_code_samples*symbols.size())
 {
     _h_fft_code_in = new wsgc_complex[_nb_code_samples];
     fill_codes_matrix();
@@ -79,10 +80,9 @@ void LocalCodes_Cuda::fill_codes_matrix()
         thrust::copy(
             reinterpret_cast<const cuComplex *>(_h_fft_code_in), 
             reinterpret_cast<const cuComplex *>(_h_fft_code_in+_nb_code_samples), 
-            _d_code.begin()
+            _codes_matrix.begin()+(_nb_code_samples*i)
         );
         
-        _codes_matrix.push_back(_d_code);
     }
 }
         

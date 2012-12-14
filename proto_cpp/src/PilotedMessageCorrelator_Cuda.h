@@ -19,31 +19,38 @@
 
      Static not real time prototype in C++
 
-     MessageCorrelator
+     MessageCorrelator_Host
 
      Given the frequency and time displacement of correlation peak given by the
      Pilot Correlator it searches correlation for all PRNs of the message symbols
      to select the one that was sent. It uses straightforward time correlation.
 
+     This is the CUDA implementation
+
 */
 
-#ifndef __MESSAGE_CORRELATOR_H__
-#define __MESSAGE_CORRELATOR_H__
+#ifndef __MESSAGE_CORRELATOR_CUDA_H__
+#define __MESSAGE_CORRELATOR_CUDA_H__
 
 #include "WsgcTypes.h"
 #include "CorrelationRecord.h"
 #include "ContinuousPhaseCarrier.h"
-#include "MessageCorrelationMatrices.h"
+#include "PilotedMessageCorrelator.h"
+
+#include <thrust/device_vector.h>
+#include <cuComplex.h>
+
 #include <vector>
 
-class LocalCodes_Host;
+class LocalCodes_Cuda;
 class PilotCorrelationAnalyzer;
+// TODO: make the CUDA and Host classes create their own flavour of local codes object. Pass Gold Code generator and modulator references to the super class.
 
 /**
  * \brief Correlator engine to acquire and track message PRN(s) using the frequency
- * and time displacement of correlation peak given by the Pilot Correlator
+ * and time displacement of correlation peak given by the Pilot Correlator - Host implementation
  */
-class MessageCorrelator
+class PilotedMessageCorrelator_Cuda : public PilotedMessageCorrelator
 {
 public:
     /**
@@ -53,28 +60,26 @@ public:
     * \param f_chip Chip rate (frequency)
     * \param prn_per_symbol Number of PRNs per symbol or averaging block
     */
-	MessageCorrelator(LocalCodes_Host& local_codes, wsgc_float f_sampling, wsgc_float f_chip, unsigned int prn_per_symbol);
-	~MessageCorrelator();
+	PilotedMessageCorrelator_Cuda(LocalCodes_Cuda& local_codes, wsgc_float f_sampling, wsgc_float f_chip, unsigned int prn_per_symbol);
+	virtual ~PilotedMessageCorrelator_Cuda();
 
 	/**
 	 * Do the message correlation over the length of one analysis window.
      * \param pilot_correlation_analyzer Reference to the pilot correlation analyzer
 	 */
-	void execute(PilotCorrelationAnalyzer& pilot_correlation_analyzer);
+	virtual void execute(PilotCorrelationAnalyzer& pilot_correlation_analyzer);
     
 protected:
-    LocalCodes_Host& _local_codes; //!< Reference to the PRN signals local copy.
+    LocalCodes_Cuda& _local_codes; //!< Reference to the PRN signals local copy.
     ContinuousPhaseCarrier _local_oscillator; //!< Local oscillator for receiving frequency adjustment
-    wsgc_float _f_sampling; //!< Sampling frequency
-    wsgc_float _f_chip; //!< Chip rate
     unsigned int _nb_msg_prns; //!< Number of message PRNs to explore
-    unsigned int _prn_per_symbol; //!< Number of PRNs per symbol that is also the number of PRNs per averaging block
     unsigned int _fft_N; //!< Size of FFT
-    wsgc_float _delta_f; //!< Retain receiving frequency
     wsgc_complex *_src; //!< Source samples of the current PRN multiplied by local oscillator
-    wsgc_complex *_corr_results; //!< Result of correlation of PRNs.
-    wsgc_complex *_corr_avgsums; //!< Result of PRNs correlation averages. Sparse matrix PRNi x [(delta t, max)]times PRN per symbol
-    wsgc_complex *_noise_corr_results; //!< Result of correlation of noise PRN.
+    thrust::device_vector<cuComplex> _d_corr_in; //!< Frequency mixed source to correlate
+    thrust::device_vector<cuComplex> _d_mul_out; //!< Result of fixed delay multiplications, one FFT size block per PRN, stride for averaging (average first strategy)
+    thrust::device_vector<int> _d_keys; //!< Keys for the reduce by key (unused), one key per PRN
+    thrust::device_vector<cuComplex> _d_corr_out; //!< Correlation result (reduce by key values), one sample per PRN
+
 };
 
-#endif /* __MESSAGE_CORRELATOR_H__ */
+#endif /* __MESSAGE_CORRELATOR_CUDA_H__ */

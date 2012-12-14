@@ -2,6 +2,7 @@
 #include "CudaManager.h"
 #include "SourceFFT_Cuda.h"
 #include "LocalCodesFFT_Cuda.h"
+#include "LocalCodes_Cuda.h"
 #include "ContinuousPhaseCarrier.h"
 #include "GoldCodeGenerator.h"
 #include "CodeModulator_BPSK.h"
@@ -9,6 +10,10 @@
 #include "Cuda_IndexTransforms.h"
 #include "WsgcException.h"
 #include "Cuda_StridedRange.h"
+#include "Cuda_RepeatRange.h"
+#include "Cuda_RepeatValue.h"
+#include "Cuda_ShiftedRange.h"
+#include "Cuda_ShiftedBySegmentsRange.h"
 
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
@@ -356,6 +361,195 @@ void test_cuda::test4(wsgc_complex *message_samples, GoldCodeGenerator& gc_gener
     cufftDestroy(ifft_plan);
 }
 
+
+void test_cuda::test_repeat_range()
+{
+	thrust::device_vector<int> data(3);
+    data[0] = 10;
+    data[1] = 20;
+    data[2] = 30;
+
+    // print the initial data
+    std::cout << "data: ";
+    thrust::copy(data.begin(), data.end(), std::ostream_iterator<int>(std::cout, " "));  std::cout << std::endl;
+
+    // create repeat range 3 times
+    repeat_range<thrust::device_vector<int>::iterator> data_3(data.begin(), data.end(), 3);
+
+    // print repeated data
+    std::cout << "data x 3: ";
+    thrust::copy(data_3.begin(), data_3.end(), std::ostream_iterator<int>(std::cout, " "));  std::cout << std::endl;
+
+	thrust::device_vector<int> mul(9);
+	mul[0] = 1;
+	mul[1] = 2;
+	mul[2] = 3;
+	mul[3] = 4;
+	mul[4] = 5;
+	mul[5] = 6;
+	mul[6] = 7;
+	mul[7] = 8;
+	mul[8] = 9;
+
+	thrust::device_vector<int> res(9);
+
+	thrust::transform(mul.begin(), mul.end(), data_3.begin(), res.begin(), thrust::multiplies<int>());
+
+	// print result
+    std::cout << "result: ";
+    thrust::copy(res.begin(), res.end(), std::ostream_iterator<int>(std::cout, " "));  std::cout << std::endl;
+
+}
+
+
+void test_cuda::test_repeat_values()
+{
+	thrust::device_vector<int> data(3);
+    data[0] = 0;
+    data[1] = 1;
+    data[2] = 2;
+
+    // print the initial data
+    std::cout << "data: ";
+    thrust::copy(data.begin(), data.end(), std::ostream_iterator<int>(std::cout, " "));  std::cout << std::endl;
+
+    // create repeat values 3 times
+    repeat_values<thrust::device_vector<int>::iterator> data_3(data.begin(), data.end(), 3);
+
+    // print repeated data
+    std::cout << "3 x data: ";
+    thrust::copy(data_3.begin(), data_3.end(), std::ostream_iterator<int>(std::cout, " "));  std::cout << std::endl;
+
+    // now we will use it as keys in a reduce by key
+
+    thrust::device_vector<int> val(3);
+    thrust::device_vector<int> key(3);
+
+	thrust::device_vector<int> mul(9);
+	mul[0] = 1;
+	mul[1] = 2;
+	mul[2] = 3;
+	mul[3] = 4;
+	mul[4] = 5;
+	mul[5] = 6;
+	mul[6] = 7;
+	mul[7] = 8;
+	mul[8] = 9;
+
+	// print input data:
+    std::cout << "input: ";
+    thrust::copy(mul.begin(), mul.end(), std::ostream_iterator<int>(std::cout, " "));  std::cout << std::endl;
+
+	thrust::reduce_by_key(data_3.begin(), data_3.end(), mul.begin(), key.begin(), val.begin());
+
+	// print result
+    std::cout << "keys: ";
+    thrust::copy(key.begin(), key.end(), std::ostream_iterator<int>(std::cout, " "));  std::cout << std::endl;
+    std::cout << "values: ";
+    thrust::copy(val.begin(), val.end(), std::ostream_iterator<int>(std::cout, " "));  std::cout << std::endl;
+
+    std::cout << "! now with a counting iterator (drum roll...) !" << std::endl;
+
+    repeat_values<thrust::counting_iterator<int> > count_3(thrust::make_counting_iterator(0), thrust::make_counting_iterator(3), 3);
+
+	thrust::reduce_by_key(count_3.begin(), count_3.end(), mul.begin(), key.begin(), val.begin());
+
+	// print result
+    std::cout << "keys: ";
+    thrust::copy(key.begin(), key.end(), std::ostream_iterator<int>(std::cout, " "));  std::cout << std::endl;
+    std::cout << "values: ";
+    thrust::copy(val.begin(), val.end(), std::ostream_iterator<int>(std::cout, " "));  std::cout << std::endl;
+
+
+}
+
+
+void test_cuda::test_shift_range()
+{
+	thrust::device_vector<int> data(9);
+	data[0] = 1;
+	data[1] = 2;
+	data[2] = 3;
+	data[3] = 4;
+	data[4] = 5;
+	data[5] = 6;
+	data[6] = 7;
+	data[7] = 8;
+	data[8] = 9;
+
+    // print the initial data
+    std::cout << "data     : ";
+    thrust::copy(data.begin(), data.end(), std::ostream_iterator<int>(std::cout, " "));  std::cout << std::endl;
+
+    // shift range 3 places forward
+    shifted_range<thrust::device_vector<int>::iterator> data_fwd_3(data.begin(), data.end(), 3);
+
+    // print shifted data
+    std::cout << "data -> 3: ";
+    thrust::copy(data_fwd_3.begin(), data_fwd_3.end(), std::ostream_iterator<int>(std::cout, " "));  std::cout << std::endl;
+
+    // shift range 3 places backward
+    shifted_range<thrust::device_vector<int>::iterator> data_bwd_3(data.begin(), data.end(), -3);
+
+    // print shifted data
+    std::cout << "data <- 3: ";
+    thrust::copy(data_bwd_3.begin(), data_bwd_3.end(), std::ostream_iterator<int>(std::cout, " "));  std::cout << std::endl;
+}
+
+
+void test_cuda::test_shifted_by_segments_range()
+{
+	thrust::device_vector<int> data(9);
+	data[0] = 0;
+	data[1] = 1;
+	data[2] = 2;
+	data[3] = 10;
+	data[4] = 11;
+	data[5] = 12;
+	data[6] = 20;
+	data[7] = 21;
+	data[8] = 22;
+
+    // print the initial data
+    std::cout << "data       : ";
+    thrust::copy(data.begin(), data.end(), std::ostream_iterator<int>(std::cout, " "));  std::cout << std::endl;
+
+    // segment size 3 shift 1 place forward
+    shifted_by_segments_range<thrust::device_vector<int>::iterator> data_3_fwd_1(data.begin(), data.end(), 3, 1);
+
+    // print shifted by segments data
+    std::cout << "data [3]->1: ";
+    thrust::copy(data_3_fwd_1.begin(), data_3_fwd_1.end(), std::ostream_iterator<int>(std::cout, " "));  std::cout << std::endl;
+
+    // segment size 3 shift 1 place backward
+    shifted_by_segments_range<thrust::device_vector<int>::iterator> data_3_bwd_1(data.begin(), data.end(), 3, -1);
+
+    // print shifted by segments data
+    std::cout << "data [3]<-1: ";
+    thrust::copy(data_3_bwd_1.begin(), data_3_bwd_1.end(), std::ostream_iterator<int>(std::cout, " "));  std::cout << std::endl;
+}
+
+
+void test_cuda::test_simple_time_correlation(wsgc_complex *message_samples, GoldCodeGenerator& gc_generator, CodeModulator_BPSK& code_modulator)
+{
+	thrust::device_vector<cuComplex> d_source_block(_options.fft_N);
+	thrust::device_vector<cuComplex> d_mul_block(_options.fft_N);
+
+    thrust::copy(
+        reinterpret_cast<const cuComplex *>(message_samples),
+        reinterpret_cast<const cuComplex *>(message_samples+_options.fft_N),
+        d_source_block.begin()
+    );
+
+    LocalCodes_Cuda local_codes(code_modulator, gc_generator, _options.f_sampling, _options.f_chip, _options.prn_list);
+    const thrust::device_vector<cuComplex>& lc_matrix = local_codes.get_local_codes();
+    shifted_range<thrust::device_vector<cuComplex>::const_iterator > lc_shifted_matrix(lc_matrix.begin(), lc_matrix.end(), -_options.code_shift);
+    thrust::transform(lc_shifted_matrix.begin(), lc_shifted_matrix.end(), d_source_block.begin(), d_mul_block.begin(), cmulc_functor2());
+
+    std::cout << "mul: ";
+    thrust::copy(d_mul_block.begin(), d_mul_block.end(), std::ostream_iterator<cuComplex>(std::cout, " "));  std::cout << std::endl;
+
+}
 
 void test_cuda::decomp_full_index(unsigned int full_index, unsigned int& bi, unsigned int& ffti, unsigned int& fsi, unsigned int& fhi)
 {

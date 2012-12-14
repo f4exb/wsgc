@@ -35,6 +35,11 @@ public:
 	void test2(wsgc_complex *message_samples, GoldCodeGenerator&, CodeModulator_BPSK&);
 	void test3(wsgc_complex *message_samples, GoldCodeGenerator&, CodeModulator_BPSK&);
 	void test4(wsgc_complex *message_samples, GoldCodeGenerator&, CodeModulator_BPSK&);
+	void test_simple_time_correlation(wsgc_complex *message_samples, GoldCodeGenerator&, CodeModulator_BPSK&);
+	void test_repeat_range();
+	void test_repeat_values();
+	void test_shift_range();
+	void test_shifted_by_segments_range();
 protected:
 	void decomp_full_index(unsigned int full_index, unsigned int& bi, unsigned int& ffti, unsigned int& fsi, unsigned int& fhi);
 	void decomp_strided_index(unsigned int full_index, unsigned int& ffti, unsigned int& fsi, unsigned int& fhi);

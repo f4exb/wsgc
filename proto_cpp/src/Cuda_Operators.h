@@ -32,7 +32,7 @@
 #include <cuComplex.h>
 
 #include <math.h>
-
+#include <iostream>
 
 /**
  * \brief average sum functor Complex
@@ -129,6 +129,33 @@ struct cmulc_functor2
 };
 
 /**
+ * \brief Complex member to member multiplication followed by conjugation
+ */
+struct cmulconjc_functor
+{
+    __host__ __device__
+    cuComplex operator()(const cuComplex& x, const cuComplex& y)
+    {
+        return make_cuFloatComplex  ((cuCrealf(x) * cuCrealf(y)) - 
+                                     (cuCimagf(x) * cuCimagf(y)),
+                                     - (cuCrealf(x) * cuCimagf(y)) - 
+                                     (cuCimagf(x) * cuCrealf(y)));
+    }
+};
+
+/**
+ * \brief Complex addition
+ */
+struct caddc_functor
+{
+    __host__ __device__
+    cuComplex operator()(const cuComplex& a, const cuComplex& b)
+    {
+        return cuCaddf(a, b);
+    }
+};
+
+/**
  * \brief Complex conjugate functor
  */
 struct conj_functor
@@ -174,7 +201,7 @@ template<typename T2, typename T>
 struct mag_squared_functor : thrust::unary_function<T2, T>
 {
     __host__ __device__
-    T operator()(T2 z)
+    T operator()(const T2& z)
     {
         return z.x*z.x + z.y*z.y;
     }
@@ -260,6 +287,16 @@ struct null_operator
         // do nothing
     }
 };
+
+
+/**
+ * Print a cuComplex to output stream
+ */
+std::ostream& operator<<(std::ostream& os, const cuComplex& z)
+{
+    os << "(" << z.x << ',' << z.y << ')';
+    return os;
+}
 
 
 #endif // __CUDA_OPERATORS_H__

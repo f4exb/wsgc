@@ -67,27 +67,17 @@ public:
 	virtual ~LocalCodes_Cuda();
 
     /**
-     * Get the vector of the local copy of the code corresponding to PRN index
-     * \param prni PRN index
-     * \return Reference to the vector of the local copy of the codes
-     */
-    const thrust::device_vector<cuComplex>& get_local_code(unsigned int prni) const
-    {
-        return _codes_matrix[prni];
-    }
-
-    /**
      * Get the vector of the local copy of the codes
      * \return Reference to the vector of the local copy of the codes
      */
-    const std::vector<thrust::device_vector<cuComplex> >& get_local_code() const
+    const thrust::device_vector<cuComplex>& get_local_codes() const
     {
         return _codes_matrix;
     }
 
 protected:
     unsigned int _nb_codes;
-    std::vector<thrust::device_vector<cuComplex> > _codes_matrix; //!< Matrix holding the local copy of the codes    
+    thrust::device_vector<cuComplex>  _codes_matrix; //!< Matrix holding the local copy of the codes PRN after PRN
     wsgc_complex *_h_fft_code_in; //!< This is the modulated code on the host
 
     /**

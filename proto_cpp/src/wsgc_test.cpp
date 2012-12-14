@@ -34,6 +34,7 @@
 #include "SimulatedSource.h"
 #include "CodeModulator_BPSK.h"
 #include "CodeModulator_OOK.h"
+#include "LocalCodes.h"
 #include "LocalCodes_Host.h"
 #include "WsgcUtils.h"
 #include "PilotCorrelationRecord.h"
@@ -42,6 +43,8 @@
 #include "MultiplePrnCorrelator_FreqIndep.h"
 #ifdef _CUDA
 #include "SinglePrnCorrelator_FreqDep_Cuda.h"
+#include "PilotedMessageCorrelator_Cuda.h"
+#include "LocalCodes_Cuda.h"
 #include "LocalCodesFFT_Cuda.h"
 #include "PilotCorrelator_Cuda.h"
 #include "SourceFFT_Cuda.h"
@@ -51,7 +54,8 @@
 #include "PilotCorrelator_Host.h"
 #include "SourceFFT_Host.h"
 #include "PilotCorrelator.h"
-#include "MessageCorrelator.h"
+#include "PilotedMessageCorrelator.h"
+#include "PilotedMessageCorrelator_Host.h"
 #include "PilotCorrelationAnalyzer.h"
 #include "PilotedMultiplePrnCorrelator.h"
 #include "DecisionBox.h"
@@ -120,7 +124,7 @@ int main(int argc, char *argv[])
             std::cout << "Produce signal samples..." << std::endl;
 
             LocalCodesFFT_Host *local_codes_fft = 0;
-            LocalCodes_Host *local_codes = 0;
+            LocalCodes *local_codes = 0;
             wsgc_complex *source_samples = 0;
             unsigned int nb_source_samples = 0;
             
@@ -192,12 +196,10 @@ int main(int argc, char *argv[])
             PilotCorrelationAnalyzer *pilot_correlation_analyzer = 0;
             const std::map<unsigned int, unsigned int> *prn_shift_occurences = 0;
             PilotCorrelator *pilot_correlator = 0;
-            MessageCorrelator *message_correlator = 0;
+            PilotedMessageCorrelator *message_correlator = 0;
             DecisionBox *decision_box = 0;
             std::vector<CorrelationRecord> correlation_records;
             static const CorrelationRecord tmp_correlation_record;
-
-            local_codes = new LocalCodes_Host(*codeModulator, gc_generator, options.f_sampling, options.f_chip, message_prn_numbers); // make local codes time domain
 
             // if using pilot PRN(s)
             // - Modulation should support code division
@@ -215,16 +217,21 @@ int main(int argc, char *argv[])
                     {
                     	std::cout << "!!! USING CUDA !!!" << std::endl;
                         unsigned int cuda_device = cuda_manager.get_pilot_device(false);
+                        local_codes = new LocalCodes_Cuda(*codeModulator, gc_generator, options.f_sampling, options.f_chip, message_prn_numbers); // make local codes time domain
                         pilot_correlator = new PilotCorrelator_Cuda(gc_generator, *codeModulator, options.f_sampling, options.f_chip, pilot_prn_numbers, options.nb_prns_per_symbol, options.df_steps, options.batch_size, options.f_step_division, cuda_device);
+                        message_correlator = new PilotedMessageCorrelator_Cuda(*((LocalCodes_Cuda *) local_codes), options.f_sampling, options.f_chip, options.nb_prns_per_symbol);
                     }
                     else
                     {
+                        local_codes = new LocalCodes_Host(*codeModulator, gc_generator, options.f_sampling, options.f_chip, message_prn_numbers); // make local codes time domain
                     	pilot_correlator = new PilotCorrelator_Host(gc_generator, *codeModulator, options.f_sampling, options.f_chip, pilot_prn_numbers, options.nb_prns_per_symbol, options.df_steps, options.batch_size, options.f_step_division);
+                        message_correlator = new PilotedMessageCorrelator_Host(*((LocalCodes_Host *) local_codes), options.f_sampling, options.f_chip, options.nb_prns_per_symbol);
                     }
 #else
+                    local_codes = new LocalCodes_Host(*codeModulator, gc_generator, options.f_sampling, options.f_chip, message_prn_numbers); // make local codes time domain
                     pilot_correlator = new PilotCorrelator_Host(gc_generator, *codeModulator, options.f_sampling, options.f_chip, pilot_prn_numbers, options.nb_prns_per_symbol, options.df_steps, options.batch_size, options.f_step_division);
+                    message_correlator = new PilotedMessageCorrelator_Host(*((LocalCodes_Host *) local_codes), options.f_sampling, options.f_chip, options.nb_prns_per_symbol);
 #endif
-                    message_correlator = new MessageCorrelator(*local_codes, options.f_sampling, options.f_chip, options.nb_prns_per_symbol);
                     piloted_mprn_correlator = new PilotedMultiplePrnCorrelator(*pilot_correlation_analyzer, correlation_records, *pilot_correlator, *message_correlator);
                 }
             }

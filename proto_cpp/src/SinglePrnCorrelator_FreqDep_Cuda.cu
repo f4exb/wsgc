@@ -242,7 +242,6 @@ void SinglePrnCorrelator_FreqDep_Cuda::execute_averaging(bool first_half)
         
         strided_range<thrust::device_vector<cuComplex>::iterator> strided_ifft_out(_d_ifft_out.begin()+shift, _d_ifft_out.end(), 2*ad._B);
         strided_range<thrust::device_vector<cuComplex>::iterator>::iterator max_element_it = thrust::max_element(strided_ifft_out.begin(), strided_ifft_out.end(), lesser_mag_squared<cuComplex>());    
-        cuComplex z = *max_element_it;
         unsigned int max_index = max_element_it - strided_ifft_out.begin();
         _batch_max_composite_indexes[pi] = max_index;
     }

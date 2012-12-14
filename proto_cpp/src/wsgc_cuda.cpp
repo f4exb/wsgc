@@ -31,12 +31,25 @@ int main(int argc, char *argv[])
     test_cuda_instance.test2(message_source.get_samples(), gc_generator, code_modulator);
 
     std::cout << "-- test3 : mul_ifft algo --" << std::endl;
-
     test_cuda_instance.test3(message_source.get_samples(), gc_generator, code_modulator);
 
-    std::cout << "-- test4 : zob --" << std::endl;
-
+    std::cout << "-- test4 : FFT correlation --" << std::endl;
     test_cuda_instance.test4(message_source.get_samples(), gc_generator, code_modulator);
+
+    std::cout << "-- test repeat range : repeat iterator --" << std::endl;
+    test_cuda_instance.test_repeat_range();
+
+    std::cout << "-- test repeat values: repeat values iterator --" << std::endl;
+    test_cuda_instance.test_repeat_values();
+
+    std::cout << "-- test shifted range: shifted range iterator --" << std::endl;
+    test_cuda_instance.test_shift_range();
+
+    std::cout << "-- test shifted by segments range: shifted by segments range iterator --" << std::endl;
+    test_cuda_instance.test_shifted_by_segments_range();
+
+    std::cout << "-- test5 : simple time correlation --" << std::endl;
+    test_cuda_instance.test_simple_time_correlation(message_source.get_samples(), gc_generator, code_modulator);
 
     return 0;
 }

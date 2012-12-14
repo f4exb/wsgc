@@ -28,7 +28,9 @@ wsgc_test_SOURCES = CodeModulator_BPSK.cpp \
     LocalCodesFFT.cpp \
     LocalCodesFFT_Host.cpp \
     MessageCorrelationMatrices.cpp \
-    MessageCorrelator.cpp \
+    PilotedMessageCorrelator.cpp \
+    PilotedMessageCorrelator_Host.cpp \
+    PilotedMessageCorrelator_Cuda.cu \
     MessageCorrelator_SoftPilot.cpp \
     Modulation.cpp \
     MultiplePrnCorrelator.cpp \
@@ -67,6 +69,8 @@ wsgc_cuda_SOURCES = CudaManager.cu \
 	CodeModulator_BPSK.cpp \
 	LocalCodesFFT.cpp \
 	LocalCodesFFT_Cuda.cu \
+	LocalCodes.cpp \
+	LocalCodes_Cuda.cu \
 	test_cuda.cu \
 	wsgc_cuda.cpp
 	
@@ -92,7 +96,8 @@ wsgc_test_SOURCES = CodeModulator_BPSK.cpp \
     LocalCodesFFT.cpp \
     LocalCodesFFT_Host.cpp \
     MessageCorrelationMatrices.cpp \
-    MessageCorrelator.cpp \
+    PilotedMessageCorrelator.cpp \
+    PilotedMessageCorrelator_Host.cpp \
     MessageCorrelator_SoftPilot.cpp \
     Modulation.cpp \
     MultiplePrnCorrelator.cpp \

@@ -33,7 +33,7 @@
 #include "PilotedMultiplePrnCorrelator.h"
 #include "PilotCorrelationAnalyzer.h"
 #include "PilotCorrelator.h"
-#include "MessageCorrelator.h"
+#include "PilotedMessageCorrelator.h"
 #include "WsgcUtils.h"
 #include <assert.h>
 #include <iostream>
@@ -43,7 +43,7 @@ PilotedMultiplePrnCorrelator::PilotedMultiplePrnCorrelator(
         PilotCorrelationAnalyzer& pilot_correlation_analyzer,
 		std::vector<CorrelationRecord>& correlation_records,
 		PilotCorrelator& pilot_correlator, 
-        MessageCorrelator& message_correlator) :
+        PilotedMessageCorrelator& message_correlator) :
     _pilot_correlation_analyzer(pilot_correlation_analyzer),
     _correlation_records(correlation_records),
     _pilot_correlator(pilot_correlator),

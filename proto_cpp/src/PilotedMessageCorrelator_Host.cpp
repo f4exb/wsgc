@@ -27,7 +27,7 @@
 
 */
 
-#include "MessageCorrelator.h"
+#include "PilotedMessageCorrelator_Host.h"
 #include "GoldCodeGenerator.h"
 #include "PilotCorrelationAnalyzer.h"
 #include "LocalCodes_Host.h"
@@ -35,19 +35,16 @@
 #include <cmath>
 #include <cstring>
 
-MessageCorrelator::MessageCorrelator(
+PilotedMessageCorrelator_Host::PilotedMessageCorrelator_Host(
 		LocalCodes_Host& local_codes,
 		wsgc_float f_sampling,
 		wsgc_float f_chip,
 		unsigned int prn_per_symbol) :
+	PilotedMessageCorrelator(f_sampling, f_chip, prn_per_symbol),
 	_local_codes(local_codes),
     _local_oscillator(f_sampling, _local_codes.get_gc_generator().get_nb_code_samples(f_sampling, f_chip)),
-	_f_sampling(f_sampling),
-	_f_chip(f_chip),
     _nb_msg_prns(_local_codes.get_gc_generator().get_nb_message_codes()+1), // +1 for noise PRN
-	_prn_per_symbol(prn_per_symbol),
-	_fft_N(_local_codes.get_gc_generator().get_nb_code_samples(f_sampling,f_chip)),
-    _delta_f(0.0)
+	_fft_N(_local_codes.get_gc_generator().get_nb_code_samples(f_sampling,f_chip))
 {
     static const wsgc_complex c_zero(0.0,0.0);
 
@@ -74,7 +71,7 @@ MessageCorrelator::MessageCorrelator(
 }
 
 
-MessageCorrelator::~MessageCorrelator()
+PilotedMessageCorrelator_Host::~PilotedMessageCorrelator_Host()
 {
 	// Free memory areas
 	delete[] _noise_corr_results;
@@ -84,7 +81,7 @@ MessageCorrelator::~MessageCorrelator()
 }
 
 
-void MessageCorrelator::execute(PilotCorrelationAnalyzer& pilot_correlation_analyzer)
+void PilotedMessageCorrelator_Host::execute(PilotCorrelationAnalyzer& pilot_correlation_analyzer)
 {
     static const wsgc_complex c_zero(0.0,0.0);
     static const wsgc_complex c_one(1.0,0.0);
