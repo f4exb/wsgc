@@ -35,6 +35,8 @@
 #include "Cuda_Operators.h"
 #include "Cuda_RepeatRange.h"
 #include "Cuda_RepeatValue.h"
+#include "Cuda_StridedShiftedRange.h"
+#include "Cuda_StridedRange.h"
 #include "Cuda_ShiftedBySegmentsRange.h"
 #include <thrust/iterator/counting_iterator.h>
 #include <thrust/iterator/transform_iterator.h>
@@ -54,9 +56,12 @@ PilotedMessageCorrelator_Cuda::PilotedMessageCorrelator_Cuda(
 	_fft_N(_local_codes.get_gc_generator().get_nb_code_samples(f_sampling,f_chip)),
 	_d_corr_in(_fft_N),
 	_d_mul_out(_fft_N*_nb_msg_prns),
-    _d_keys(_nb_msg_prns),
-    _d_corr_out(_nb_msg_prns)
+    _d_corr_out(_nb_msg_prns*_prn_per_symbol), //
+    _d_corr_out_avg(_nb_msg_prns),
+	_d_keys(_nb_msg_prns)
 {
+	static const cuComplex c_zero = {0.0, 0.0};
+	thrust::fill(_d_corr_out.begin(), _d_corr_out.end(), c_zero);
 	// Allocate memory areas
     _src = new wsgc_complex[_fft_N];
 }
@@ -71,10 +76,10 @@ PilotedMessageCorrelator_Cuda::~PilotedMessageCorrelator_Cuda()
 
 void PilotedMessageCorrelator_Cuda::execute(PilotCorrelationAnalyzer& pilot_correlation_analyzer)
 {
-    float avgsum_magnitude;
+    //float avgsum_magnitude;
     unsigned int pi = pilot_correlation_analyzer.get_start_analysis_pilot_correlation_records_index();
     const std::vector<PilotCorrelationRecord> pilot_correlation_records = pilot_correlation_analyzer.get_pilot_correlation_records();
-    int cuda_nb_msg_prns = _nb_msg_prns;
+    //int cuda_nb_msg_prns = _nb_msg_prns;
 
     for (unsigned int pai=0; pai < pilot_correlation_analyzer.get_analysis_window_size()*_prn_per_symbol; pi++, pai++) // scan PRNs in the window
     {
@@ -127,28 +132,31 @@ void PilotedMessageCorrelator_Cuda::execute(PilotCorrelationAnalyzer& pilot_corr
         thrust::transform(d_codes_shifted.begin(), d_codes_shifted.end(), d_corr_in_multi.begin(), _d_mul_out.begin(), cmulc_functor2()); // multiply together with many copies of source
 
         // reduce by key to get correlation value (sum of _d_mul_out segments) for each PRN, result keys will be PRN numbers incidentally
-        
-        repeat_values<thrust::counting_iterator<int> > key_counter(thrust::make_counting_iterator(0), thrust::make_counting_iterator(cuda_nb_msg_prns), _fft_N);
-        thrust::reduce_by_key(key_counter.begin(), key_counter.end(), _d_mul_out.begin(), _d_keys.begin(), _d_corr_out.begin(), thrust::equal_to<int>(), caddc_functor());
-        
-        // TODO: missing averaging on prn_per_symbol. This should be a prefix sum + stride kind of pb
-        
+
+        repeat_values<thrust::counting_iterator<int> > key_counter(thrust::make_counting_iterator(0), thrust::make_counting_iterator((int)_nb_msg_prns), _fft_N);
+        strided_shifted_range<thrust::device_vector<cuComplex>::iterator> d_corr_out_avg_in(_d_corr_out.begin(), _d_corr_out.end(), _prn_per_symbol, pai%_prn_per_symbol);
+        thrust::reduce_by_key(key_counter.begin(), key_counter.end(), _d_mul_out.begin(), _d_keys.begin(), d_corr_out_avg_in.begin(), thrust::equal_to<int>(), caddc_functor());
+
+        // Averaging sum
+        //thrust::copy(d_corr_out_avg_in.begin(), d_corr_out_avg_in.end(), _d_corr_out_avg.begin());
+        repeat_values<thrust::counting_iterator<int> > key_counter_avg(thrust::make_counting_iterator(0), thrust::make_counting_iterator((int)_nb_msg_prns), _prn_per_symbol);
+        thrust::reduce_by_key(key_counter_avg.begin(), key_counter_avg.end(), _d_corr_out.begin(), _d_keys.begin(), _d_corr_out_avg.begin(), thrust::equal_to<int>(), caddc_functor());
+
         // further reduce the result (values) to get the sum of all magnitudes in order to compute average
-        avgsum_magnitude = thrust::transform_reduce(_d_corr_out.begin(), _d_corr_out.end(), mag_squared_functor<cuComplex, float>(), 0.0, thrust::plus<float>());
+        float avgsum_magnitude = thrust::transform_reduce(_d_corr_out_avg.begin(), _d_corr_out_avg.end(), mag_squared_functor<cuComplex, float>(), 0.0, thrust::plus<float>());
         // search PRN index with largest magnitude (squared norm)
-        thrust::device_vector<cuComplex>::iterator max_prn_it = thrust::max_element(_d_corr_out.begin(), _d_corr_out.end(), lesser_mag_squared<cuComplex>());    
-        
+        thrust::device_vector<cuComplex>::iterator max_prn_it = thrust::max_element(_d_corr_out_avg.begin(), _d_corr_out_avg.end(), lesser_mag_squared<cuComplex>());
+
         cuComplex z = *max_prn_it;
 
     	correlation_record.prn_per_symbol_index = pai % _prn_per_symbol;
-    	correlation_record.prn_index_max = max_prn_it - _d_corr_out.begin();
+    	correlation_record.prn_index_max = max_prn_it - _d_corr_out_avg.begin();
     	correlation_record.magnitude_max = mag_squared_functor<cuComplex, float>()(z);
     	correlation_record.magnitude_avg = avgsum_magnitude / (_nb_msg_prns-1);
-    	correlation_record.noise_avg = mag_squared_functor<cuComplex, float>()(_d_corr_out.back()); // TODO: as averaging is not implemented yet this is not actually an average
+    	correlation_record.noise_avg = mag_squared_functor<cuComplex, float>()(_d_corr_out_avg.back());
     	correlation_record.pilot_shift = delta_t;
     	correlation_record.shift_index_max = delta_t; // copy over
     	correlation_record.f_rx = -delta_f; // copy over
     	correlation_record.phase_at_max = atan2(z.y, z.x);
     }
 }
-

@@ -67,8 +67,6 @@ void PilotCorrelator_Host::execute(PilotCorrelationAnalyzer& pilot_correlation_a
     unsigned int pilot_prn_index = pilot_correlation_analyzer.get_prn_index();
     unsigned int batch_number = pilot_prn_index / _nb_batch_prns;
 
-    // TODO: multithread for each pilot
-    
     execute(pilot_correlation_analyzer, _ifft_correlator_pilot_1);
 
     _new_batch_processed = false; // a new cycle begins
@@ -85,8 +83,6 @@ void PilotCorrelator_Host::execute(PilotCorrelationAnalyzer& pilot_correlation_a
     }
 }
 */
-
-//TODO: use native device vectors
 
 void PilotCorrelator_Cuda::execute(PilotCorrelationAnalyzer& pilot_correlation_analyzer, unsigned int pilot_prn_code_index)
 {

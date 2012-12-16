@@ -19,12 +19,13 @@
 
  Static not real time prototype in C++
 
- Repeating values iterator (or range) - inspired by the strided range
+ Strided iterator (or range) - found in Thrust library examples
+ http://code.google.com/p/thrust/source/browse/examples/strided_range.cu
 
  */
 
-#ifndef __CUDA_REPEAT_VALUES_H__
-#define __CUDA_REPEAT_VALUES_H__
+#ifndef __CUDA_STRIDED_SHIFTED_RANGE_H__
+#define __CUDA_STRIDED_SHIFTED_RANGE_H__
 
 #include <thrust/iterator/counting_iterator.h>
 #include <thrust/iterator/transform_iterator.h>
@@ -32,66 +33,68 @@
 #include <thrust/functional.h>
 
 /**
- * \brief Repeated values for each value in a range
+ * \brief Strided range of values
  *
- * These examples illustrate how to make repeated values with a range of values:
- *   repeat_values([0, 1, 2], 1) -> [0, 1, 2]
- *   repeat_values([0, 1, 2], 2) -> [0, 0, 1, 1, 2, 2]
- *   repeat_values([0, 1, 2], 3) -> [0, 0, 0, 1, 1, 1, 2, 2, 2]
+ * These examples illustrate how to make strided access to a range of values:
+ *   strided_range([0, 1, 2, 3, 4, 5, 6], 1) -> [0, 1, 2, 3, 4, 5, 6]
+ *   strided_range([0, 1, 2, 3, 4, 5, 6], 2) -> [0, 2, 4, 6]
+ *   strided_range([0, 1, 2, 3, 4, 5, 6], 3) -> [0, 3, 6]
  *   ...
  */
 template<typename Iterator>
-class repeat_values
+class strided_shifted_range
 {
 public:
 
 	typedef typename thrust::iterator_difference<Iterator>::type difference_type;
 
-	struct ediv_functor: public thrust::unary_function<difference_type,
+	struct stride_shift_functor: public thrust::unary_function<difference_type,
 			difference_type>
 	{
-		difference_type modulo;
+		difference_type stride;
+		difference_type shift;
 
-		ediv_functor(difference_type modulo) :
-			modulo(modulo)
+		stride_shift_functor(difference_type stride, difference_type shift) :
+				stride(stride), shift(shift)
 		{
 		}
 
 		__host__ __device__
 		difference_type operator()(const difference_type& i) const
 		{
-			return i / modulo;
+			return stride * i + shift;
 		}
 	};
 
 	typedef typename thrust::counting_iterator<difference_type> CountingIterator;
-	typedef typename thrust::transform_iterator<ediv_functor, CountingIterator> TransformIterator;
+	typedef typename thrust::transform_iterator<stride_shift_functor, CountingIterator> TransformIterator;
 	typedef typename thrust::permutation_iterator<Iterator, TransformIterator> PermutationIterator;
 
-	// type of the repeat_range iterator
+	// type of the strided_range iterator
 	typedef PermutationIterator iterator;
 
-	// construct repeat_range for the range [first,last)
-	repeat_values(Iterator first, Iterator last, difference_type repeat) :
-			first(first), last(last), repeat(repeat)
+	// construct strided_range for the range [first,last)
+	strided_shifted_range(Iterator first, Iterator last, difference_type stride, difference_type shift) :
+			first(first), last(last), stride(stride), shift(shift)
 	{
 	}
 
 	iterator begin(void) const
 	{
 		return PermutationIterator(first,
-				TransformIterator(CountingIterator(0), ediv_functor(repeat)));
+				TransformIterator(CountingIterator(0), stride_shift_functor(stride ,shift)));
 	}
 
 	iterator end(void) const
 	{
-		return begin() + ((last - first) * repeat);
+		return begin() + ((last - first) + (stride - 1)) / stride;
 	}
 
 protected:
 	Iterator first;
 	Iterator last;
-	difference_type repeat;
+	difference_type stride;
+	difference_type shift;
 };
 
-#endif // __CUDA_REPEAT_VALUES_H__
+#endif // __CUDA_STRIDED_SHIFTED_RANGE_H__

@@ -74,7 +74,6 @@ class LocalCodesFFT_Cuda : public LocalCodesFFT
 
     protected:
         unsigned int _nb_codes;
-        std::vector<thrust::device_vector<cuComplex> > _codes_matrix; //!< Matrix holding the local copy of the codes
         cufftHandle _fft_plan; //!< CUFFT transform plan for local code FFT computation
         wsgc_complex *_h_fft_code_in; //!< CUFFT input data. This is the modulated code
         thrust::device_vector<cuComplex> _d_code; //!< CUFFT input data. This is the modulated codes

@@ -31,21 +31,16 @@
 #include <thrust/iterator/permutation_iterator.h>
 #include <thrust/functional.h>
 
-#include <thrust/fill.h>
-#include <thrust/device_vector.h>
-
-// for printing
-#include <thrust/copy.h>
-#include <ostream>
-
-// this example illustrates how to make repeated values with a range of values
-// examples:
-//   shifted_range([0, 1, 2, 3, 4, 5, 6], 0)  -> [0, 1, 2, 3, 4, 5, 6]
-//   shifted_range([0, 1, 2, 3, 4, 5, 6], 1)  -> [1, 2, 3, 4, 5, 6, 0]
-//   shifted_range([0, 1, 2, 3, 4, 5, 6], 2)  -> [2, 3, 4, 5, 6, 0, 1]
-//   shifted_range([0, 1, 2, 3, 4, 5, 6], -1) -> [6, 0, 1, 2, 3, 4, 5]
-//   ...
-
+/**
+ * \brief shifted values in a range
+ *
+ * These examples illustrate how to make shifted values access within a range of values:
+ *   shifted_range([0, 1, 2, 3, 4, 5, 6], 0)  -> [0, 1, 2, 3, 4, 5, 6]
+ *   shifted_range([0, 1, 2, 3, 4, 5, 6], 1)  -> [1, 2, 3, 4, 5, 6, 0]
+ *   shifted_range([0, 1, 2, 3, 4, 5, 6], 2)  -> [2, 3, 4, 5, 6, 0, 1]
+ *   shifted_range([0, 1, 2, 3, 4, 5, 6], -1) -> [6, 0, 1, 2, 3, 4, 5]
+ *   ...
+ */
 template<typename Iterator>
 class shifted_range
 {

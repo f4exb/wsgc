@@ -17,10 +17,10 @@ int main(int argc, char *argv[])
 
 	test_cuda test_cuda_instance(options);
 
-	std::cout << "-- test1 : Source FFT --" << std::endl;
-	test_cuda_instance.test1();
+	//std::cout << "-- test1 : Source FFT --" << std::endl;
+	//test_cuda_instance.test1();
 
-    std::cout << "-- test2 : Frequency domain correlation --" << std::endl;
+    //std::cout << "-- test2 : Frequency domain correlation --" << std::endl;
 
     GoldCodeGenerator gc_generator(options.gc_nb_stages, options.nb_message_symbols, options.nb_service_symbols, options.g1_poly_powers, options.g2_poly_powers);
     SimulatedSource message_source(gc_generator, options.prn_list, options.f_sampling, options.f_chip, options.f_tx, options.code_shift);
@@ -28,28 +28,36 @@ int main(int argc, char *argv[])
     message_source.set_code_modulator(&code_modulator);
     message_source.create_samples();
 
-    test_cuda_instance.test2(message_source.get_samples(), gc_generator, code_modulator);
+    //test_cuda_instance.test2(message_source.get_samples(), gc_generator, code_modulator);
 
-    std::cout << "-- test3 : mul_ifft algo --" << std::endl;
-    test_cuda_instance.test3(message_source.get_samples(), gc_generator, code_modulator);
+    //std::cout << "-- test3 : mul_ifft algo --" << std::endl;
+    //test_cuda_instance.test3(message_source.get_samples(), gc_generator, code_modulator);
 
-    std::cout << "-- test4 : FFT correlation --" << std::endl;
-    test_cuda_instance.test4(message_source.get_samples(), gc_generator, code_modulator);
+    //std::cout << "-- test4 : FFT correlation --" << std::endl;
+    //test_cuda_instance.test4(message_source.get_samples(), gc_generator, code_modulator);
 
-    std::cout << "-- test repeat range : repeat iterator --" << std::endl;
-    test_cuda_instance.test_repeat_range();
+    //std::cout << "-- test repeat range : repeat iterator --" << std::endl;
+    //test_cuda_instance.test_repeat_range();
 
     std::cout << "-- test repeat values: repeat values iterator --" << std::endl;
     test_cuda_instance.test_repeat_values();
 
-    std::cout << "-- test shifted range: shifted range iterator --" << std::endl;
-    test_cuda_instance.test_shift_range();
+    //std::cout << "-- test shifted range: shifted range iterator --" << std::endl;
+    //test_cuda_instance.test_shift_range();
 
-    std::cout << "-- test shifted by segments range: shifted by segments range iterator --" << std::endl;
-    test_cuda_instance.test_shifted_by_segments_range();
+    //std::cout << "-- test shifted by segments range: shifted by segments range iterator --" << std::endl;
+    //test_cuda_instance.test_shifted_by_segments_range();
 
-    std::cout << "-- test5 : simple time correlation --" << std::endl;
-    test_cuda_instance.test_simple_time_correlation(message_source.get_samples(), gc_generator, code_modulator);
+    std::cout << "-- test strided folded range --" << std::endl;
+    test_cuda_instance.test_strided_folded_range();
+
+    //std::cout << "-- test5 : simple time correlation --" << std::endl;
+    //test_cuda_instance.test_simple_time_correlation(message_source.get_samples(), gc_generator, code_modulator);
+
+    std::cout << "-- test6 : multiple time correlation --" << std::endl;
+    options.prn_list.push_back(1);
+    options.prn_list.push_back(2);
+    test_cuda_instance.test_multiple_time_correlation(message_source.get_samples(), gc_generator, code_modulator);
 
     return 0;
 }
@@ -73,6 +81,7 @@ void fill_options(options_t& options)
 	options.code_shift = 10;
 	options.nb_batch_prns = 3;
 	options.nb_f_bins = 2;
+	options.prns_per_symbol = 4;
 }
 
 

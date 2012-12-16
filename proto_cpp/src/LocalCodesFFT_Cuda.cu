@@ -50,7 +50,14 @@ LocalCodesFFT_Cuda::LocalCodesFFT_Cuda(CodeModulator& code_modulator,
 {
     _h_fft_code_in = new wsgc_complex[_nb_code_samples];
     cufftResult_t fft_stat = cufftPlan1d(&_fft_plan, _nb_code_samples, CUFFT_C2C, _nb_codes);
-    //TODO: check return code
+
+    if (fft_stat != CUFFT_SUCCESS)
+    {
+    	std::ostringstream os;
+    	os << "CUFFT error: Failed to allocate FFT plan rc=" << fft_stat;
+    	throw WsgcException(os.str());
+    }
+
     fill_codes_matrix();
 }
 

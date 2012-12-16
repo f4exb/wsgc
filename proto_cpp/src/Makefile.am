@@ -56,7 +56,8 @@ wsgc_test_SOURCES = CodeModulator_BPSK.cpp \
     LocalCodesFFT_Cuda.cu \
     PilotCorrelator_Cuda.cu \
     SinglePrnCorrelator_FreqDep_Cuda.cu \
-    SourceFFT_Cuda.cu
+    SourceFFT_Cuda.cu \
+    Cuda_Operators.cu
 
 wsgc_test_LDADD = -lrt $(FFTW3F_LIBS) $(NVLDFLAGS)
 
@@ -71,6 +72,7 @@ wsgc_cuda_SOURCES = CudaManager.cu \
 	LocalCodesFFT_Cuda.cu \
 	LocalCodes.cpp \
 	LocalCodes_Cuda.cu \
+    Cuda_Operators.cu \
 	test_cuda.cu \
 	wsgc_cuda.cpp
 	

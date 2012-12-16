@@ -40,7 +40,13 @@ SourceFFT_Cuda::SourceFFT_Cuda(wsgc_float f_sampling,
 
     _h_fft_sample_in  = new wsgc_complex[_fft_N*_freq_step_division];
     cufftResult_t fft_stat = cufftPlan1d(&_fft_plan, _fft_N, CUFFT_C2C, _freq_step_division);
-    //TODO: check return code
+
+    if (fft_stat != CUFFT_SUCCESS)
+    {
+    	std::ostringstream os;
+    	os << "CUFFT error: Failed to allocate FFT plan rc=" << fft_stat;
+    	throw WsgcException(os.str());
+    }
 
     for (unsigned int fi=0; fi < _freq_step_division; fi++)
     {

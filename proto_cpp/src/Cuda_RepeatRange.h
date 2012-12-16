@@ -34,20 +34,15 @@
 #include <thrust/iterator/permutation_iterator.h>
 #include <thrust/functional.h>
 
-#include <thrust/fill.h>
-#include <thrust/device_vector.h>
-
-// for printing
-#include <thrust/copy.h>
-#include <ostream>
-
-// this example illustrates how to make repeated access to a range of values
-// examples:
-//   repeat_range([0, 1, 2], 1) -> [0, 1, 2]
-//   repeat_range([0, 1, 2], 2) -> [0, 1, 2, 0, 1, 2]
-//   repeat_range([0, 1, 2], 3) -> [0, 1, 2, 0, 1, 2, 0, 1, 2]
-//   ...
-
+/**
+ * \brief Repetition of the range of values
+ *
+ * These examples illustrate how to make repeated access to a range of values
+ *   repeat_range([0, 1, 2], 1) -> [0, 1, 2]
+ *   repeat_range([0, 1, 2], 2) -> [0, 1, 2, 0, 1, 2]
+ *   repeat_range([0, 1, 2], 3) -> [0, 1, 2, 0, 1, 2, 0, 1, 2]
+ *   ...
+ */
 template<typename Iterator>
 class repeat_range
 {

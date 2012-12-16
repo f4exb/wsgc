@@ -31,19 +31,14 @@
 #include <thrust/iterator/permutation_iterator.h>
 #include <thrust/functional.h>
 
-#include <thrust/fill.h>
-#include <thrust/device_vector.h>
-
-// for printing
-#include <thrust/copy.h>
-#include <ostream>
-
-// this example illustrates how to make repeated values with a range of values
-// examples:
-//   strided_shifted_range([0, 1, 2, 10, 11, 12, 20, 21, 22], 3, 1)   -> [1, 2, 0, 11, 12, 10, 21, 22, 20]
-//   strided_shifted_range([0, 1, 2, 10, 11, 12, 20, 21, 22], 3, -1)  -> [2, 0, 1, 12, 10, 11, 22, 20, 21]
-//   ...
-
+/**
+ * \brief Shifted range by equal length segments:
+ *
+ * These examples illustrate how to make shifted access by segments of equal length:
+ *   strided_shifted_range([0, 1, 2, 10, 11, 12, 20, 21, 22], 3, 1)   -> [1, 2, 0, 11, 12, 10, 21, 22, 20]
+ *   strided_shifted_range([0, 1, 2, 10, 11, 12, 20, 21, 22], 3, -1)  -> [2, 0, 1, 12, 10, 11, 22, 20, 21]
+ *   ...
+ */
 template<typename Iterator>
 class shifted_by_segments_range
 {

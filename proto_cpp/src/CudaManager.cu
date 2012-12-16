@@ -32,9 +32,23 @@
 #include <cuda_runtime_api.h>
 #include <shrUtils.h>
 
-CudaManager::CudaManager(unsigned int nb_message_symbols, unsigned int nb_pilots) :
+CudaManager::CudaManager(
+		unsigned int nb_message_symbols,
+		unsigned int nb_pilots,
+		unsigned int nb_code_samples,
+		unsigned int batch_size,
+		unsigned int df_steps,
+		unsigned int nb_prns_per_symbol,
+		unsigned int f_step_division
+		) :
 	_nb_message_symbols(nb_message_symbols+1), // include noise PRN
 	_nb_pilots(nb_pilots),
+	_nb_code_samples(nb_code_samples),
+	_complex_size(sizeof(cuComplex)),
+	_batch_size(batch_size),
+	_df_steps(df_steps),
+	_nb_prns_per_symbol(nb_prns_per_symbol),
+	_f_step_division(f_step_division),
 	_nb_cuda_devices(0),
 	_pilot1_cuda_device(0),
 	_pilot2_cuda_device(0),
@@ -61,7 +75,10 @@ void CudaManager::diagnose()
     {
         std::cout << "cudaGetDeviceCount returned %d\n-> %s\n" << (int)error_id << " -> " << cudaGetErrorString(error_id) << std::endl;
         _nb_cuda_devices = 0;
+        return;
     }
+
+   analyze_memory_profile();
 
     // TODO: check if device has enough memory
     // TODO: consider more in detail (devices already sorted in bogomips order) each device capabilities to allocate workload more evenly
@@ -181,6 +198,10 @@ void CudaManager::dump(std::ostringstream& os) const
 
 		os << "[" << it-_message_prn_allocation.begin() << "]:" << *it;
 	}
+
+	os << std::endl;
+	os << "Application CUDA memory profile:" << std::endl;
+	_wsgc_memory_profile.dump(os);
 }
 
 
@@ -196,3 +217,56 @@ void CudaManager::dump_device_info(std::ostringstream& os) const
         it->dump(os);
     }
 }
+
+void CudaManager::WsgcMemoryProfile::dump(std::ostringstream& os) const
+{
+	unsigned int total;
+
+	os << "Pilot processing:" << std::endl;
+	os << "LocalCodes_FFT matrix ................: " << std::right << std::setw(11) << _local_codes_fft_matrix << std::endl
+	   << "LocalCodes_FFT code (t) ..............: " << std::right << std::setw(11) << _local_codes_fft_code << std::endl
+	   << "SourceFFT in .........................: " << std::right << std::setw(11) << _source_fft_fft_in << std::endl
+	   << "SourceFFT out.........................: " << std::right << std::setw(11) << _source_fft_fft_out << std::endl
+	   << "Single PRN correlator fDep IFFT in ...: " << std::right << std::setw(11) << _sprn_corr_fdep_ifft_in << std::endl
+	   << "Single PRN correlator fDep IFFT out ..: " << std::right << std::setw(11) << _sprn_corr_fdep_ifft_out << std::endl;
+	total = _local_codes_fft_matrix
+			+ _local_codes_fft_code
+			+ _source_fft_fft_in
+			+ _source_fft_fft_out
+			+ _sprn_corr_fdep_ifft_in
+			+ _sprn_corr_fdep_ifft_out;
+	os << "Total Pilot ..........................: " << std::right << std::setw(11) << total << std::endl;
+
+	os << "Message processing:" << std::endl;
+	os << "LocalCodes matrix ....................: " << std::right << std::setw(11) << _local_codes_matrix << std::endl
+	   << "LocalCodes code (t) ..................: " << std::right << std::setw(11) << _local_codes_code << std::endl
+	   << "Piloted Msg correlator in ............: " << std::right << std::setw(11) << _pil_msg_corr_corr_in << std::endl
+	   << "Piloted Msg correlator mul ...........: " << std::right << std::setw(11) << _pil_msg_corr_mul_out << std::endl
+	   << "Piloted Msg correlator corr ..........: " << std::right << std::setw(11) << _pil_msg_corr_corr_out << std::endl
+	   << "Piloted Msg correlator corr avg ......: " << std::right << std::setw(11) << _pil_msg_corr_corr_out_avg << std::endl;
+	total = _local_codes_matrix
+			+ _local_codes_code
+			+ _pil_msg_corr_corr_in
+			+ _pil_msg_corr_mul_out
+			+ _pil_msg_corr_corr_out
+			+ _pil_msg_corr_corr_out_avg;
+	os << "Total Message ........................: " << std::right << std::setw(11) << total << std::endl;
+}
+
+void CudaManager::analyze_memory_profile()
+{
+	_wsgc_memory_profile._local_codes_matrix = _nb_message_symbols*_nb_code_samples*_complex_size;
+	_wsgc_memory_profile._local_codes_code = _nb_code_samples*_complex_size; // transient
+	_wsgc_memory_profile._local_codes_fft_matrix = _nb_code_samples*_nb_pilots*_complex_size;
+	_wsgc_memory_profile._local_codes_fft_code = _nb_code_samples*_nb_pilots*_complex_size; // transient
+	_wsgc_memory_profile._pil_msg_corr_corr_in = _nb_code_samples*_complex_size;
+	_wsgc_memory_profile._pil_msg_corr_mul_out = _nb_code_samples*_nb_message_symbols*_complex_size;
+	_wsgc_memory_profile._pil_msg_corr_corr_out = _nb_message_symbols*_nb_prns_per_symbol*_complex_size;
+	_wsgc_memory_profile._pil_msg_corr_corr_out_avg = _nb_message_symbols*_complex_size;
+	_wsgc_memory_profile._sprn_corr_fdep_ifft_in = 2*_batch_size*_nb_code_samples*_f_step_division*_df_steps*_complex_size;
+	_wsgc_memory_profile._sprn_corr_fdep_ifft_out = _wsgc_memory_profile._sprn_corr_fdep_ifft_in;
+	_wsgc_memory_profile._source_fft_fft_in = _nb_code_samples*_f_step_division*_complex_size;
+	_wsgc_memory_profile._source_fft_fft_out = _wsgc_memory_profile._source_fft_fft_in;
+}
+
+

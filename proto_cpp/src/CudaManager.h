@@ -27,6 +27,8 @@
 #ifndef __CUDA_MANAGER_H__
 #define __CUDA_MANAGER_H__
 
+#include "cuComplex.h"
+
 #include <sstream>
 #include <vector>
 #include <string>
@@ -40,10 +42,17 @@ class CudaManager
 public:
 	/**
 	 * Constructor
-	 * \param nb_message_symbols Number of message symbols to explore
-	 * \param nb_pilots Number of pilot PRNs to explore (limited to 0,1,2)
+	 * \param options Processing options
 	 */
-	CudaManager(unsigned int nb_message_symbols, unsigned int nb_pilots);
+	CudaManager(
+			unsigned int nb_message_symbols,
+			unsigned int nb_pilots,
+			unsigned int nb_code_samples,
+			unsigned int batch_size,
+			unsigned int df_steps,
+			unsigned int nb_prns_per_symbol,
+			unsigned int f_step_division
+			);
 	virtual ~CudaManager();
 
 	/**
@@ -96,7 +105,7 @@ protected:
         unsigned int       _pciDeviceID; //!< PCI device ID of the device
         unsigned int       _pciDomainID; //!< PCI domain ID of the device
         
-        CudaDeviceProfile() : _id(0), _gmemsize(0), _cpufreq(0.0), _nbcores(0) {}
+        CudaDeviceProfile() : _id(0), _gmemsize(0), _cpufreq(0.0), _nbcores(0), _pciBusID(0), _pciDeviceID(0), _pciDomainID(0) {}
         
         void dump(std::ostringstream& os) const
         {
@@ -133,8 +142,51 @@ protected:
         }
     };
 
+    class WsgcMemoryProfile
+    {
+    public:
+    	unsigned int _local_codes_matrix;
+    	unsigned int _local_codes_code;
+    	unsigned int _local_codes_fft_matrix;
+    	unsigned int _local_codes_fft_code;
+    	unsigned int _pil_msg_corr_corr_in;
+    	unsigned int _pil_msg_corr_mul_out;
+    	unsigned int _pil_msg_corr_corr_out;
+    	unsigned int _pil_msg_corr_corr_out_avg;
+    	unsigned int _sprn_corr_fdep_ifft_in;
+    	unsigned int _sprn_corr_fdep_ifft_out;
+    	unsigned int _source_fft_fft_in;
+    	unsigned int _source_fft_fft_out;
+
+    	WsgcMemoryProfile() :
+        	_local_codes_matrix(0),
+        	_local_codes_code(0),
+        	_local_codes_fft_matrix(0),
+        	_local_codes_fft_code(0),
+        	_pil_msg_corr_corr_in(0),
+        	_pil_msg_corr_mul_out(0),
+        	_pil_msg_corr_corr_out(0),
+        	_pil_msg_corr_corr_out_avg(0),
+        	_sprn_corr_fdep_ifft_in(0),
+        	_sprn_corr_fdep_ifft_out(0),
+        	_source_fft_fft_in(0),
+        	_source_fft_fft_out(0)
+    	{}
+
+    	virtual ~WsgcMemoryProfile()
+    	{}
+
+    	void dump(std::ostringstream& os) const;
+    };
+
 	unsigned int _nb_message_symbols;
 	unsigned int _nb_pilots;
+	unsigned int _nb_code_samples;
+	unsigned int _complex_size;
+	unsigned int _nb_prns_per_symbol;
+	unsigned int _batch_size;
+	unsigned int _f_step_division;
+	unsigned int _df_steps;
 	unsigned int _nb_cuda_devices;
 	unsigned int _pilot1_cuda_device;
 	unsigned int _pilot2_cuda_device;
@@ -142,6 +194,7 @@ protected:
 	unsigned int _message_first_device;
     std::vector<CudaDeviceProfile> _device_profiles;
 	std::vector<unsigned int> _message_prn_allocation;
+	WsgcMemoryProfile _wsgc_memory_profile;
     
   	/**
 	 * Create device profiles
@@ -152,6 +205,9 @@ protected:
      * Prints devices profiles to output stream
      */
     void dump_device_info(std::ostringstream& os) const;
+
+protected:
+	void analyze_memory_profile();
 };
 
 #endif /* __CUDA_MANAGER_H__ */

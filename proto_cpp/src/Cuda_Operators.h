@@ -180,8 +180,8 @@ struct mag_estim_functor
     {
         /* magnitude ~= alpha * max(|I|, |Q|) + beta * min(|I|, |Q|) */
 
-        wsgc_float abs_inphase = fabs(z.x);
-        wsgc_float abs_quadrature = fabs(z.y);
+        float abs_inphase = fabs(z.x);
+        float abs_quadrature = fabs(z.y);
 
         if (abs_inphase > abs_quadrature) 
         {
@@ -292,11 +292,6 @@ struct null_operator
 /**
  * Print a cuComplex to output stream
  */
-std::ostream& operator<<(std::ostream& os, const cuComplex& z)
-{
-    os << "(" << z.x << ',' << z.y << ')';
-    return os;
-}
-
+std::ostream& operator<<(std::ostream& os, const cuComplex& z);
 
 #endif // __CUDA_OPERATORS_H__

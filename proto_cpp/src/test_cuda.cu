@@ -14,6 +14,7 @@
 #include "Cuda_RepeatValue.h"
 #include "Cuda_ShiftedRange.h"
 #include "Cuda_ShiftedBySegmentsRange.h"
+#include "Cuda_StridedFoldedRange.h"
 
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
@@ -30,7 +31,15 @@
 test_cuda::test_cuda(options_t& options) :
 	_options(options)
 {
-	_cuda_manager = new CudaManager(options.nb_message_symbols, options.nb_pilot_prns);
+	_cuda_manager = new CudaManager(
+			options.nb_message_symbols,
+			options.nb_pilot_prns,
+			options.fft_N,
+			options.nb_batch_prns,
+			options.nb_f_bins,
+			options.prns_per_symbol,
+			options.freq_step_division
+			);
     _cuda_manager->diagnose();
     std::ostringstream cuda_os;
     _cuda_manager->dump(cuda_os);
@@ -404,10 +413,11 @@ void test_cuda::test_repeat_range()
 
 void test_cuda::test_repeat_values()
 {
-	thrust::device_vector<int> data(3);
-    data[0] = 0;
-    data[1] = 1;
-    data[2] = 2;
+	thrust::device_vector<int> data(4);
+    data[0] = 10;
+    data[1] = 11;
+    data[2] = 12;
+    data[3] = 13;
 
     // print the initial data
     std::cout << "data: ";
@@ -530,10 +540,43 @@ void test_cuda::test_shifted_by_segments_range()
 }
 
 
+void test_cuda::test_strided_folded_range()
+{
+	thrust::device_vector<int> data(15);
+	data[0] = 0;
+	data[1] = 1;
+	data[2] = 2;
+	data[3] = 3;
+	data[4] = 4;
+	data[5] = 5;
+	data[6] = 6;
+	data[7] = 7;
+	data[8] = 8;
+	data[9] = 9;
+	data[10] = 10;
+	data[11] = 11;
+	data[12] = 12;
+	data[13] = 13;
+	data[14] = 14;
+
+    // print the initial data
+    std::cout << "data                    : ";
+    thrust::copy(data.begin(), data.end(), std::ostream_iterator<int>(std::cout, " "));  std::cout << std::endl;
+
+    // strided folded range by 4
+    strided_folded_range<thrust::device_vector<int>::iterator> data_strided_folded_4(data.begin(), data.end(), 4);
+
+    std::cout << "data strided folded by 4: ";
+    thrust::copy(data_strided_folded_4.begin(), data_strided_folded_4.end(), std::ostream_iterator<int>(std::cout, " "));  std::cout << std::endl;
+    
+}
+
+
 void test_cuda::test_simple_time_correlation(wsgc_complex *message_samples, GoldCodeGenerator& gc_generator, CodeModulator_BPSK& code_modulator)
 {
 	thrust::device_vector<cuComplex> d_source_block(_options.fft_N);
 	thrust::device_vector<cuComplex> d_mul_block(_options.fft_N);
+	thrust::host_vector<cuComplex> h_mul_block(_options.fft_N);
 
     thrust::copy(
         reinterpret_cast<const cuComplex *>(message_samples),
@@ -547,8 +590,69 @@ void test_cuda::test_simple_time_correlation(wsgc_complex *message_samples, Gold
     thrust::transform(lc_shifted_matrix.begin(), lc_shifted_matrix.end(), d_source_block.begin(), d_mul_block.begin(), cmulc_functor2());
 
     std::cout << "mul: ";
-    thrust::copy(d_mul_block.begin(), d_mul_block.end(), std::ostream_iterator<cuComplex>(std::cout, " "));  std::cout << std::endl;
+    thrust::copy(d_mul_block.begin(), d_mul_block.end(), h_mul_block.begin());
+    
+    thrust::host_vector<cuComplex>::const_iterator it;
+    const thrust::host_vector<cuComplex>::const_iterator it_end;
+    unsigned int i = 0;
+    
+    for (; it != it_end; ++it)
+    {
+        std::cout << "[" << i << "] = " << h_mul_block[i] << std::endl;
+    }
+}
 
+void test_cuda::test_multiple_time_correlation(wsgc_complex *message_samples, GoldCodeGenerator& gc_generator, CodeModulator_BPSK& code_modulator)
+{
+	thrust::device_vector<cuComplex> d_source_block(_options.fft_N);
+	thrust::device_vector<cuComplex> d_mul_block(_options.fft_N*_options.prn_list.size());
+    thrust::device_vector<int> d_keys(_options.prn_list.size());
+    thrust::device_vector<cuComplex> d_corr_out(_options.prn_list.size());
+	thrust::host_vector<cuComplex> h_src_block(_options.fft_N*_options.prn_list.size());
+	thrust::host_vector<cuComplex> h_lcm_block(_options.fft_N*_options.prn_list.size());
+	thrust::host_vector<cuComplex> h_mul_block(_options.fft_N*_options.prn_list.size());
+
+    thrust::copy(
+        reinterpret_cast<const cuComplex *>(message_samples),
+        reinterpret_cast<const cuComplex *>(message_samples+_options.fft_N),
+        d_source_block.begin()
+    );
+
+    // make repetition of input
+    repeat_range<thrust::device_vector<cuComplex>::iterator> d_source_block_multi(d_source_block.begin(), d_source_block.end(), _options.prn_list.size());
+    // get local codes serial matrix    
+    LocalCodes_Cuda local_codes(code_modulator, gc_generator, _options.f_sampling, _options.f_chip, _options.prn_list);
+    const thrust::device_vector<cuComplex>& lc_matrix = local_codes.get_local_codes();
+    // shift local codes to match source delay
+    shifted_by_segments_range<thrust::device_vector<cuComplex>::const_iterator > lc_shifted_matrix(lc_matrix.begin(), lc_matrix.end(), _options.fft_N, -_options.code_shift);
+    // multiply local codes and source
+    thrust::transform(lc_shifted_matrix.begin(), lc_shifted_matrix.end(), d_source_block_multi.begin(), d_mul_block.begin(), cmulc_functor2());
+    // reduce by key to get correlation value (sum of _d_mul_out segments) for each PRN, result keys will be PRN numbers incidentally
+    int cuda_nb_msg_prns = _options.prn_list.size();
+    repeat_values<thrust::counting_iterator<int> > key_counter(thrust::make_counting_iterator(0), thrust::make_counting_iterator(cuda_nb_msg_prns), _options.fft_N);
+    thrust::reduce_by_key(key_counter.begin(), key_counter.end(), d_mul_block.begin(), d_keys.begin(), d_corr_out.begin(), thrust::equal_to<int>(), caddc_functor());
+    
+    // display result
+    /*
+    std::cout << "src:lcm:mul: " << std::endl;
+    
+    thrust::copy(d_source_block_multi.begin(), d_source_block_multi.end(), h_src_block.begin());
+    thrust::copy(lc_shifted_matrix.begin(), lc_shifted_matrix.end(), h_lcm_block.begin());
+    thrust::copy(d_mul_block.begin(), d_mul_block.end(), h_mul_block.begin());
+    
+    for (unsigned int i=0; i<_options.fft_N*_options.prn_list.size(); i++)
+    {
+        std::cout << "PRN " << i / _options.fft_N << "[" << i % _options.fft_N << "] = " << h_src_block[i] << " : " << h_lcm_block[i] << " : " << h_mul_block[i] << " : " << std::endl;
+    }
+    */
+    std::cout << "key counter out: ";
+    thrust::copy(key_counter.begin(), key_counter.end(), std::ostream_iterator<int>(std::cout, " "));  std::cout << std::endl;
+    
+    std::cout << "keys out: ";
+    thrust::copy(d_keys.begin(), d_keys.end(), std::ostream_iterator<int>(std::cout, " "));  std::cout << std::endl;
+    
+    std::cout << "corr out: ";
+    thrust::copy(d_corr_out.begin(), d_corr_out.end(), std::ostream_iterator<cuComplex>(std::cout, " "));  std::cout << std::endl;
 }
 
 void test_cuda::decomp_full_index(unsigned int full_index, unsigned int& bi, unsigned int& ffti, unsigned int& fsi, unsigned int& fhi)

@@ -82,17 +82,26 @@ int main(int argc, char *argv[])
         std::ostringstream os;
         options.print_options(os);
         std::cout << os.str() << std::endl;
-        
+
+        GoldCodeGenerator gc_generator(options.gc_nb_stages, options.nb_message_symbols, options.nb_service_symbols, options.g1_poly_powers, options.g2_poly_powers);
+
         // get and print CUDA mapping
 #ifdef _CUDA
-        CudaManager cuda_manager(options.nb_message_symbols, options.nb_pilot_prns);
+        CudaManager cuda_manager(
+        		gc_generator.get_nb_message_codes(),
+        		options.nb_pilot_prns,
+        		gc_generator.get_nb_code_samples(options.f_sampling, options.f_chip),
+        		options.batch_size,
+        		options.df_steps,
+        		options.nb_prns_per_symbol,
+        		options.f_step_division
+        		);
         cuda_manager.diagnose();
         std::ostringstream cuda_os;
         cuda_manager.dump(cuda_os);
         std::cout << cuda_os.str() << std::endl << std::endl;
 #endif
 
-        GoldCodeGenerator gc_generator(options.gc_nb_stages, options.nb_message_symbols, options.nb_service_symbols, options.g1_poly_powers, options.g2_poly_powers);
         CodeModulator *codeModulator = 0;
         SimulatedSource *message_source = 0;
         SourceMixer *source_mixer = 0;

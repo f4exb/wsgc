@@ -32,20 +32,15 @@
 #include <thrust/iterator/permutation_iterator.h>
 #include <thrust/functional.h>
 
-#include <thrust/fill.h>
-#include <thrust/device_vector.h>
-
-// for printing
-#include <thrust/copy.h>
-#include <ostream>
-
-// this example illustrates how to make strided access to a range of values
-// examples:
-//   strided_range([0, 1, 2, 3, 4, 5, 6], 1) -> [0, 1, 2, 3, 4, 5, 6]
-//   strided_range([0, 1, 2, 3, 4, 5, 6], 2) -> [0, 2, 4, 6]
-//   strided_range([0, 1, 2, 3, 4, 5, 6], 3) -> [0, 3, 6]
-//   ...
-
+/**
+ * \brief Strided range of values
+ *
+ * These examples illustrate how to make strided access to a range of values:
+ *   strided_range([0, 1, 2, 3, 4, 5, 6], 1) -> [0, 1, 2, 3, 4, 5, 6]
+ *   strided_range([0, 1, 2, 3, 4, 5, 6], 2) -> [0, 2, 4, 6]
+ *   strided_range([0, 1, 2, 3, 4, 5, 6], 3) -> [0, 3, 6]
+ *   ...
+ */
 template<typename Iterator>
 class strided_range
 {

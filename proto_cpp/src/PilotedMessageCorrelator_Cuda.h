@@ -68,7 +68,7 @@ public:
      * \param pilot_correlation_analyzer Reference to the pilot correlation analyzer
 	 */
 	virtual void execute(PilotCorrelationAnalyzer& pilot_correlation_analyzer);
-    
+
 protected:
     LocalCodes_Cuda& _local_codes; //!< Reference to the PRN signals local copy.
     ContinuousPhaseCarrier _local_oscillator; //!< Local oscillator for receiving frequency adjustment
@@ -77,8 +77,9 @@ protected:
     wsgc_complex *_src; //!< Source samples of the current PRN multiplied by local oscillator
     thrust::device_vector<cuComplex> _d_corr_in; //!< Frequency mixed source to correlate
     thrust::device_vector<cuComplex> _d_mul_out; //!< Result of fixed delay multiplications, one FFT size block per PRN, stride for averaging (average first strategy)
-    thrust::device_vector<int> _d_keys; //!< Keys for the reduce by key (unused), one key per PRN
     thrust::device_vector<cuComplex> _d_corr_out; //!< Correlation result (reduce by key values), one sample per PRN
+    thrust::device_vector<cuComplex> _d_corr_out_avg; //!< intermediate results for averaging
+    thrust::device_vector<int> _d_keys; //!< Keys for the reduce by key (unused), one key per PRN
 
 };
 
