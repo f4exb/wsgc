@@ -33,7 +33,6 @@
 #include "WsgcTypes.h"
 #include "CorrelationRecord.h"
 #include "ContinuousPhaseCarrier.h"
-#include "MessageCorrelationMatrices.h"
 #include <vector>
 
 class PilotCorrelationAnalyzer;

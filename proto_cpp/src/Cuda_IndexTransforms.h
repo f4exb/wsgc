@@ -46,9 +46,12 @@ struct transpose_index_A : public thrust::unary_function<size_t,size_t>
 	__host__ __device__
 	size_t operator()(size_t linear_index)
 	{
+        /*
 		size_t t = linear_index % _T;
 		size_t isf = (linear_index / _T) % _Isf;
 		return (_T * isf) + t;
+        */
+        return linear_index % (_T * _Isf);
 	}
 };
 

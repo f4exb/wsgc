@@ -27,11 +27,9 @@ wsgc_test_SOURCES = CodeModulator_BPSK.cpp \
     LocalCodes_Host.cpp \
     LocalCodesFFT.cpp \
     LocalCodesFFT_Host.cpp \
-    MessageCorrelationMatrices.cpp \
     PilotedMessageCorrelator.cpp \
     PilotedMessageCorrelator_Host.cpp \
     PilotedMessageCorrelator_Cuda.cu \
-    MessageCorrelator_SoftPilot.cpp \
     Modulation.cpp \
     MultiplePrnCorrelator.cpp \
     MultiplePrnCorrelator_FreqDep.cpp \
@@ -97,10 +95,8 @@ wsgc_test_SOURCES = CodeModulator_BPSK.cpp \
     LocalCodes_Host.cpp \
     LocalCodesFFT.cpp \
     LocalCodesFFT_Host.cpp \
-    MessageCorrelationMatrices.cpp \
     PilotedMessageCorrelator.cpp \
     PilotedMessageCorrelator_Host.cpp \
-    MessageCorrelator_SoftPilot.cpp \
     Modulation.cpp \
     MultiplePrnCorrelator.cpp \
     MultiplePrnCorrelator_FreqDep.cpp \

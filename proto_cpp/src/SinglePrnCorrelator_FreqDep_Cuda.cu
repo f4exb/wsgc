@@ -35,6 +35,12 @@
 #include "Cuda_Averagers.h"
 #include "CudaManager.h"
 #include "Cuda_StridedRange.h"
+#include "Cuda_StridedShiftedRange.h"
+#include "Cuda_RepeatRange.h"
+#include "Cuda_RepeatValue.h"
+#include "Cuda_RepeatShiftedRange.h"
+#include "Cuda_Repeat2ShiftedRange.h"
+#include "Cuda_IFFTAveragingRange.h"
 
 #include <thrust/iterator/counting_iterator.h>
 #include <thrust/iterator/transform_iterator.h>
@@ -58,6 +64,7 @@ SinglePrnCorrelator_FreqDep_Cuda::SinglePrnCorrelator_FreqDep_Cuda(
     _local_codes(code_modulator, gc_generator, f_sampling, f_chip, pilot_symbols),
     _d_ifft_in(2*nb_batch_prns*_fft_N*freq_step_division*nb_f_bins),
     _d_ifft_out(2*nb_batch_prns*_fft_N*freq_step_division*nb_f_bins),
+    _d_avg_keys(nb_batch_prns*_fft_N*freq_step_division*nb_f_bins),
     _nb_pilot_prns(_local_codes.get_nb_codes()),
     _cuda_device(cuda_device),
     _pilot_correlation_analyzer(0)
@@ -111,7 +118,13 @@ void SinglePrnCorrelator_FreqDep_Cuda::multiply_and_ifft(const thrust::device_ve
 	const thrust::device_vector<cuComplex>& d_local_codes = _local_codes.get_local_codes();
 
 	// Multiplication. Linear index ranging [0..T*Isf*Ihf[ making all FFT samples for all harmonic frequencies and sub-frequencies
+    repeat_range<thrust::device_vector<cuComplex>::const_iterator> d_source_repetition(d_source_block.begin(), d_source_block.end(), _nb_f_bins); // source
+    repeat_2_shifted_range<thrust::device_vector<cuComplex>::const_iterator> d_local_codes_shifted(d_local_codes.begin(), d_local_codes.end(), -(_nb_f_bins/2), _freq_step_division, _nb_f_bins); // local codes
+    strided_shifted_range<thrust::device_vector<cuComplex>::iterator> d_ifft_in_stride(_d_ifft_in.begin(), _d_ifft_in.end(), 2*_nb_batch_prns, prn_position); // multiplication results = input to IFFT
+    // replaced for_each with a simple transform using above transformed iterators
+    thrust::transform(d_source_repetition.begin(), d_source_repetition.end(), d_local_codes_shifted.begin(), d_ifft_in_stride.begin(), cmulc_functor2());
 
+    /*
     thrust::for_each(
         thrust::make_zip_iterator(
             thrust::make_tuple(
@@ -129,6 +142,7 @@ void SinglePrnCorrelator_FreqDep_Cuda::multiply_and_ifft(const thrust::device_ve
         ),
         cmulc_functor()
     );
+    */
 
     /*
     if (cudaThreadSynchronize() != cudaSuccess)
@@ -187,6 +201,7 @@ void SinglePrnCorrelator_FreqDep_Cuda::execute_averaging(bool first_half)
 	ad._Ifs = _freq_step_division;
 	ad._Ifh = _nb_f_bins;
 	unsigned int b_shift = (first_half ? 0 : _nb_batch_prns);
+    //int odd_parity = (first_half ? 0 : 1); // for reduce by key using transformed iterators
 
     if (cudaThreadSynchronize() != cudaSuccess)
     {
@@ -198,6 +213,7 @@ void SinglePrnCorrelator_FreqDep_Cuda::execute_averaging(bool first_half)
     _pilot_correlation_analyzer->_pilot_cuda_avg_times.push_back(PilotCorrelationAnalyzer::tmp_time);
     clock_gettime(PilotCorrelationAnalyzer::_time_option, &_pilot_correlation_analyzer->_pilot_cuda_avg_times.back()._beg);
 
+    // process using for_each and index transforms
 	if (_prn_per_block == 4) // supported size
 	{
 		Averager<4> averager;
@@ -218,6 +234,14 @@ void SinglePrnCorrelator_FreqDep_Cuda::execute_averaging(bool first_half)
 		throw WsgcException("CUDA Averaging Error: averaging not supported for this average size");
 	}
 
+    /*
+    // reduce by key using transformed iterators works but is much slower
+    repeat_values<thrust::counting_iterator<int> > key_counter_avg(thrust::make_counting_iterator(0), thrust::make_counting_iterator((int)(ad._T*ad._Ifs*ad._Ifh*ad._B)), _prn_per_block);
+    ifft_averaging_range<thrust::device_vector<cuComplex>::iterator> d_ifft_out_avg_in(_d_ifft_out.begin(), _d_ifft_out.end(), _prn_per_block, _nb_batch_prns, odd_parity);
+    ifft_averaged_range<thrust::device_vector<cuComplex>::iterator> d_ifft_out_avg_out(_d_ifft_out.begin(), _d_ifft_out.end(), _nb_batch_prns, odd_parity);
+    thrust::reduce_by_key(key_counter_avg.begin(), key_counter_avg.end(), d_ifft_out_avg_in.begin(), _d_avg_keys.begin(), d_ifft_out_avg_out.begin(), thrust::equal_to<int>(), caddc_functor());
+    */
+    
     if (cudaThreadSynchronize() != cudaSuccess)
     {
         throw WsgcException("CUDA Averaging Error: unable to synchronize threads after averaging");

@@ -155,6 +155,7 @@ protected:
     	unsigned int _pil_msg_corr_corr_out_avg;
     	unsigned int _sprn_corr_fdep_ifft_in;
     	unsigned int _sprn_corr_fdep_ifft_out;
+        unsigned int _sprn_corr_fdep_avg_keys;
     	unsigned int _source_fft_fft_in;
     	unsigned int _source_fft_fft_out;
 
@@ -169,6 +170,7 @@ protected:
         	_pil_msg_corr_corr_out_avg(0),
         	_sprn_corr_fdep_ifft_in(0),
         	_sprn_corr_fdep_ifft_out(0),
+            _sprn_corr_fdep_avg_keys(0),
         	_source_fft_fft_in(0),
         	_source_fft_fft_out(0)
     	{}
@@ -183,6 +185,7 @@ protected:
 	unsigned int _nb_pilots;
 	unsigned int _nb_code_samples;
 	unsigned int _complex_size;
+	unsigned int _int_size;
 	unsigned int _nb_prns_per_symbol;
 	unsigned int _batch_size;
 	unsigned int _f_step_division;

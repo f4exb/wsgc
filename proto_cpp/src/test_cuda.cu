@@ -15,6 +15,10 @@
 #include "Cuda_ShiftedRange.h"
 #include "Cuda_ShiftedBySegmentsRange.h"
 #include "Cuda_StridedFoldedRange.h"
+#include "Cuda_RepeatIncrementalRange.h"
+#include "Cuda_RepeatShiftedRange.h"
+#include "Cuda_Repeat2ShiftedRange.h"
+#include "Cuda_IFFTAveragingRange.h"
 
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
@@ -569,6 +573,143 @@ void test_cuda::test_strided_folded_range()
     std::cout << "data strided folded by 4: ";
     thrust::copy(data_strided_folded_4.begin(), data_strided_folded_4.end(), std::ostream_iterator<int>(std::cout, " "));  std::cout << std::endl;
     
+}
+
+
+void test_cuda::test_repeat_incremental_range()
+{
+	thrust::device_vector<int> data(7);
+	data[0] = 0;
+	data[1] = 1;
+	data[2] = 2;
+	data[3] = 3;
+	data[4] = 4;
+	data[5] = 5;
+	data[6] = 6;
+
+    // print the initial data
+    std::cout << "data                  : ";
+    thrust::copy(data.begin(), data.end(), std::ostream_iterator<int>(std::cout, " "));  std::cout << std::endl;
+
+    // reoeat incremental range by 4
+    repeat_incremental_range<thrust::device_vector<int>::iterator> data_repeat_inc_4(data.begin(), data.end(), 4);
+ 
+    std::cout << "data repeated inc by 4: ";
+    thrust::copy(data_repeat_inc_4.begin(), data_repeat_inc_4.end(), std::ostream_iterator<int>(std::cout, " "));  std::cout << std::endl;
+}
+
+
+void test_cuda::test_repeat_shifted_range()
+{
+	thrust::device_vector<int> data(7);
+	data[0] = 0;
+	data[1] = 1;
+	data[2] = 2;
+	data[3] = 3;
+	data[4] = 4;
+	data[5] = 5;
+	data[6] = 6;
+
+    // print the initial data
+    std::cout << "data                      : ";
+    thrust::copy(data.begin(), data.end(), std::ostream_iterator<int>(std::cout, " "));  std::cout << std::endl;
+
+    // repeat shifted range by 5 starting at -2
+    repeat_shifted_range<thrust::device_vector<int>::iterator> data_repeat_shift_m2_5(data.begin(), data.end(), -2, 5);
+ 
+    std::cout << "data repeated shift (-2,5): ";
+    thrust::copy(data_repeat_shift_m2_5.begin(), data_repeat_shift_m2_5.end(), std::ostream_iterator<int>(std::cout, " "));  std::cout << std::endl;
+}
+
+
+void test_cuda::test_repeat_2_shifted_range()
+{
+	thrust::device_vector<int> data(7);
+	data[0] = 0;
+	data[1] = 1;
+	data[2] = 2;
+	data[3] = 3;
+	data[4] = 4;
+	data[5] = 5;
+	data[6] = 6;
+
+    // print the initial data
+    std::cout << "data                        : ";
+    thrust::copy(data.begin(), data.end(), std::ostream_iterator<int>(std::cout, " "));  std::cout << std::endl;
+
+    // repeat shifted range by (2,5) starting at -2
+    repeat_2_shifted_range<thrust::device_vector<int>::iterator> data_repeat_shift_m2_2_5(data.begin(), data.end(), -2, 2, 5);
+ 
+    std::cout << "data repeated shift (-2,2,5): ";
+    thrust::copy(data_repeat_shift_m2_2_5.begin(), data_repeat_shift_m2_2_5.end(), std::ostream_iterator<int>(std::cout, " "));  std::cout << std::endl;
+}
+
+
+void test_cuda::test_ifft_averaging_range()
+{
+	thrust::device_vector<int> data(12);
+	data[0] = 0;
+	data[1] = 1;
+	data[2] = 2;
+	data[3] = 3;
+	data[4] = 4;
+	data[5] = 5;
+	data[6] = 6;
+	data[7] = 7;
+	data[8] = 8;
+	data[9] = 9;
+	data[10] = 10;
+	data[11] = 11;
+
+    // print the initial data
+    std::cout << "data                  : ";
+    thrust::copy(data.begin(), data.end(), std::ostream_iterator<int>(std::cout, " "));  std::cout << std::endl;
+
+    // even batch
+    ifft_averaging_range<thrust::device_vector<int>::iterator> data_ifft_averaging_4_3_0(data.begin(), data.end(), 4, 3, 0);
+ 
+    std::cout << "ifft averaging (4,3,0): ";
+    thrust::copy(data_ifft_averaging_4_3_0.begin(), data_ifft_averaging_4_3_0.end(), std::ostream_iterator<int>(std::cout, " "));  std::cout << std::endl;
+
+    // odd batch
+    ifft_averaging_range<thrust::device_vector<int>::iterator> data_ifft_averaging_4_3_1(data.begin(), data.end(), 4, 3, 1);
+ 
+    std::cout << "ifft averaging (4,3,1): ";
+    thrust::copy(data_ifft_averaging_4_3_1.begin(), data_ifft_averaging_4_3_1.end(), std::ostream_iterator<int>(std::cout, " "));  std::cout << std::endl;
+}
+
+
+void test_cuda::test_ifft_averaged_range()
+{
+	thrust::device_vector<int> data(12);
+	data[0] = 0;
+	data[1] = 1;
+	data[2] = 2;
+	data[3] = 3;
+	data[4] = 4;
+	data[5] = 5;
+	data[6] = 6;
+	data[7] = 7;
+	data[8] = 8;
+	data[9] = 9;
+	data[10] = 10;
+	data[11] = 11;
+
+    // print the initial data
+    std::cout << "data               : ";
+    thrust::copy(data.begin(), data.end(), std::ostream_iterator<int>(std::cout, " "));  std::cout << std::endl;
+
+    // even batch
+    ifft_averaged_range<thrust::device_vector<int>::iterator> data_ifft_averaged_4_3_0(data.begin(), data.end(), 3, 0);
+ 
+    std::cout << "ifft averaged (3,0): ";
+    thrust::copy(data_ifft_averaged_4_3_0.begin(), data_ifft_averaged_4_3_0.end(), std::ostream_iterator<int>(std::cout, " "));  std::cout << std::endl;
+
+    // odd batch
+    ifft_averaged_range<thrust::device_vector<int>::iterator> data_ifft_averaged_4_3_1(data.begin(), data.end(), 3, 1);
+ 
+    std::cout << "ifft averaged (3,1): ";
+    thrust::copy(data_ifft_averaged_4_3_1.begin(), data_ifft_averaged_4_3_1.end(), std::ostream_iterator<int>(std::cout, " "));  std::cout << std::endl;
 }
 
 

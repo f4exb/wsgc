@@ -84,7 +84,6 @@ int main(int argc, char *argv[])
         std::cout << os.str() << std::endl;
 
         GoldCodeGenerator gc_generator(options.gc_nb_stages, options.nb_message_symbols, options.nb_service_symbols, options.g1_poly_powers, options.g2_poly_powers);
-
         // get and print CUDA mapping
 #ifdef _CUDA
         CudaManager cuda_manager(

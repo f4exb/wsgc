@@ -139,6 +139,7 @@ protected:
 	int _onembed[1];                                 //!< CUFFT Plan parameter
 	thrust::device_vector<cuComplex> _d_ifft_in;     //!< Input area for IFFT
 	thrust::device_vector<cuComplex> _d_ifft_out;    //!< Output area for IFFT
+	thrust::device_vector<int> _d_avg_keys;          //!< Result keys for averaging
 	unsigned int _nb_pilot_prns;                     //!< Number of possible pilot PRNs
 	unsigned int _cuda_device;                       //!< CUDA device number on which to run
 	PilotCorrelationAnalyzer *_pilot_correlation_analyzer;

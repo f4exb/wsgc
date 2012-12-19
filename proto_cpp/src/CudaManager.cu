@@ -45,6 +45,7 @@ CudaManager::CudaManager(
 	_nb_pilots(nb_pilots),
 	_nb_code_samples(nb_code_samples),
 	_complex_size(sizeof(cuComplex)),
+	_int_size(sizeof(int)),
 	_batch_size(batch_size),
 	_df_steps(df_steps),
 	_nb_prns_per_symbol(nb_prns_per_symbol),
@@ -228,13 +229,15 @@ void CudaManager::WsgcMemoryProfile::dump(std::ostringstream& os) const
 	   << "SourceFFT in .........................: " << std::right << std::setw(11) << _source_fft_fft_in << std::endl
 	   << "SourceFFT out.........................: " << std::right << std::setw(11) << _source_fft_fft_out << std::endl
 	   << "Single PRN correlator fDep IFFT in ...: " << std::right << std::setw(11) << _sprn_corr_fdep_ifft_in << std::endl
-	   << "Single PRN correlator fDep IFFT out ..: " << std::right << std::setw(11) << _sprn_corr_fdep_ifft_out << std::endl;
+	   << "Single PRN correlator fDep IFFT out ..: " << std::right << std::setw(11) << _sprn_corr_fdep_ifft_out << std::endl
+	   << "Single PRN correlator fDep avg keys ..: " << std::right << std::setw(11) << _sprn_corr_fdep_avg_keys << std::endl;
 	total = _local_codes_fft_matrix
 			+ _local_codes_fft_code
 			+ _source_fft_fft_in
 			+ _source_fft_fft_out
 			+ _sprn_corr_fdep_ifft_in
-			+ _sprn_corr_fdep_ifft_out;
+			+ _sprn_corr_fdep_ifft_out
+            + _sprn_corr_fdep_avg_keys;
 	os << "Total Pilot ..........................: " << std::right << std::setw(11) << total << std::endl;
 
 	os << "Message processing:" << std::endl;
@@ -265,6 +268,7 @@ void CudaManager::analyze_memory_profile()
 	_wsgc_memory_profile._pil_msg_corr_corr_out_avg = _nb_message_symbols*_complex_size;
 	_wsgc_memory_profile._sprn_corr_fdep_ifft_in = 2*_batch_size*_nb_code_samples*_f_step_division*_df_steps*_complex_size;
 	_wsgc_memory_profile._sprn_corr_fdep_ifft_out = _wsgc_memory_profile._sprn_corr_fdep_ifft_in;
+	_wsgc_memory_profile._sprn_corr_fdep_avg_keys = _batch_size*_nb_code_samples*_f_step_division*_df_steps*_int_size;
 	_wsgc_memory_profile._source_fft_fft_in = _nb_code_samples*_f_step_division*_complex_size;
 	_wsgc_memory_profile._source_fft_fft_out = _wsgc_memory_profile._source_fft_fft_in;
 }

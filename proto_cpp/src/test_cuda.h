@@ -43,6 +43,11 @@ public:
 	void test_shift_range();
 	void test_shifted_by_segments_range();
 	void test_strided_folded_range();
+	void test_repeat_incremental_range();
+	void test_repeat_shifted_range();
+	void test_repeat_2_shifted_range();
+	void test_ifft_averaging_range();
+	void test_ifft_averaged_range();
 protected:
 	void decomp_full_index(unsigned int full_index, unsigned int& bi, unsigned int& ffti, unsigned int& fsi, unsigned int& fhi);
 	void decomp_strided_index(unsigned int full_index, unsigned int& ffti, unsigned int& fsi, unsigned int& fhi);
