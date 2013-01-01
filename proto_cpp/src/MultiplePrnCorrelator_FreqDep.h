@@ -46,6 +46,8 @@ class CodeModulator_BPSK;
  * receiving frequency makes it match exactly at zero IF. As oscillators are never infinitely stable there should be a frequency tracking
  * mechanism.
  *
+ * \deprecated Use PilotedMessageCorrelator classes for frequency dependant modulations
+ *
 */
 class MultiplePrnCorrelator_FreqDep : public MultiplePrnCorrelator
 {

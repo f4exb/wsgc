@@ -45,6 +45,8 @@ class GoldCodeGenerator;
  * can be done reliably even if the receiving frequency shifts by a certain tolerable amount. It is assumed that it stays within this amount throughout
  * the decoding process.
  *
+ * \deprecated Use UnpilotedMessageCorrelator classes for frequency independant modulations
+ *
 */
 class MultiplePrnCorrelator_FreqIndep : public MultiplePrnCorrelator
 {

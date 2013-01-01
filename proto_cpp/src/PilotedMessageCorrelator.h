@@ -27,8 +27,8 @@
 
 */
 
-#ifndef __MESSAGE_CORRELATOR_H__
-#define __MESSAGE_CORRELATOR_H__
+#ifndef __PILOTED_MESSAGE_CORRELATOR_H__
+#define __PILOTED_MESSAGE_CORRELATOR_H__
 
 #include "WsgcTypes.h"
 #include "CorrelationRecord.h"
@@ -66,4 +66,4 @@ protected:
     wsgc_float _delta_f; //!< Retain receiving frequency
 };
 
-#endif /* __MESSAGE_CORRELATOR_H__ */
+#endif /* __PILOTED_MESSAGE_CORRELATOR_H__ */

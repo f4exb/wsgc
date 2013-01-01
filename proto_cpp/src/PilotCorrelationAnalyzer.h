@@ -31,6 +31,7 @@
 #include "WsgcTypes.h"
 #include "PilotCorrelationRecord.h"
 #include "CorrelationRecord.h"
+#include "AutocorrelationRecord.h"
 #include <time.h>
 #include <vector>
 #include <map>

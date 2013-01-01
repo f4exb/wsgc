@@ -33,6 +33,8 @@
 #include <vector>
 #include <map>
 
+class Modulation;
+
 /**
  * \brief SampleAnalyzer Class to handle PRN samples sequencing for operation with only the message PRNs
  */
@@ -44,9 +46,14 @@ class DecisionBox_Unpiloted : public DecisionBox
 		 * \param prn_per_symbol Number of PRNs per symbol
          * \param fft_N Size of the FFT, this is also the number of samples in one PRN
          * \param correlation_records Reference to the correlation records obtained from the message correlator
-         * \param shift_occurences References to the PRN shift occurences 
+         * \param shift_occurences References to the PRN shift occurences
+         * \param modulation Reference to the modulation corresponding to the message modulation
 		 */
-        DecisionBox_Unpiloted(unsigned int prn_per_symbol, unsigned int fft_size, const std::vector<CorrelationRecord>& correlation_records, const std::map<unsigned int, unsigned int>& shift_occurences);
+        DecisionBox_Unpiloted(unsigned int prn_per_symbol,
+        		unsigned int fft_size,
+        		const std::vector<CorrelationRecord>& correlation_records,
+        		const std::map<unsigned int, unsigned int>& shift_occurences,
+        		const Modulation& modulation);
         
         virtual ~DecisionBox_Unpiloted();
 
@@ -64,8 +71,10 @@ class DecisionBox_Unpiloted : public DecisionBox
         const std::vector<CorrelationRecord>& _correlation_records; //!< Reference to the calculated correlation records
         const std::map<unsigned int, unsigned int>& _shift_occurences; //!< Reference to the calculated PRN time shifts occurences
         std::vector<std::pair<unsigned int, unsigned int> > _histo_shift_occurences; //!< Histogram of the PRN time shifts occurences
+        const Modulation& _modulation;
 
-        static const wsgc_float noise_margin_threshold; //<! max / noise max ratio threshold
+        static const wsgc_float noise_margin_threshold;      //<! max / noise max ratio threshold
+        static const wsgc_float max_to_avg_margin_threshold; //<! max magnitude / average magnitude ratio threshold
 
         /**
          * Select PRN for the estimation process depending on corresponding correlation record values and the preferred PRN time shift

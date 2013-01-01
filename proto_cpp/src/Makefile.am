@@ -11,8 +11,10 @@ AM_CXXFLAGS += $(CUDA_CFLAGS)
 # ls *.cpp -1 | awk '{printf "%s \\\n", $1}'
 wsgc_test_SOURCES = CodeModulator_BPSK.cpp \
     CodeModulator_OOK.cpp \
+    CodeModulator_OOK_detection.cpp \
     ContinuousPhaseCarrier.cpp \
     CorrelationRecord.cpp \
+    AutocorrelationRecord.cpp \
     DecisionBox.cpp \
     DecisionBox_Piloted.cpp \
     DecisionBox_Unpiloted.cpp \
@@ -30,6 +32,8 @@ wsgc_test_SOURCES = CodeModulator_BPSK.cpp \
     PilotedMessageCorrelator.cpp \
     PilotedMessageCorrelator_Host.cpp \
     PilotedMessageCorrelator_Cuda.cu \
+    UnpilotedMessageCorrelator_Host.cpp \
+    UnpilotedMultiplePrnCorrelator.cpp \
     Modulation.cpp \
     MultiplePrnCorrelator.cpp \
     MultiplePrnCorrelator_FreqDep.cpp \
@@ -45,6 +49,8 @@ wsgc_test_SOURCES = CodeModulator_BPSK.cpp \
     SimulatedSource.cpp \
     SinglePrnCorrelator_FreqDep.cpp \
     SinglePrnCorrelator_FreqDep_Host.cpp \
+    PrnAutocorrelator.cpp \
+    PrnAutocorrelator_Host.cpp \
     SourceFFT.cpp \
     SourceFFT_Host.cpp \
     SourceMixer.cpp \
@@ -80,8 +86,10 @@ else
 
 wsgc_test_SOURCES = CodeModulator_BPSK.cpp \
     CodeModulator_OOK.cpp \
+    CodeModulator_OOK_detection.cpp \
     ContinuousPhaseCarrier.cpp \
     CorrelationRecord.cpp \
+    AutocorrelationRecord.cpp \
     DecisionBox.cpp \
     DecisionBox_Piloted.cpp \
     DecisionBox_Unpiloted.cpp \
@@ -97,6 +105,8 @@ wsgc_test_SOURCES = CodeModulator_BPSK.cpp \
     LocalCodesFFT_Host.cpp \
     PilotedMessageCorrelator.cpp \
     PilotedMessageCorrelator_Host.cpp \
+    UnpilotedMessageCorrelator_Host.cpp \
+    UnpilotedMultiplePrnCorrelator.cpp \
     Modulation.cpp \
     MultiplePrnCorrelator.cpp \
     MultiplePrnCorrelator_FreqDep.cpp \
@@ -112,6 +122,8 @@ wsgc_test_SOURCES = CodeModulator_BPSK.cpp \
     SimulatedSource.cpp \
     SinglePrnCorrelator_FreqDep.cpp \
     SinglePrnCorrelator_FreqDep_Host.cpp \
+    PrnAutocorrelator.cpp \
+    PrnAutocorrelator_Host.cpp \
     SourceFFT.cpp \
     SourceFFT_Host.cpp \
     SourceMixer.cpp \
@@ -122,10 +134,22 @@ wsgc_test_LDADD = -lrt $(FFTW3F_LIBS)
 
 endif
                     
-wsgc_generator_SOURCES = wsgc_generator.cpp CodeModulator_BPSK.cpp ContinuousPhaseCarrier.cpp GoldCodeGenerator.cpp \
-                    LocalCodesFFT.cpp WsgcUtils.cpp Options.cpp SimulatedSource.cpp CodeModulator_OOK.cpp FadingModel.cpp \
-                    FadingModelNone.cpp FadingModelClarke.cpp Modulation.cpp SampleSequencer.cpp SourceMixer.cpp 
-                    
+wsgc_generator_SOURCES = wsgc_generator.cpp \
+	CodeModulator_BPSK.cpp \
+	ContinuousPhaseCarrier.cpp \
+	GoldCodeGenerator.cpp \
+    LocalCodesFFT.cpp \
+    WsgcUtils.cpp \
+    Options.cpp \
+    SimulatedSource.cpp \
+    CodeModulator_OOK.cpp \
+    CodeModulator_OOK_detection.cpp \
+    FadingModel.cpp \
+    FadingModelNone.cpp \
+    FadingModelClarke.cpp \
+    Modulation.cpp \
+    SampleSequencer.cpp \
+    SourceMixer.cpp 
 
 wsgc_generator_LDADD = -lrt $(FFTW3F_LIBS)
 

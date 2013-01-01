@@ -39,6 +39,11 @@
 
 class GoldCodeGenerator;
 
+/*
+ * \brief The legacy messages correlator super-class for frequency dependant and independant modulation floavours
+ * \deprecated Use PilotedMessageCorrelator classes instead for frequency dependant modulations and UnpilotedMessageCorrelator
+ * classes for frequency independant mudulations
+ */
 class MultiplePrnCorrelator
 {
     public:

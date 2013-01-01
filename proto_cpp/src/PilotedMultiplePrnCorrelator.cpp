@@ -34,6 +34,7 @@
 #include "PilotCorrelationAnalyzer.h"
 #include "PilotCorrelator.h"
 #include "PilotedMessageCorrelator.h"
+#include "PrnAutocorrelator.h"
 #include "WsgcUtils.h"
 #include <assert.h>
 #include <iostream>
@@ -43,11 +44,13 @@ PilotedMultiplePrnCorrelator::PilotedMultiplePrnCorrelator(
         PilotCorrelationAnalyzer& pilot_correlation_analyzer,
 		std::vector<CorrelationRecord>& correlation_records,
 		PilotCorrelator& pilot_correlator, 
-        PilotedMessageCorrelator& message_correlator) :
+        PilotedMessageCorrelator& message_correlator,
+        PrnAutocorrelator& prn_autocorrelator) :
     _pilot_correlation_analyzer(pilot_correlation_analyzer),
     _correlation_records(correlation_records),
     _pilot_correlator(pilot_correlator),
-    _message_correlator(message_correlator)
+    _message_correlator(message_correlator),
+    _prn_autocorrelator(prn_autocorrelator)
 {}
 
 
@@ -67,8 +70,16 @@ void PilotedMultiplePrnCorrelator::make_correlation(unsigned int pilot_prn_code_
 	static const CorrelationRecord tmp_correlation_record;
     unsigned int prn_index = _pilot_correlation_analyzer.get_prn_index();
 
+    // autocorrelation - removed not useful for piloted operation
+    /*
+    _prn_autocorrelator.set_source_block(_pilot_correlation_analyzer.get_last_samples(), prn_index);
+    _prn_autocorrelator.make_correlation();
+    */
+
+    // pilot correlation
     _pilot_correlator.execute(_pilot_correlation_analyzer, pilot_prn_code_index);
 
+    // message correlation
     if (_pilot_correlator.new_batch_processed())
     {
         for (int pi=_pilot_correlator.get_batch_size()-1; pi >= 0; pi--)

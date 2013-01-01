@@ -25,18 +25,25 @@
 */
 #include "WsgcUtils.h"
 #include "DecisionBox_Unpiloted.h"
+#include "Modulation.h"
 #include <iostream>
 #include <sstream>
 #include <iomanip>
 #include <algorithm>
 
-const wsgc_float DecisionBox_Unpiloted::noise_margin_threshold = 1.3; // max / noise max ratio threshold. Used to be 1.2 however this is slightly too sensitive as it gets false decodes in complete noise
+const wsgc_float DecisionBox_Unpiloted::noise_margin_threshold = 1.3; // max / noise max ratio threshold. Used to be 1.2
+const wsgc_float DecisionBox_Unpiloted::max_to_avg_margin_threshold = 1.1; // max / avg magnitude ratio threshold.
 
 //=================================================================================================
-DecisionBox_Unpiloted::DecisionBox_Unpiloted(unsigned int prn_per_symbol, unsigned int fft_size, const std::vector<CorrelationRecord>& correlation_records, const std::map<unsigned int, unsigned int>& shift_occurences) :
+DecisionBox_Unpiloted::DecisionBox_Unpiloted(unsigned int prn_per_symbol,
+		unsigned int fft_size,
+		const std::vector<CorrelationRecord>& correlation_records,
+		const std::map<unsigned int, unsigned int>& shift_occurences,
+		const Modulation& modulation) :
     DecisionBox(prn_per_symbol, fft_size),
     _correlation_records(correlation_records),
-    _shift_occurences(shift_occurences)
+    _shift_occurences(shift_occurences),
+    _modulation(modulation)
 {}
 
   
@@ -189,6 +196,14 @@ void DecisionBox_Unpiloted::estimate_symbols()
                         
                         std::cout << os.str();
                     }
+                    else
+                    {
+                    	std::cout << "    -  symbol already validated skipping..." << std::endl;
+                    }
+                }
+                else
+                {
+                	std::cout << "    -  record not selected skipping..." << std::endl;
                 }
                 
                 // end of cycle: if no matching symbol was found take any symbol found in the cycle outside the preferred index (that would othewise have matched)
@@ -215,5 +230,16 @@ void DecisionBox_Unpiloted::estimate_symbols()
 //=================================================================================================
 bool DecisionBox_Unpiloted::select_record(std::vector<CorrelationRecord>::const_iterator& record_it, unsigned int preferred_shift)
 {
-    return ((record_it->shift_index_max == preferred_shift) && ((record_it->magnitude_max / record_it->noise_max) > noise_margin_threshold));
+	if (_modulation.getScheme() == Modulation::Modulation_OOK)
+	{
+		return ((record_it->shift_index_max == preferred_shift) && ((record_it->magnitude_max / record_it->magnitude_avg) > max_to_avg_margin_threshold));
+	}
+	else if (_modulation.getScheme() == Modulation::Modulation_BPSK)
+	{
+		return ((record_it->shift_index_max == preferred_shift) && ((record_it->magnitude_max / record_it->noise_max) > noise_margin_threshold));
+	}
+	else
+	{
+		return record_it->shift_index_max == preferred_shift;
+	}
 }
