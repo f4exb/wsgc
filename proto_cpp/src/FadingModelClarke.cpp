@@ -67,8 +67,8 @@ void FadingModelClarke::apply_fading(const wsgc_complex *samples_in, wsgc_comple
         for (unsigned int path_i=0; path_i < _nb_paths; path_i++)
         {
             wsgc_float x = cos(((2.0*path_i)*M_PI+theta_factors[path_i])/(4*_nb_paths));
-            h += (cos(2.0*M_PI*_spread_frequency*x*(_global_sample_index/_f_sampling)+alpha_factors[path_i]),
-                  sin(2.0*M_PI*_spread_frequency*x*(_global_sample_index/_f_sampling)+beta_factors[path_i]));
+            h.real() += cos(2.0*M_PI*_spread_frequency*x*(_global_sample_index/_f_sampling)+alpha_factors[path_i]);
+            h.imag() += sin(2.0*M_PI*_spread_frequency*x*(_global_sample_index/_f_sampling)+beta_factors[path_i]);
         }
         
         //h /= 1.0/sqrt(_nb_paths);

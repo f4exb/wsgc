@@ -46,6 +46,7 @@ class FadingModelWatterson : public FadingModel
             wsgc_float delay;
             wsgc_float amplitude_factor;
             wsgc_float spread_frequency;
+            wsgc_float offset_frequency;
         } FadingModelPath_t;
     
         FadingModelWatterson(wsgc_float f_sampling);
@@ -53,7 +54,7 @@ class FadingModelWatterson : public FadingModel
         virtual void apply_fading(const wsgc_complex *samples_in, wsgc_complex *samples_out, unsigned int samples_length);
         virtual void print_fading_data(std::ostringstream& os) const;
         virtual unsigned int get_output_size(unsigned int input_size) const;
-        void add_path_description(wsgc_float delay, wsgc_float amplitude_factor, wsgc_float spread_frequency);
+        void add_path_description(wsgc_float delay, wsgc_float amplitude_factor, wsgc_float spread_frequency, wsgc_float offset_frequency);
         void calculate_paths_description();
         
     private:

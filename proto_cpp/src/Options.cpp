@@ -535,8 +535,8 @@ void Options::get_help(std::ostringstream& os)
         {"-B", "--batch-size", "Batch size in number of PRNs for pilot processing", "int", "3"},
         {"-p", "--prns", "Symbol PRN numbers in a comma separated list (overrides -R)", "string", "null (uses random option)"},
         {"-R", "--random-prns", "Number of random symbols to generate", "int", "4"},
-        {"-f", "--fading-model", "Fading model data (see documentation)", "string", "null (no fading)"},
-        {"-d", "--modulation-scheme", "Modulation scheme (see documentation)", "string", "BPSK"},
+        {"-f", "--fading-model", "Fading model data (see short help below)", "string", "null (no fading)"},
+        {"-d", "--modulation-scheme", "Modulation scheme (see short help below)", "string", "BPSK"},
         {"-z", "--analysis-window-size", "Pilot analysis window size in number of symbols", "int", "4"},
         {"-o", "--samples-output-file", "Output file for generated samples", "string", ""},
         {0,0,0,0,0}
@@ -579,8 +579,18 @@ void Options::get_help(std::ostringstream& os)
         i++;
     } while (help_lines[i].short_option);
     
-    os << std::endl << "Fading Model Clarke: -f \"C:<nb paths>,<frequency spread>\"" << std::endl;
-    os << std::endl << "Example: wsgc_test -s 4096 -c 1023 -C 1020 -t 100.0 -r 100.1 -n -24 -N 4 -I 0 -R 6" << std::endl; 
+    os << std::endl;
+    os << "Modulation schemes:" << std::endl;
+    os << " - BPSK: BPSK" << std::endl;
+    os << " - OOK : OOK"  << std::endl;
+    os << " - CW  : CW (no message: only to test fading models with wsgc_generator)" << std::endl;
+    os << std::endl;
+    os << "Fading models:" << std::endl;
+    os << " - Clarke:    -f \"C:<nb paths>,<frequency spread (Hz)>\"" << std::endl;
+    os << " - Watterson: -f \"W:<path params>/<path params>/...\"" << std::endl;
+    os << "     path params: <delay (s)>,<amplitude>,<f Doppler (Hz)>,<f offset (Hz)>" << std::endl;
+    os << std::endl;
+    os << "Example: wsgc_test -s 4096 -c 1023 -C 1020 -t 100.0 -r 100.1 -n -24 -N 4 -I 0 -R 6" << std::endl;
 }
 
         
@@ -750,7 +760,7 @@ bool Options::parse_fading_model_data(std::string fading_data_str)
                             }
                             else
                             {
-                                static_cast<FadingModelWatterson*>(_fading_model)->add_path_description(raw_float_parameters[0], raw_float_parameters[1], raw_float_parameters[2]);
+                                static_cast<FadingModelWatterson*>(_fading_model)->add_path_description(raw_float_parameters[0], raw_float_parameters[1], raw_float_parameters[2], raw_float_parameters[3]);
                             }
                         }
                         else

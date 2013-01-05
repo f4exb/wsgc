@@ -48,7 +48,7 @@ FadingModelWatterson::~FadingModelWatterson()
 }
 
 
-void FadingModelWatterson::add_path_description(wsgc_float delay, wsgc_float amplitude_factor, wsgc_float spread_frequency)
+void FadingModelWatterson::add_path_description(wsgc_float delay, wsgc_float amplitude_factor, wsgc_float spread_frequency, wsgc_float offset_frequency)
 {
     static const FadingModelPath_t tmp_path_description = {0.0, 0.0, 0.0};
     
@@ -56,6 +56,7 @@ void FadingModelWatterson::add_path_description(wsgc_float delay, wsgc_float amp
     _fading_model_description.back().delay = delay;
     _fading_model_description.back().amplitude_factor = amplitude_factor;
     _fading_model_description.back().spread_frequency = spread_frequency;
+    _fading_model_description.back().offset_frequency = offset_frequency;
     _nb_paths = _fading_model_description.size();
 }
 
@@ -125,7 +126,8 @@ void FadingModelWatterson::calculate_paths_description()
     {
         static const Path tmp_path;
         _paths.push_back(tmp_path);
-        _paths.back().InitPath(it->spread_frequency, 0.0, 1, _fading_model_description.size(), true);
+        //TODO: implement frequency shift
+        _paths.back().InitPath(it->spread_frequency, it->offset_frequency, 1, _fading_model_description.size(), true);
         
         if (it == _fading_model_description.begin())
         {
