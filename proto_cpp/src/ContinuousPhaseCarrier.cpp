@@ -55,7 +55,7 @@ void ContinuousPhaseCarrier::set_phase(wsgc_float phase)
 void ContinuousPhaseCarrier::make_next_samples(wsgc_float f)
 {
     wsgc_fftw_complex *fftw_samples = reinterpret_cast<wsgc_fftw_complex *>(_samples);
-    
+
     for (int i=0; i<_length; i++)
     {
         fftw_samples[i][0] = cos(2.0 * M_PI * (((i*f)/_f_sampling) + _phase_mod_2pi)); // real

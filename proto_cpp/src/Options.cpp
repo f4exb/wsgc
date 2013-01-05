@@ -32,6 +32,7 @@
 #include <stdlib.h>
 #include <getopt.h>
 #include <cstring>
+#include <string>
 #include <stdlib.h>
 #include <time.h>
 #include <algorithm>
@@ -578,6 +579,7 @@ void Options::get_help(std::ostringstream& os)
         i++;
     } while (help_lines[i].short_option);
     
+    os << std::endl << "Fading Model Clarke: -f \"C:<nb paths>,<frequency spread>\"" << std::endl;
     os << std::endl << "Example: wsgc_test -s 4096 -c 1023 -C 1020 -t 100.0 -r 100.1 -n -24 -N 4 -I 0 -R 6" << std::endl; 
 }
 
@@ -726,7 +728,7 @@ bool Options::parse_fading_model_data(std::string fading_data_str)
                 
                 break;
             
-            /* This is a shitty implementation - avoid it completely for the moment
+            // WARNING: This is a shitty implementation - avoid it completely for the moment
             case 'W': // Watterson
             case 'w':
                 status = WsgcUtils::extract_string_vector(raw_string_parameters, parameter_str);
@@ -767,8 +769,7 @@ bool Options::parse_fading_model_data(std::string fading_data_str)
                 }
                                 
                 break;
-                */
-            
+
             default:
                 break;
         }
@@ -785,6 +786,29 @@ bool Options::parse_fading_model_data(std::string fading_data_str)
 
 bool Options::parse_modulation_data(std::string modulation_data_str)
 {
+	std::transform(modulation_data_str.begin(), modulation_data_str.end(), modulation_data_str.begin(), ::toupper);
+
+	if (modulation_data_str == "BPSK")
+	{
+		modulation.setScheme(Modulation::Modulation_BPSK);
+		return true;
+	}
+	else if (modulation_data_str == "OOK")
+	{
+        modulation.setScheme(Modulation::Modulation_OOK);
+        return true;
+	}
+	else if (modulation_data_str == "CW")
+	{
+        modulation.setScheme(Modulation::Modulation_CW);
+        return true;
+	}
+	else
+	{
+        return false;
+	}
+
+	/*
     switch(modulation_data_str[0])
     {
         case 'B':
@@ -798,6 +822,7 @@ bool Options::parse_modulation_data(std::string modulation_data_str)
         default:
             return false;
     }
+    */
 }
 
 

@@ -74,6 +74,7 @@ void Path::InitPath( wsgc_float Spread, wsgc_float Offset, unsigned int blocksiz
 	m_inc = 0;
 	m_Timeinc = 0.0;
 	m_pLPFIR = new GaussFIR;
+	m_noSpread = false;
     
 	if( (m_Spread > 2.0) && (m_Spread <= 30.0) )
 	{
@@ -95,6 +96,7 @@ void Path::InitPath( wsgc_float Spread, wsgc_float Offset, unsigned int blocksiz
 	}
 	else if( (m_Spread >= 0.0) && (m_Spread < 0.1) )
 	{		//here if spread<.1 so will not use any spread just offset
+		m_noSpread = true;
 		m_NoiseSampRate = RATE_320;
 		m_LPGain = 1.0;
 	}
@@ -162,111 +164,127 @@ void Path::CalcPathSample(const wsgc_complex *sIn, wsgc_complex *sOut)
     const wsgc_float* Kptr;
     wsgc_complex* Firptr;
     wsgc_complex offset;
-    
-    if( m_NoiseSampRate == RATE_12_8)
+
+    if (m_noSpread)
     {
-        if( m_Indx%(5*5*5*5) == 0 )	
-        {			//generate noise samples at 12.8Hz rate
-            acc = MakeGaussianDelaySample();
-
-            //SweepGenCpx(  &acc, 12.8, 0.0, 6.4, 0.016 );
-
-            j = m_FirState0/INTP_VALUE;
-            m_pQue0[j] = acc;
-        }
+    	acc.real() = 1.0;
+    	acc.imag() = 0.0;
     }
-    if( m_NoiseSampRate <= RATE_64)
+    else
     {
-        if( m_Indx%(5*5*5) == 0 )	
-        {
-            if( m_NoiseSampRate == RATE_64)
-            {			//generate noise samples at 64Hz rate
-                acc = MakeGaussianDelaySample();
-            }
-            else
-            {
-                acc = (0.0, 0.0);
-                Firptr = m_pQue0;
-                Kptr = X5IntrpFIRCoef+INTP_FIR_SIZE-m_FirState0;
-                
-                for(j=0; j<INTP_QUE_SIZE; j++)
-                {
-                    acc += ((Firptr->real())*(*Kptr), (Firptr++->imag())*(*Kptr));
-                    Kptr += INTP_VALUE;
-                }
-                
-                if( --m_FirState0 < 0)
-                    m_FirState0 = INTP_FIR_SIZE-1;
-            }	
+		if( m_NoiseSampRate == RATE_12_8)
+		{
+			if( m_Indx%(5*5*5*5) == 0 )
+			{			//generate noise samples at 12.8Hz rate
+				acc = MakeGaussianDelaySample();
 
-            //SweepGenCpx(  &acc, 64, 0.0, 32.0, 0.08 );
-            
-            j = m_FirState1/INTP_VALUE;
-            m_pQue1[j] = acc;
-        }
+				//SweepGenCpx(  &acc, 12.8, 0.0, 6.4, 0.016 );
+
+				j = m_FirState0/INTP_VALUE;
+				m_pQue0[j] = acc;
+			}
+		}
+		if( m_NoiseSampRate <= RATE_64)
+		{
+			if( m_Indx%(5*5*5) == 0 )
+			{
+				if( m_NoiseSampRate == RATE_64)
+				{			//generate noise samples at 64Hz rate
+					acc = MakeGaussianDelaySample();
+				}
+				else
+				{
+					acc = (0.0, 0.0);
+					Firptr = m_pQue0;
+					Kptr = X5IntrpFIRCoef+INTP_FIR_SIZE-m_FirState0;
+
+					for(j=0; j<INTP_QUE_SIZE; j++)
+					{
+						acc.real() += (Firptr->real())*(*Kptr);
+						acc.imag() += (Firptr++->imag())*(*Kptr);
+						//acc += ((Firptr->real())*(*Kptr), (Firptr++->imag())*(*Kptr));
+						Kptr += INTP_VALUE;
+					}
+
+					if( --m_FirState0 < 0)
+						m_FirState0 = INTP_FIR_SIZE-1;
+				}
+
+				//SweepGenCpx(  &acc, 64, 0.0, 32.0, 0.08 );
+
+				j = m_FirState1/INTP_VALUE;
+				m_pQue1[j] = acc;
+			}
+		}
+		if( m_Indx%(5*5) == 0 )	//interpolate/upsample x5
+		{
+			if( m_NoiseSampRate == RATE_320)
+			{
+				acc = MakeGaussianDelaySample();
+			}
+			else
+			{
+					acc = (0.0, 0.0);
+					Firptr = m_pQue1;
+					Kptr = X5IntrpFIRCoef+INTP_FIR_SIZE-m_FirState1;
+
+					for(j=0; j<INTP_QUE_SIZE; j++)
+					{
+						acc.real() += (Firptr->real())*(*Kptr);
+						acc.imag() += (Firptr++->imag())*(*Kptr);
+						//acc += ((Firptr->real())*(*Kptr), (Firptr++->imag())*(*Kptr));
+						Kptr += INTP_VALUE;
+					}
+
+					if( --m_FirState1 < 0)
+						m_FirState1 = INTP_FIR_SIZE-1;
+			}
+
+			//SweepGenCpx(  &acc, 320, 0.0, 160.0, 0.4 );
+
+			j = m_FirState2/INTP_VALUE;
+			m_pQue2[j] = acc;
+		}
+		if( m_Indx%(5) == 0 )	//interpolate/upsample x5
+		{
+			acc = (0.0, 0.0);
+			Firptr = m_pQue2;
+			Kptr = X5IntrpFIRCoef+INTP_FIR_SIZE-m_FirState2;
+
+			for(j=0; j<INTP_QUE_SIZE; j++)
+			{
+				acc.real() += (Firptr->real())*(*Kptr);
+				acc.imag() += (Firptr++->imag())*(*Kptr);
+				//acc += ((Firptr->real())*(*Kptr), (Firptr++->imag())*(*Kptr));
+				Kptr += INTP_VALUE;
+			}
+
+			if( --m_FirState2 < 0)
+				m_FirState2 = INTP_FIR_SIZE-1;
+
+			//SweepGenCpx(  &acc, 1600, 0.0, 800.0, 2 );
+
+			j = m_FirState3/INTP_VALUE;
+			m_pQue3[j] = acc;
+		}
+
+		acc = (0.0, 0.0);
+		Firptr = m_pQue3;
+		Kptr = X5IntrpFIRCoef+INTP_FIR_SIZE-m_FirState3;
+
+		for(j=0; j<INTP_QUE_SIZE; j++)
+		{
+			acc.real() += (Firptr->real())*(*Kptr);
+			acc.imag() += (Firptr++->imag())*(*Kptr);
+			//acc += ((Firptr->real())*(*Kptr), (Firptr++->imag())*(*Kptr));
+			Kptr += INTP_VALUE;
+		}
+
+		if( --m_FirState3 < 0)
+			m_FirState3 = INTP_FIR_SIZE-1;
+
+		//CalcCpxSweepRMS( acc, 8000);
     }
-    if( m_Indx%(5*5) == 0 )	//interpolate/upsample x5
-    {
-        if( m_NoiseSampRate == RATE_320)
-        {
-            acc = MakeGaussianDelaySample();
-        }
-        else
-        {
-                acc = (0.0, 0.0);
-                Firptr = m_pQue1;
-                Kptr = X5IntrpFIRCoef+INTP_FIR_SIZE-m_FirState1;
-                
-                for(j=0; j<INTP_QUE_SIZE; j++)
-                {
-                    acc += ((Firptr->real())*(*Kptr), (Firptr++->imag())*(*Kptr));
-                    Kptr += INTP_VALUE;
-                }
-                
-                if( --m_FirState1 < 0)
-                    m_FirState1 = INTP_FIR_SIZE-1;
-        }
-
-        //SweepGenCpx(  &acc, 320, 0.0, 160.0, 0.4 );
-
-        j = m_FirState2/INTP_VALUE;
-        m_pQue2[j] = acc;
-    }
-    if( m_Indx%(5) == 0 )	//interpolate/upsample x5
-    {
-        acc = (0.0, 0.0);
-        Firptr = m_pQue2;
-        Kptr = X5IntrpFIRCoef+INTP_FIR_SIZE-m_FirState2;
-        
-        for(j=0; j<INTP_QUE_SIZE; j++)
-        {
-            acc += ((Firptr->real())*(*Kptr), (Firptr++->imag())*(*Kptr));
-            Kptr += INTP_VALUE;
-        }
-        
-        if( --m_FirState2 < 0)
-            m_FirState2 = INTP_FIR_SIZE-1;
-
-        //SweepGenCpx(  &acc, 1600, 0.0, 800.0, 2 );
-
-        j = m_FirState3/INTP_VALUE;
-        m_pQue3[j] = acc;
-    }
-    
-    acc = (0.0, 0.0);
-    Firptr = m_pQue3;
-    Kptr = X5IntrpFIRCoef+INTP_FIR_SIZE-m_FirState3;
-    
-    for(j=0; j<INTP_QUE_SIZE; j++)
-    {
-        acc += ((Firptr->real())*(*Kptr), (Firptr++->imag())*(*Kptr));
-        Kptr += INTP_VALUE;
-    }
-    
-    if( --m_FirState3 < 0)
-        m_FirState3 = INTP_FIR_SIZE-1;
-
-    //CalcCpxSweepRMS( acc, 8000);
 
     if (m_Offset == 0)
     {
@@ -314,7 +332,8 @@ wsgc_complex Path::MakeGaussianDelaySample()
 			r = u1*u1 + u2*u2;
 		} while(r >= 1.0 || r == 0.0);
         
-		val = (m_LPGain*u1*sqrt(-2.0*log(r)/r), m_LPGain*u2*sqrt(-2.0*log(r)/r));
+		val.real() = m_LPGain*u1*sqrt(-2.0*log(r)/r);
+		val.imag() = m_LPGain*u2*sqrt(-2.0*log(r)/r);
 
         //SweepGenCpx(  &val, 320, 0.0, 30*5, 30*5/200.0);
 

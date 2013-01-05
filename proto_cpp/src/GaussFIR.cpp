@@ -25,6 +25,8 @@
 ////////////////////////////////////////////////////////////////////////
 
 #include "GaussFIR.h"
+#include "WsgcException.h"
+#include <iostream>
 
 #define SQRT2PI (2.506628275)
 #define PI2 ( 2.0 * M_PI )		// 2 Pi
@@ -57,7 +59,7 @@ GaussFIR::~GaussFIR()
 ////////////////////////////////////////////////////////////////////////////
 void GaussFIR::Init(wsgc_float Fs, wsgc_float F2sig)
 {
-    unsigned int indx;
+    int indx;
     wsgc_float sigma = (Fs*SQRT2)/(PI2*F2sig);		// calculate sigma for coefficients
     
 	m_FIRlen = (unsigned int)(K_GAUSSIAN*Fs/F2sig);		//calculate FIR length
@@ -70,21 +72,21 @@ void GaussFIR::Init(wsgc_float Fs, wsgc_float F2sig)
     //allocate buffer and Coefficient memory based on calculated FIR length
 	if( (m_pCoef = new wsgc_float[sizeof(wsgc_float)*((m_FIRlen*2)+10)] ) == 0)
     {
-		return;
+		throw WsgcException("GaussFIR Error: cannot allocate coefficient memory");
     }
         
 	if( (m_pQue = new wsgc_complex[sizeof(wsgc_complex)*(m_FIRlen+10)] ) == 0)
     {
-		return;
+		throw WsgcException("GaussFIR Error: cannot allocate buffer memory");;
     }
         
     // generate the scaled Gaussian shaped impulse response	to create a 0 dB
     //   passband LP filter with a 2 Sigma frequency bandwidth.
-	indx = -(m_FIRlen-1)/2;
-    
-	for(unsigned int i=0; i<m_FIRlen;i++)
+	indx = -((m_FIRlen-1)/2);
+
+	for(unsigned int i=0; i<m_FIRlen;i++, indx++)
 	{
-		m_pCoef[i] = ( 1.0/(SQRT2PI*sigma) )*dnorm( indx++,0.0, sigma)
+		m_pCoef[i] = ( 1.0/(SQRT2PI*sigma) )*dnorm( indx,0.0, sigma)
 									/ dnorm( 0.0,0.0, sigma);
 		m_pQue[i] = (0.0, 0.0);
 		m_pCoef[i+m_FIRlen] = m_pCoef[i];	//make duplicate for flat FIR
@@ -109,7 +111,8 @@ wsgc_complex GaussFIR::CalcFilter(wsgc_complex in)
     
 	for(unsigned int i=0; i<m_FIRlen; i++)
 	{
-        acc += ((Firptr->real())*(*Kptr), (Firptr++->imag())*(*Kptr));
+		acc.real() += (Firptr->real())*(*Kptr);
+		acc.imag() += (Firptr++->imag())*(*Kptr);
         Kptr++;
 	}
     

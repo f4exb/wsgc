@@ -73,6 +73,29 @@ wsgc_float FadingModel::get_mean_signal_power(wsgc_complex *samples, unsigned in
 }
 
 
+void FadingModel::normalize(wsgc_complex *samples, unsigned int nb_samples)
+{
+    wsgc_float max = 0;
+
+    for (unsigned int i=0; i<nb_samples; i++)
+    {
+    	if (samples[i].real() > max)
+    	{
+    		max = samples[i].real();
+    	}
+    	if (samples[i].imag() > max)
+    	{
+    		max = samples[i].imag();
+    	}
+    }
+
+    for (unsigned int i=0; i<nb_samples; i++)
+    {
+    	samples[i] /= (1.414 * max);
+    }
+}
+
+
 void FadingModel::apply_awgn(wsgc_complex *samples, unsigned int nb_samples, unsigned int signal_shift, wsgc_float snr_db)
 {
     assert(signal_shift < nb_samples);

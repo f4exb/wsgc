@@ -41,7 +41,7 @@ FadingModelClarke::FadingModelClarke(unsigned int nb_paths, wsgc_float spread_fr
 {
     assert(nb_paths > 0);
     
-    for (unsigned int i=1; i<nb_paths; i++)
+    for (unsigned int i=0; i<nb_paths; i++)
     {
         alpha_factors.push_back(_unif(_random_engine));
         beta_factors.push_back(_unif(_random_engine));
@@ -64,11 +64,11 @@ void FadingModelClarke::apply_fading(const wsgc_complex *samples_in, wsgc_comple
     {
         h = (0.0, 0.0); // fading term at one sample
         
-        for (unsigned int path_i=1; path_i < _nb_paths; path_i++)
+        for (unsigned int path_i=0; path_i < _nb_paths; path_i++)
         {
-            wsgc_float x = cos(((2.0*path_i-1)*M_PI+theta_factors[path_i-1])/(4*_nb_paths));
-            h += (cos(2.0*M_PI*_spread_frequency*x*(_global_sample_index/_f_sampling)+alpha_factors[path_i-1]),
-                  sin(2.0*M_PI*_spread_frequency*x*(_global_sample_index/_f_sampling)+beta_factors[path_i-1])); 
+            wsgc_float x = cos(((2.0*path_i)*M_PI+theta_factors[path_i])/(4*_nb_paths));
+            h += (cos(2.0*M_PI*_spread_frequency*x*(_global_sample_index/_f_sampling)+alpha_factors[path_i]),
+                  sin(2.0*M_PI*_spread_frequency*x*(_global_sample_index/_f_sampling)+beta_factors[path_i]));
         }
         
         //h /= 1.0/sqrt(_nb_paths);

@@ -144,9 +144,13 @@ wsgc_generator_SOURCES = wsgc_generator.cpp \
     SimulatedSource.cpp \
     CodeModulator_OOK.cpp \
     CodeModulator_OOK_detection.cpp \
+    CodeModulator_CW_Test.cpp \
     FadingModel.cpp \
     FadingModelNone.cpp \
     FadingModelClarke.cpp \
+    FadingModelWatterson.cpp \
+    Path.cpp \
+    GaussFIR.cpp \
     Modulation.cpp \
     SampleSequencer.cpp \
     SourceMixer.cpp 

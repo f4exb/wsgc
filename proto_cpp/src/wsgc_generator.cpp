@@ -11,6 +11,7 @@
 #include "SimulatedSource.h"
 #include "CodeModulator_BPSK.h"
 #include "CodeModulator_OOK.h"
+#include "CodeModulator_CW_Test.h"
 #include "LocalCodesFFT.h"
 #include "LocalCodes.h"
 #include "WsgcUtils.h"
@@ -46,7 +47,10 @@ int main(int argc, char *argv[])
         {
             codeModulator = new CodeModulator_OOK();
         }
-
+        else if (options.modulation.getScheme() == Modulation::Modulation_CW)
+        {
+            codeModulator = new CodeModulator_CW_Test();
+        }
 
         if (codeModulator) // if a code modulator is available then the actual signal processing can take place
         {
@@ -91,12 +95,14 @@ int main(int argc, char *argv[])
             // apply fading
             if (fading->is_fading_active())
             {
+            	std::cout << "Apply fading" << std::endl;
                 nb_faded_source_samples = fading->get_output_size(nb_source_samples);
                 faded_source_samples = (wsgc_complex *) WSGC_FFTW_MALLOC(nb_faded_source_samples*sizeof(wsgc_fftw_complex));
                 fading->apply_fading(source_samples, faded_source_samples, nb_source_samples);
             }
             else
             {
+            	std::cout << "Do not apply fading" << std::endl;
                 faded_source_samples = source_samples;
                 nb_faded_source_samples = nb_source_samples;
             }
@@ -104,20 +110,23 @@ int main(int argc, char *argv[])
             // apply AWGN
             if (options.make_noise)
             {
+            	std::cout << "Apply AWGN" << std::endl;
                 fading->apply_awgn(faded_source_samples, nb_faded_source_samples, options.code_shift, options.snr);
             }
 
-            // apply any demodulation scheme (OOK only for now)
+            // apply power detection for OOK
             if (options.modulation.getScheme() == Modulation::Modulation_OOK)
-            { // calculate magnitude in place
+            { // trim imaginary part
+            	std::cout << "Simulate AM power detection" << std::endl;
                 for (unsigned int i = 0; i<nb_faded_source_samples; i++)
                 {
-                    wsgc_float magnitude;
-                    WsgcUtils::magnitude_estimation(&faded_source_samples[i], &magnitude);
-                    faded_source_samples[i].real() = magnitude;
+                    faded_source_samples[i].real() = std::norm(faded_source_samples[i]);
                     faded_source_samples[i].imag() = 0.0;
                 }
             }
+
+            std::cout << "Normalize" << std::endl;
+            fading->normalize(faded_source_samples, nb_faded_source_samples);
 
             // Generate samples
             std::ofstream ofs;

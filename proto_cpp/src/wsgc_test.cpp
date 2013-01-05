@@ -196,21 +196,6 @@ int main(int argc, char *argv[])
                 fading->apply_awgn(faded_source_samples, nb_faded_source_samples, options.code_shift, options.snr);
             }
                       
-            // apply any demodulation scheme (OOK only for now)
-            /*
-            if (options.modulation.getScheme() == Modulation::Modulation_OOK)
-            { // calculate magnitude in place
-            	std::cout << "WTF!!!" << std::endl;
-                for (unsigned int i = 0; i<nb_faded_source_samples; i++)
-                {
-                    wsgc_float magnitude;
-                    WsgcUtils::magnitude_estimation(&faded_source_samples[i], &magnitude);
-                    faded_source_samples[i].real() = magnitude;
-                    faded_source_samples[i].imag() = 0.0;
-                }
-            }
-            */
-
             if (options.modulation.getScheme() == Modulation::Modulation_OOK)
             { // trim imaginary part
             	std::cout << "Simulate AM power detection" << std::endl;
@@ -221,7 +206,6 @@ int main(int argc, char *argv[])
                     faded_source_samples[i].imag() = 0.0;
                 }
             }
-
 
             // Implement correlator(s)
 

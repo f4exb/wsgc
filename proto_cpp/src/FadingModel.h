@@ -60,6 +60,7 @@ class FadingModel
         
         static wsgc_float get_mean_signal_power(wsgc_complex *samples, unsigned int nb_samples);
         void apply_awgn(wsgc_complex *samples, unsigned int nb_samples, unsigned int signal_shift, wsgc_float snr_db);
+        void normalize(wsgc_complex *samples, unsigned int nb_samples);
         
     protected:
         typedef std::tr1::ranlux64_base_01 RandomEngine; 

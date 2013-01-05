@@ -65,6 +65,7 @@ private:
 	int m_FirState2;
 	int m_FirState3;
 	GaussFIR* m_pLPFIR;
+	bool m_noSpread;
 };
 
 #endif // __PATH_H__
