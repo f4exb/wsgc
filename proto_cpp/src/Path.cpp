@@ -88,14 +88,14 @@ void Path::InitPath( wsgc_float Spread, wsgc_float Offset, unsigned int blocksiz
 		m_pLPFIR->Init( 64.0, m_Spread );
 		m_LPGain = sqrt(64.0/(4.0*m_Spread*KGNB) );
 	}
-	else if( (m_Spread >= 0.1) && (m_Spread <= 0.4) )
+	else if( (m_Spread >= 0.01) && (m_Spread <= 0.4) )
 	{
 		m_NoiseSampRate = RATE_12_8;
 		m_pLPFIR->Init( 12.8, m_Spread );
 		m_LPGain = sqrt(12.8/(4.0*m_Spread*KGNB) );
 	}
-	else if( (m_Spread >= 0.0) && (m_Spread < 0.1) )
-	{		//here if spread<.1 so will not use any spread just offset
+	else if( (m_Spread >= 0.0) && (m_Spread < 0.01) )
+	{		//here if spread<.01 so will not use any spread just offset
 		m_noSpread = true;
 		m_NoiseSampRate = RATE_320;
 		m_LPGain = 1.0;
@@ -103,10 +103,10 @@ void Path::InitPath( wsgc_float Spread, wsgc_float Offset, unsigned int blocksiz
     
 	for(unsigned int i=0; i<INTP_QUE_SIZE; i++)
 	{
-		m_pQue0[i] = (0.0, 0.0);
-		m_pQue1[i] = (0.0, 0.0);
-		m_pQue2[i] = (0.0, 0.0);
-		m_pQue3[i] = (0.0, 0.0);
+		m_pQue0[i] = wsgc_complex(0.0, 0.0);
+		m_pQue1[i] = wsgc_complex(0.0, 0.0);
+		m_pQue2[i] = wsgc_complex(0.0, 0.0);
+		m_pQue3[i] = wsgc_complex(0.0, 0.0);
 	}
     
 	m_LPGain = m_LPGain/ sqrt((wsgc_float)numpaths);
@@ -133,7 +133,7 @@ void Path::CalcPath(const wsgc_complex *pIn, wsgc_complex *pOut)
 	{
 		for(unsigned int i=0; i<m_BlockSize; i++)
 		{
-			pOut[i] = (0.0, 0.0);
+			pOut[i] = wsgc_complex(0.0, 0.0);
 		}
 	}
 
@@ -167,8 +167,7 @@ void Path::CalcPathSample(const wsgc_complex *sIn, wsgc_complex *sOut)
 
     if (m_noSpread)
     {
-    	acc.real() = 1.0;
-    	acc.imag() = 0.0;
+    	acc = wsgc_complex(1.0, 0.0);
     }
     else
     {
@@ -194,7 +193,7 @@ void Path::CalcPathSample(const wsgc_complex *sIn, wsgc_complex *sOut)
 				}
 				else
 				{
-					acc = (0.0, 0.0);
+					acc = wsgc_complex(0.0, 0.0);
 					Firptr = m_pQue0;
 					Kptr = X5IntrpFIRCoef+INTP_FIR_SIZE-m_FirState0;
 
@@ -224,7 +223,7 @@ void Path::CalcPathSample(const wsgc_complex *sIn, wsgc_complex *sOut)
 			}
 			else
 			{
-					acc = (0.0, 0.0);
+					acc = wsgc_complex(0.0, 0.0);
 					Firptr = m_pQue1;
 					Kptr = X5IntrpFIRCoef+INTP_FIR_SIZE-m_FirState1;
 
@@ -247,7 +246,7 @@ void Path::CalcPathSample(const wsgc_complex *sIn, wsgc_complex *sOut)
 		}
 		if( m_Indx%(5) == 0 )	//interpolate/upsample x5
 		{
-			acc = (0.0, 0.0);
+			acc = wsgc_complex(0.0, 0.0);
 			Firptr = m_pQue2;
 			Kptr = X5IntrpFIRCoef+INTP_FIR_SIZE-m_FirState2;
 
@@ -268,7 +267,7 @@ void Path::CalcPathSample(const wsgc_complex *sIn, wsgc_complex *sOut)
 			m_pQue3[j] = acc;
 		}
 
-		acc = (0.0, 0.0);
+		acc = wsgc_complex(0.0, 0.0);
 		Firptr = m_pQue3;
 		Kptr = X5IntrpFIRCoef+INTP_FIR_SIZE-m_FirState3;
 
@@ -319,7 +318,11 @@ wsgc_complex Path::MakeGaussianDelaySample()
     wsgc_float r;
     wsgc_complex val;
     
-	if( m_Spread >= 0.1 )
+	if (m_noSpread) //if not using any spread
+	{
+		val = (m_LPGain, 0);
+	}
+	else
 	{
         // Generate two uniform random numbers between -1 and +1
         // that are inside the unit circle
@@ -339,10 +342,6 @@ wsgc_complex Path::MakeGaussianDelaySample()
 
         // Now LP filter the Gaussian samples
 		val = m_pLPFIR->CalcFilter(val);
-	}
-	else		//if not using any spread
-	{
-		val = (m_LPGain, 0);
 	}
 
     //gDebug1 = CalcCpxRMS( val, 288000);
