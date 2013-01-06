@@ -364,6 +364,8 @@ int main(int argc, char *argv[])
             clock_gettime(time_option, &time2);
             std::cout << "Message correlation time: " << std::setw(12) << std::setprecision(9) << WsgcUtils::get_time_difference(time2,time1) << " s" << std::endl << std::endl;
             
+            /*
+            // Dump timing data
             if (pilot_correlation_analyzer != 0)
             {
                 std::ostringstream corr_os;
@@ -373,6 +375,7 @@ int main(int argc, char *argv[])
 
                 std::cout << corr_os.str() << std::endl;
             }
+            */
 
             // Do the decoding with the decision box
             std::cout << "Do the decoding with the decision box..." << std::endl;

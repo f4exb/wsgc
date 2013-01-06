@@ -44,7 +44,9 @@ class CorrelationRecord
         unsigned int global_prn_index;     //!< PRN index in the global sequence of received PRNs
         unsigned int prn_per_symbol_index; //!< PRN index in the arbitrary PRN per symbol cycle
         unsigned int prn_index_max;        //!< Index of the PRN in GC sequences having maximum correlation
+        unsigned int prn_index_max_i;      //!< Instantaneous (no averaging sum) index of the PRN in GC sequences having maximum correlation
         wsgc_float magnitude_max;          //!< Magnitude of maximum correlation
+        wsgc_float magnitude_max_i;        //!< Instantaneous (no averaging sum) magnitude of maximum correlation
         wsgc_float magnitude_avg;          //!< Average of correlation magnitudes
         unsigned int shift_index_max;      //!< Time shift of correlation peak in PRN sequence
         wsgc_float phase_at_max;           //!< Phase of correlation at maximum

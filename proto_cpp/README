@@ -35,7 +35,11 @@ Hint: Use make -j<2*n> where n is the number of machine threads to speed up. For
              -F 63 Use 63 frequency bins for exploration around zero IF
              --cuda Use CUDA GPU acceleration. Needs to be compiled with CUDA options, see README.cuda
              
-- wsgc_generator: generates and saves zero IF simulated samples into a file as complex (I/Q) float numbers (4 bytes) real (I) part first. 
+- wsgc_generator: generates and saves zero IF (if option -t 0.0) simulated samples into a file as complex (I/Q) float numbers (4 bytes) real (I) part first. 
                   You may use this file as input to a GNU Radio graph to generate actual signal (more on this later)
                   
+
+
+Typical invocation of wsgc_test:
+/opt/install/wsgc_test/bin/wsgc_test -s 4096 -c 1023 -C 1020 -t -1.0 -r 0.0 -N 4 -I 0 -R 16 -P 1 -B 4 -F 63 -n -24 --cuda
 

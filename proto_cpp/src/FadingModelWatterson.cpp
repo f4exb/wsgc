@@ -36,13 +36,10 @@
 #include <assert.h>
 
 FadingModelWatterson::FadingModelWatterson(wsgc_float f_sampling) :
-    FadingModel::FadingModel(f_sampling, true)
+    FadingModel::FadingModel(f_sampling, true),
+    _max_delay_samples(0),
+    _nb_paths(0)
 {
-	/*
-    // Presently works for sample rates multiple of 5^2, 5^3 or 5^4
-    unsigned int f_sampling_int = int(f_sampling);
-    assert ((f_sampling_int % (5*5*5*5) == 0) || (f_sampling_int % (5*5*5) == 0) || (f_sampling_int % (5*5) == 0));
-    */
 }
 
 FadingModelWatterson::~FadingModelWatterson()
@@ -52,7 +49,7 @@ FadingModelWatterson::~FadingModelWatterson()
 
 void FadingModelWatterson::add_path_description(wsgc_float delay, wsgc_float amplitude_factor, wsgc_float spread_frequency, wsgc_float offset_frequency)
 {
-    static const FadingModelPath_t tmp_path_description = {0.0, 0.0, 0.0};
+    static const FadingModelPath_t tmp_path_description = {0.0, 0.0, 0.0, 0.0};
     
     _fading_model_description.push_back(tmp_path_description);
     _fading_model_description.back().delay = delay;

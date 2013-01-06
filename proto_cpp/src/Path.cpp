@@ -64,10 +64,10 @@ Path::Path(wsgc_float fSampling) :
 	m_FirState3(INTP_QUE_SIZE-1),
 	m_noSpread(true),
 	m_OffsetFreqConst(K_2PI/fSampling),
-	m_SpreadLimit0(fSampling/200.0),
-	m_SpreadLimit1(fSampling/4000.0),
-	m_SpreadLimit2(fSampling/20000.0),
-	m_SpreadLimit3(fSampling/800000.0),
+	m_SpreadLimit0(fSampling/(10.0*rate_2)), // 200
+	m_SpreadLimit1(fSampling/(10.0*rate_3)), // 4000
+	m_SpreadLimit2(fSampling/(10.0*rate_4)), // 20000
+	m_SpreadLimit3(0.01),
 	m_NoiseFs_2(fSampling/rate_2),
 	m_NoiseFs_3(fSampling/rate_3),
 	m_NoiseFs_4(fSampling/rate_4)
