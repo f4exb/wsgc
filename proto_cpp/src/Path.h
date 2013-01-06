@@ -35,18 +35,18 @@
 class Path  
 {
 public:
+	Path(wsgc_float fSampling);
+	virtual ~Path();
 	void CalcPath(const wsgc_complex* pIn, wsgc_complex* pOut);
 	void CalcPathSample(const wsgc_complex* sIn, wsgc_complex* sOut);
 	void InitPath( wsgc_float Spread, wsgc_float Offset, unsigned int blocksize, unsigned int numpaths, bool active);
-	Path();
-	~Path();
 
 private:
     typedef std::tr1::ranlux64_base_01 RandomEngine; 
     RandomEngine m_randomEngine;
     std::tr1::uniform_real<wsgc_float> m_unif;
-	unsigned m_IIRLength;
-	wsgc_complex MakeGaussianDelaySample();
+	//unsigned m_IIRLength;
+	wsgc_float m_fSampling;
 	unsigned m_NoiseSampRate;
 	bool m_PathActive;
 	int m_inc;
@@ -66,6 +66,19 @@ private:
 	int m_FirState3;
 	GaussFIR* m_pLPFIR;
 	bool m_noSpread;
+	wsgc_float m_OffsetFreqConst;
+	wsgc_float m_SpreadLimit0;
+	wsgc_float m_SpreadLimit1;
+	wsgc_float m_SpreadLimit2;
+	wsgc_float m_SpreadLimit3;
+	wsgc_float m_NoiseFs_2;
+	wsgc_float m_NoiseFs_3;
+	wsgc_float m_NoiseFs_4;
+	static const wsgc_float rate_2;
+	static const wsgc_float rate_3;
+	static const wsgc_float rate_4;
+
+	wsgc_complex MakeGaussianDelaySample();
 };
 
 #endif // __PATH_H__

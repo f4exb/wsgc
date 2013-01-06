@@ -38,9 +38,11 @@
 FadingModelWatterson::FadingModelWatterson(wsgc_float f_sampling) :
     FadingModel::FadingModel(f_sampling, true)
 {
+	/*
     // Presently works for sample rates multiple of 5^2, 5^3 or 5^4
     unsigned int f_sampling_int = int(f_sampling);
-    assert ((f_sampling_int % (5*5*5*5) == 0) || (f_sampling_int % (5*5*5) == 0) || (f_sampling_int % (5*5) == 0));     
+    assert ((f_sampling_int % (5*5*5*5) == 0) || (f_sampling_int % (5*5*5) == 0) || (f_sampling_int % (5*5) == 0));
+    */
 }
 
 FadingModelWatterson::~FadingModelWatterson()
@@ -110,7 +112,7 @@ void FadingModelWatterson::print_fading_data(std::ostringstream& os) const
             os << ",(";
         }
         
-        os << it->delay << "," << it->amplitude_factor << "," << it->spread_frequency << ")";
+        os << it->delay << "," << it->amplitude_factor << "," << it->spread_frequency << "," << it->offset_frequency << ")";
     }    
     
     os << "]";
@@ -124,9 +126,8 @@ void FadingModelWatterson::calculate_paths_description()
     
     for (;it != itEnd; ++it)
     {
-        static const Path tmp_path;
+        static const Path tmp_path(_f_sampling);
         _paths.push_back(tmp_path);
-        //TODO: implement frequency shift
         _paths.back().InitPath(it->spread_frequency, it->offset_frequency, 1, _fading_model_description.size(), true);
         
         if (it == _fading_model_description.begin())

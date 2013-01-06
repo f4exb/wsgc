@@ -88,7 +88,7 @@ void GaussFIR::Init(wsgc_float Fs, wsgc_float F2sig)
 	{
 		m_pCoef[i] = ( 1.0/(SQRT2PI*sigma) )*dnorm( indx,0.0, sigma)
 									/ dnorm( 0.0,0.0, sigma);
-		m_pQue[i] = (0.0, 0.0);
+		m_pQue[i] = wsgc_complex(0.0, 0.0);
 		m_pCoef[i+m_FIRlen] = m_pCoef[i];	//make duplicate for flat FIR
 	}
     
@@ -106,7 +106,7 @@ wsgc_complex GaussFIR::CalcFilter(wsgc_complex in)
     
 	m_pQue[m_FirState] = in;
 	Firptr = m_pQue;
-	acc = (0.0, 0.0);
+	acc = wsgc_complex(0.0, 0.0);
 	Kptr = m_pCoef+m_FIRlen-m_FirState;
     
 	for(unsigned int i=0; i<m_FIRlen; i++)

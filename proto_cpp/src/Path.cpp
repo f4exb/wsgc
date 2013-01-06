@@ -24,27 +24,53 @@
 ////////////////////////////////////////////////////////////////////////
 
 #include "Path.h"
+#include "WsgcException.h"
 #include <math.h>
 #include <iostream>
+#include <sstream>
 
 #define K_2PI ( 2.0 * M_PI )			// 2 Pi
-#define OFFSET_FREQ_CONST (K_2PI/8000.0)	//2Pi/8000
 #define KGNB 0.62665707	//equivalent Noise BW of Gaussian shaped filter
 
-#define RATE_12_8 0		//Used for 0.1 > Spread >= 0.4
-#define RATE_64 1		//Used for 0.4 > Spread >= 2.0
-#define RATE_320 2		//Used for 2.0 > Spread >= 10.0
+#define RATE_5_5_5_5 0	// Noise interpolation rate = 5^4. Used for 0.01 =< Spread <= 0.4   (based on 8000 Hz sampling frequency)
+#define RATE_5_5_5   1	// Noise interpolation rate = 5^3. Used for 0.4   < Spread <= 2.0
+#define RATE_5_5     2	// Noise interpolation rate = 5^2. Used for 2.0   < Spread <= 40.0
 
+
+const wsgc_float Path::rate_2 = 25.0;  // 5^2
+const wsgc_float Path::rate_3 = 125.0; // 5^3
+const wsgc_float Path::rate_4 = 625.0; // 5^4
 
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
 //////////////////////////////////////////////////////////////////////
 
-Path::Path() :
+Path::Path(wsgc_float fSampling) :
     m_unif(-1.0,1.0),
-	m_NoiseSampRate(RATE_320),
+    m_fSampling(fSampling),
+	m_NoiseSampRate(RATE_5_5),
 	m_Indx(0),
-	m_pLPFIR(0)
+	m_pLPFIR(0),
+	m_BlockSize(1),
+	m_PathActive(false),
+	m_inc(0),
+	m_Offset(0.0),
+	m_Spread(0.0),
+	m_LPGain(1.0),
+	m_Timeinc(0.0),
+	m_FirState0(INTP_QUE_SIZE-1),
+	m_FirState1(INTP_QUE_SIZE-1),
+	m_FirState2(INTP_QUE_SIZE-1),
+	m_FirState3(INTP_QUE_SIZE-1),
+	m_noSpread(true),
+	m_OffsetFreqConst(K_2PI/fSampling),
+	m_SpreadLimit0(fSampling/200.0),
+	m_SpreadLimit1(fSampling/4000.0),
+	m_SpreadLimit2(fSampling/20000.0),
+	m_SpreadLimit3(fSampling/800000.0),
+	m_NoiseFs_2(fSampling/rate_2),
+	m_NoiseFs_3(fSampling/rate_3),
+	m_NoiseFs_4(fSampling/rate_4)
 {
     m_randomEngine.seed(time(0));
 }
@@ -76,29 +102,35 @@ void Path::InitPath( wsgc_float Spread, wsgc_float Offset, unsigned int blocksiz
 	m_pLPFIR = new GaussFIR;
 	m_noSpread = false;
     
-	if( (m_Spread > 2.0) && (m_Spread <= 30.0) )
+	if( (m_Spread > m_SpreadLimit1) && (m_Spread <= m_SpreadLimit0) )
 	{
-		m_NoiseSampRate = RATE_320;
-		m_pLPFIR->Init( 320.0, m_Spread );
-		m_LPGain = sqrt(320.0/(4.0*m_Spread*KGNB) );
+		m_NoiseSampRate = RATE_5_5;
+		m_pLPFIR->Init( m_NoiseFs_2, m_Spread );
+		m_LPGain = sqrt(m_NoiseFs_2/(4.0*m_Spread*KGNB) );
 	}
-	else if( (m_Spread > 0.4) && (m_Spread <= 2.0) )
+	else if( (m_Spread > m_SpreadLimit2) && (m_Spread <= m_SpreadLimit1) )
 	{
-		m_NoiseSampRate = RATE_64;
-		m_pLPFIR->Init( 64.0, m_Spread );
-		m_LPGain = sqrt(64.0/(4.0*m_Spread*KGNB) );
+		m_NoiseSampRate = RATE_5_5_5;
+		m_pLPFIR->Init( m_NoiseFs_3, m_Spread );
+		m_LPGain = sqrt(m_NoiseFs_3/(4.0*m_Spread*KGNB) );
 	}
-	else if( (m_Spread >= 0.01) && (m_Spread <= 0.4) )
+	else if( (m_Spread >= m_SpreadLimit3) && (m_Spread <= m_SpreadLimit2) )
 	{
-		m_NoiseSampRate = RATE_12_8;
-		m_pLPFIR->Init( 12.8, m_Spread );
-		m_LPGain = sqrt(12.8/(4.0*m_Spread*KGNB) );
+		m_NoiseSampRate = RATE_5_5_5_5;
+		m_pLPFIR->Init( m_NoiseFs_4, m_Spread );
+		m_LPGain = sqrt(m_NoiseFs_4/(4.0*m_Spread*KGNB) );
 	}
-	else if( (m_Spread >= 0.0) && (m_Spread < 0.01) )
+	else if( (m_Spread >= 0.0) && (m_Spread < m_SpreadLimit3) )
 	{		//here if spread<.01 so will not use any spread just offset
 		m_noSpread = true;
-		m_NoiseSampRate = RATE_320;
+		m_NoiseSampRate = RATE_5_5;
 		m_LPGain = 1.0;
+	}
+	else
+	{
+		std::ostringstream es;
+		es << "Path: Error frequency spread over the limit of " << m_SpreadLimit0 << "Hz according to sample rate " << m_fSampling << "Hz";
+		throw WsgcException(es.str());
 	}
     
 	for(unsigned int i=0; i<INTP_QUE_SIZE; i++)
@@ -171,7 +203,7 @@ void Path::CalcPathSample(const wsgc_complex *sIn, wsgc_complex *sOut)
     }
     else
     {
-		if( m_NoiseSampRate == RATE_12_8)
+		if( m_NoiseSampRate == RATE_5_5_5_5)
 		{
 			if( m_Indx%(5*5*5*5) == 0 )
 			{			//generate noise samples at 12.8Hz rate
@@ -183,11 +215,11 @@ void Path::CalcPathSample(const wsgc_complex *sIn, wsgc_complex *sOut)
 				m_pQue0[j] = acc;
 			}
 		}
-		if( m_NoiseSampRate <= RATE_64)
+		if( m_NoiseSampRate <= RATE_5_5_5)
 		{
 			if( m_Indx%(5*5*5) == 0 )
 			{
-				if( m_NoiseSampRate == RATE_64)
+				if( m_NoiseSampRate == RATE_5_5_5)
 				{			//generate noise samples at 64Hz rate
 					acc = MakeGaussianDelaySample();
 				}
@@ -217,7 +249,7 @@ void Path::CalcPathSample(const wsgc_complex *sIn, wsgc_complex *sOut)
 		}
 		if( m_Indx%(5*5) == 0 )	//interpolate/upsample x5
 		{
-			if( m_NoiseSampRate == RATE_320)
+			if( m_NoiseSampRate == RATE_5_5)
 			{
 				acc = MakeGaussianDelaySample();
 			}
@@ -294,7 +326,7 @@ void Path::CalcPathSample(const wsgc_complex *sIn, wsgc_complex *sOut)
         tmp = acc * (*sIn);
         offset = (cos(m_Timeinc), sin(m_Timeinc)); //Cpx multiply by offset frequency
         *sOut = offset * tmp;
-        m_Timeinc += (OFFSET_FREQ_CONST*m_Offset);
+        m_Timeinc += (m_OffsetFreqConst*m_Offset);
         double intpart;
         m_Timeinc = K_2PI * modf(m_Timeinc/K_2PI, &intpart); //keep radian counter bounded
     }
