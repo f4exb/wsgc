@@ -86,12 +86,12 @@ void PilotedMessageCorrelator_Host::execute(PilotCorrelationAnalyzer& pilot_corr
     static const wsgc_complex c_zero(0.0,0.0);
     static const wsgc_complex c_one(1.0,0.0);
     wsgc_complex corr_result;
-    wsgc_float max_magnitude;
+    wsgc_float max_magnitude, max_magnitude_i;
     wsgc_float avgsum_magnitude;
     wsgc_complex max_correlation;
     wsgc_complex noise_avgsum;
     wsgc_float magnitude, magnitude_sum, noise_magnitude, avg_noise;
-    unsigned int max_prn_index;
+    unsigned int max_prn_index, max_prn_index_i;
     const wsgc_complex *local_code;
     unsigned int ni = 0;
     
@@ -133,9 +133,22 @@ void PilotedMessageCorrelator_Host::execute(PilotCorrelationAnalyzer& pilot_corr
     	}
 
     	max_magnitude = 0.0;
+    	max_magnitude_i = 0.0;
     	avgsum_magnitude = 0.0;
     	max_prn_index = _nb_msg_prns-1;
     	max_correlation = c_one;
+
+    	// Zero sum averaging memory on averaging start if external synchronization is active
+    	if (_simulate_symbol_synchronization && (ai==0))
+    	{
+    		for (unsigned int prni=0; prni < _nb_msg_prns; prni++)
+    		{
+    			for (unsigned int aj=0; aj<_prn_per_symbol; aj++)
+    			{
+    				_corr_results[prni*_prn_per_symbol + aj] = c_zero;
+    			}
+    		}
+    	}
 
     	// scan all PRNs
     	for (unsigned int prni=0; prni < _nb_msg_prns; prni++)
@@ -162,7 +175,7 @@ void PilotedMessageCorrelator_Host::execute(PilotCorrelationAnalyzer& pilot_corr
 				_corr_results[prni*_prn_per_symbol + ai] = c_zero; // no contribution
     		}
 
-    		// averaging
+    		// instant and averaging calculations
 			if (prni < _nb_msg_prns-1) // real message PRNs
 			{
 				/*// vector sum
@@ -176,6 +189,19 @@ void PilotedMessageCorrelator_Host::execute(PilotCorrelationAnalyzer& pilot_corr
 				// maximum magnitude and average
 				WsgcUtils::magnitude_estimation(&_corr_avgsums[prni], &magnitude);
 				*/
+
+				// instant magnitude
+				WsgcUtils::magnitude_estimation(&_corr_results[prni*_prn_per_symbol + ai], &magnitude);
+
+				if (magnitude == 0)
+				{
+					max_prn_index_i = _nb_msg_prns-1; // not selected => set as noise PRN
+				}
+				else if (magnitude > max_magnitude_i)
+				{
+					max_magnitude_i = magnitude;
+					max_prn_index_i = prni;
+				}
 
 				// magnitude sum
 				magnitude_sum = 0.0;
@@ -208,6 +234,8 @@ void PilotedMessageCorrelator_Host::execute(PilotCorrelationAnalyzer& pilot_corr
     	}
 
     	correlation_record.prn_per_symbol_index = ai;
+    	correlation_record.prn_index_max_i = max_prn_index_i;
+    	correlation_record.magnitude_max_i = max_magnitude_i;
     	correlation_record.prn_index_max = max_prn_index;
     	correlation_record.magnitude_max = max_magnitude;
     	correlation_record.magnitude_avg = avgsum_magnitude / (_nb_msg_prns-1);

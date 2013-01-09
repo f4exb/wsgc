@@ -32,7 +32,7 @@
 class CorrelationRecord
 {
     public:
-        CorrelationRecord();
+        CorrelationRecord(unsigned int _prn_per_symbol);
         ~CorrelationRecord();
         
         void reset();
@@ -56,6 +56,7 @@ class CorrelationRecord
         bool frequency_locked;             //!< Indicates if receiving frequency was in locked status
         unsigned int pilot_shift;          //!< Pilot sequence shift corresponding to this PRN (piloted operation only)
         bool selected;                     //!< PRN sample has been selected as valid for message correlation by the pilot correlation analyser
+        unsigned int prn_per_symbol;       //!< Number of PRNs per symbol
 };
 
 #endif // __CORRELATION_RECORD_H__

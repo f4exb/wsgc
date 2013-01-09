@@ -27,7 +27,8 @@
 #include <iostream>
 #include <iomanip>
 
-CorrelationRecord::CorrelationRecord()
+CorrelationRecord::CorrelationRecord(unsigned int _prn_per_symbol) :
+	prn_per_symbol(_prn_per_symbol)
 {
 	reset();
 }
@@ -42,7 +43,9 @@ void CorrelationRecord::reset()
     global_prn_index = 0;     // PRN index in the global sequence of received PRNs
     prn_per_symbol_index = 0; // PRN index in the arbitrary PRN per symbol cycle
     prn_index_max = 0;        // Index of the PRN in GC sequences having maximum correlation
+    prn_index_max_i = 0;      // Instantaneous index of the PRN in GC sequences having maximum correlation
     magnitude_max = 0.0;      // Magnitude of maximum correlation
+    magnitude_max_i = 0.0;    // Instantaneous magnitude of maximum correlation
     magnitude_avg = 0.0;      // Average of correlation magnitudes
     shift_index_max = 0;      // Time shift of correlation peak in PRN sequence
     phase_at_max = 0.0;       // Phase of correlation at maximum
@@ -60,6 +63,8 @@ void CorrelationRecord::dump(unsigned int magnitude_factor, std::ostringstream& 
     //"-- %2d:%2d>" % ((bn-1)/self.N,Ni), "Fdi:", fd_i, "Ni:", Ni, "PRN:", "%03d"% prn_index_max, "Max:", "%07.1f"% value_max, "Shift:", "%04d" % bin_index_max, "Phase @ max: %5.2f" % phase_max, "Fd: %.2f" % fd, "Locked:", frequency_locked
     os << "PNi: " << std::setw(3) << global_prn_index
        << " Ni: " << std::setw(2) << prn_per_symbol_index
+       //<< " iPRN: " << std::setw(3) << std::setfill('0') << prn_index_max_i
+       //<< " iMax: " << std::setw(7) << std::setprecision(1) << magnitude_max_i / magnitude_factor
        << " PRN: " << std::setw(3) << std::setfill('0') << prn_index_max
        << " Max: " << std::setw(7) << std::setprecision(1) << magnitude_max / magnitude_factor;
 
@@ -92,7 +97,10 @@ void CorrelationRecord::dump_line(wsgc_float magnitude_factor, std::ostringstrea
 {
     os << std::setiosflags(std::ios_base::fixed);
     os << std::setw(3) << global_prn_index
+       << " " << std::setw(2) << global_prn_index / prn_per_symbol
        << " " << std::setw(2) << prn_per_symbol_index
+       << " " << std::setw(3) << std::setfill('0') << prn_index_max_i
+       << " " << std::setw(7) << std::setprecision(1) << magnitude_max_i / magnitude_factor
        << " " << std::setw(3) << std::setfill('0') << prn_index_max
        << " " << std::setw(7) << std::setprecision(1) << magnitude_max / magnitude_factor;
 
@@ -128,5 +136,5 @@ void CorrelationRecord::dump_line(wsgc_float magnitude_factor, std::ostringstrea
 
 void CorrelationRecord::dump_banner(std::ostringstream& os)
 {
-    os << "PNi Ni PN# Mag.Max Max/Avg Ti.. PlTi Nse.Max Nse.Avg Ph@Mx Frx... Fl S/N.. S" << std::endl;
+    os << "PNi Si Ni iPN iMagMax PN# Mag.Max Max/Avg Ti.. PlTi Nse.Max Nse.Avg Ph@Mx Frx... Fl S/N.. S" << std::endl;
 }

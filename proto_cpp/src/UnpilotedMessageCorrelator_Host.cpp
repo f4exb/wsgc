@@ -199,7 +199,7 @@ void UnpilotedMessageCorrelator_Host::do_averaging(std::vector<CorrelationRecord
     	}
     }
 
-    static const CorrelationRecord tmp_correlation_record;
+    static const CorrelationRecord tmp_correlation_record(_prn_per_symbol);
 
     for (unsigned int bi=0; bi<_nb_batch_prns; bi++)
     {

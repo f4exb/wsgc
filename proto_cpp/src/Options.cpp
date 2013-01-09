@@ -90,7 +90,8 @@ Options::Options() :
     batch_size(3),
     noise_prn(0),
     use_cuda(false),
-    analysis_window_size(4)
+    analysis_window_size(4),
+    simulate_sync(false)
 {
     srand(time(0));
 }
@@ -122,6 +123,7 @@ bool Options::get_options(int argc, char *argv[])
             {"file-debugging", no_argument, &_indicator_int, 1},
             {"help", no_argument, &_indicator_int, 1},
             {"cuda", no_argument, &_indicator_int, 1},
+            {"simulate-sync", no_argument, &_indicator_int, 1},
             // these options do not set a flag
             {"f-sampling", required_argument, 0, 's'},
             {"f-chip", required_argument, 0, 'c'},
@@ -180,6 +182,11 @@ bool Options::get_options(int argc, char *argv[])
                 {
                     std::cout << "Using CUDA implementation" << std::endl;
                     use_cuda = true;
+                }
+                else if (strcmp("simulate-sync", long_options[option_index].name) == 0)
+                {
+                    std::cout << "Simulate symbol synchronization" << std::endl;
+                    simulate_sync = true;
                 }
                 _indicator_int = 0;
                 break;
@@ -514,6 +521,7 @@ void Options::get_help(std::ostringstream& os)
         {"", "--noise-test", "Trigger noise test", "flag", "false"},    
         {"", "--file-debugging", "Trigger debugging on files", "flag", "false"},    
         {"", "--cuda", "Trigger CUDA implementation", "flag", "false"},
+        {"", "--simulate-sync", "Trigger external symbol synchronization simulation", "flag", "false"},
         {"-s", "--f-sampling", "Sampling frequency", "float", "4096.0"},    
         {"-c", "--f-chip", "Chip frequency", "float", "1023.0"},    
         {"-C", "--code-shift", "PRN code shift in number of samples", "int", "1020"},    
@@ -678,7 +686,10 @@ void Options::print_options(std::ostringstream& os)
     os << "Message time ..............: " << std::setw(9) << std::setprecision(2) << std::right << message_time << std::endl; 
     os << std::endl;
 
-    os << (use_cuda ? "Using CUDA implementation" : "Using Host implementation") << std::endl << std::endl;
+    os << "Processing options:" << std::endl;
+    os << " - " << (use_cuda ? "Using CUDA implementation" : "Using Host implementation") << std::endl;
+    os << " - " << (simulate_sync ? "Simulate external symbol synchronization" : "Use cyclic maximum detection for symbol synchronization") << std::endl;
+    os << std::endl;
 
     os << "Generator polynomials:" << std::endl;
     os << "G1 = ";

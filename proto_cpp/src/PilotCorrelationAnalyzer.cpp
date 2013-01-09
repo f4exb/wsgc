@@ -58,7 +58,8 @@ PilotCorrelationAnalyzer::PilotCorrelationAnalyzer(
     _start_message_correlation_records_index(0),
     _validate_count(0),
     _analysis_index(0),
-    _mag_display_factor(1.0)
+    _pilot_mag_display_factor(1.0),
+    _message_mag_display_factor(1.0)
 {
     _samples = (wsgc_complex *) WSGC_FFTW_MALLOC(analysis_window_size*prn_per_symbol*fft_N*2*sizeof(wsgc_fftw_complex));
 }
@@ -140,7 +141,7 @@ PilotCorrelationRecord& PilotCorrelationAnalyzer::new_pilot_correlation_record(b
 //=================================================================================================
 CorrelationRecord& PilotCorrelationAnalyzer::new_message_correlation_record(unsigned int global_prn_index)
 {
-    static const CorrelationRecord tmp_message_correlation_record;
+    static const CorrelationRecord tmp_message_correlation_record(_prn_per_symbol);
 
     _message_correlation_records.push_back(tmp_message_correlation_record);
     _message_correlation_records.back().global_prn_index = global_prn_index;
@@ -442,7 +443,7 @@ void PilotCorrelationAnalyzer::dump_pilot_correlation_records(std::ostringstream
 
 	for (; it != it_end; ++it)
 	{
-		it->dump_oneline(os, _mag_display_factor);
+		it->dump_oneline(os, _pilot_mag_display_factor);
 	}
 }
 
@@ -457,7 +458,7 @@ void PilotCorrelationAnalyzer::dump_message_correlation_records(std::ostringstre
 
 	for (; it != it_end; ++it)
 	{
-		it->dump_line(1.0, os);
+		it->dump_line(_message_mag_display_factor, os);
 	}
 }
 

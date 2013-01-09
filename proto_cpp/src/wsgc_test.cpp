@@ -66,6 +66,7 @@
 #include "UnpilotedMultiplePrnCorrelator.h"
 #include "DecisionBox.h"
 #include "DecisionBox_Piloted.h"
+#include "DecisionBox_Piloted_And_Synced.h"
 #include "DecisionBox_Unpiloted.h"
 #include "SampleSequencer.h"
 #include "SourceMixer.h"
@@ -219,7 +220,7 @@ int main(int argc, char *argv[])
             DecisionBox *decision_box = 0;
             std::vector<CorrelationRecord> correlation_records;
             std::vector<AutocorrelationRecord> autocorrelation_records;
-            static const CorrelationRecord tmp_correlation_record;
+            static const CorrelationRecord tmp_correlation_record(options.nb_prns_per_symbol);
             UnpilotedMessageCorrelator *unpiloted_message_correlator = 0;
             UnpilotedMultiplePrnCorrelator *unpiloted_mprn_correlator = 0;
 
@@ -256,6 +257,7 @@ int main(int argc, char *argv[])
                     pilot_correlator = new PilotCorrelator_Host(gc_generator, *localCodeModulator, options.f_sampling, options.f_chip, pilot_prn_numbers, options.nb_prns_per_symbol, options.df_steps, options.batch_size, options.f_step_division);
                     message_correlator = new PilotedMessageCorrelator_Host(*((LocalCodes_Host *) local_codes), options.f_sampling, options.f_chip, options.nb_prns_per_symbol);
 #endif
+                    message_correlator->set_simulate_symbol_synchronization(options.simulate_sync);
                     prn_autocorrelator = new PrnAutocorrelator_Host(fft_N, options.nb_prns_per_symbol);
                     piloted_mprn_correlator = new PilotedMultiplePrnCorrelator(*pilot_correlation_analyzer, correlation_records, *pilot_correlator, *message_correlator, *prn_autocorrelator);
                 }
@@ -390,8 +392,13 @@ int main(int argc, char *argv[])
             	corr_os << std::endl;
 
 #ifdef _CUDA
-                pilot_correlation_analyzer->set_mag_display_factor((fft_N/2)*(fft_N/2));
+            	if (options.use_cuda)
+            	{
+					pilot_correlation_analyzer->set_pilot_mag_display_factor((fft_N/2)*(fft_N/2));
+					pilot_correlation_analyzer->set_message_mag_display_factor(fft_N/2);
+            	}
 #endif
+
                 corr_os << "--- pilot correlation records:" << std::endl;
                 pilot_correlation_analyzer->dump_pilot_correlation_records(corr_os);
                 corr_os << std::endl << "--- correlation records:" << std::endl;
@@ -411,7 +418,15 @@ int main(int argc, char *argv[])
 
                 std::cout << corr_os.str() << std::endl;
                 
-                decision_box = new DecisionBox_Piloted(options.nb_prns_per_symbol, fft_N, *pilot_correlation_analyzer);
+                if (options.simulate_sync)
+                {
+                	decision_box = new DecisionBox_Piloted_And_Synced(options.nb_prns_per_symbol, fft_N, *pilot_correlation_analyzer);
+                	((DecisionBox_Piloted_And_Synced *)decision_box)->set_prn_index_start(0); //TODO: use the PRN in symbol shift option
+                }
+                else
+                {
+                	decision_box = new DecisionBox_Piloted(options.nb_prns_per_symbol, fft_N, *pilot_correlation_analyzer);
+                }
             }
             else if (mprn_correlator != 0) // Correlation without pilot PRN - legacy process
             {

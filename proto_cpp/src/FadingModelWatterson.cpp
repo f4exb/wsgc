@@ -109,7 +109,8 @@ void FadingModelWatterson::print_fading_data(std::ostringstream& os) const
             os << ",(";
         }
         
-        os << it->delay << "," << it->amplitude_factor << "," << it->spread_frequency << "," << it->offset_frequency << ")";
+        // delay in milliseconds
+        os << it->delay * 1000.0 << "," << it->amplitude_factor << "," << it->spread_frequency << "," << it->offset_frequency << ")";
     }    
     
     os << "]";
@@ -121,24 +122,25 @@ void FadingModelWatterson::calculate_paths_description()
     const std::vector<FadingModelPath_t>::iterator itEnd = _fading_model_description.end();
     wsgc_float max_delay = 0.0;
     
-    for (;it != itEnd; ++it)
+    Path tmp_path(_f_sampling);
+    _paths.assign(_fading_model_description.size(), tmp_path);
+
+    for (unsigned int i=0; i < _fading_model_description.size(); ++i)
     {
-        static const Path tmp_path(_f_sampling);
-        _paths.push_back(tmp_path);
-        _paths.back().InitPath(it->spread_frequency, it->offset_frequency, 1, _fading_model_description.size(), true);
+        _paths[i].InitPath(it->spread_frequency, it->offset_frequency, 1, _fading_model_description.size(), true);
         
-        if (it == _fading_model_description.begin())
+        if (i == 0)
         {
             _delay_samples.push_back(0); // first path is direct path
         }
         else
         {
-            _delay_samples.push_back(int(it->delay*_f_sampling)); // path delay in number of samples
+            _delay_samples.push_back(int(_fading_model_description[i].delay*_f_sampling)); // path delay in number of samples
         }
         
-        if (it->delay > max_delay)
+        if (_fading_model_description[i].delay > max_delay)
         {
-            max_delay = it->delay;
+            max_delay = _fading_model_description[i].delay;
         }        
     }
     

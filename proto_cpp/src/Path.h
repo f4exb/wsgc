@@ -40,7 +40,7 @@ public:
 	 * \param fSampling Main sampling frequency
 	 */
 	Path(wsgc_float fSampling);
-	virtual ~Path();
+	~Path();
 
 	/**
 	 * Calculation for a block of samples (see blocksize parameter of InitPath) through the path

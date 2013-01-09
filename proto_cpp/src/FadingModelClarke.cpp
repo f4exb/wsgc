@@ -22,7 +22,7 @@
      Fading Model
       
      Applies a fading model to the test signal. It follows the model known as the 
-     Clarke model and implemented using Matlab by Athuranathan Viswanathan at:
+     Clarke model and implemented using Matlab by Mathuranathan Viswanathan at:
      http://gaussianwaves.blogspot.com/2011/05/simulation-of-rayleigh-fading-clarkes.html
       
 */
@@ -76,8 +76,8 @@ void FadingModelClarke::apply_fading(const wsgc_complex *samples_in, wsgc_comple
         samples_out[sample_i] = h*samples_in[sample_i]; // multiply by fading term
     }
 }
-     
-     
+
+
 void FadingModelClarke::print_fading_data(std::ostringstream& os) const
 {
     os << "Clarke [nb_paths=" << _nb_paths << ",FDoppler=" << _spread_frequency << "]";

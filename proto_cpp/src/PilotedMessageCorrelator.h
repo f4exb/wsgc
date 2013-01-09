@@ -58,12 +58,22 @@ public:
      * \param pilot_correlation_analyzer Reference to the pilot correlation analyzer
 	 */
 	virtual void execute(PilotCorrelationAnalyzer& pilot_correlation_analyzer) = 0;
+
+	/**
+	 * Set the external symbol synchronization option
+	 * \param sync_option True if external symbol synchronization active
+	 */
+	void set_simulate_symbol_synchronization(bool sync_option)
+	{
+		_simulate_symbol_synchronization = sync_option;
+	}
     
 protected:
     wsgc_float _f_sampling; //!< Sampling frequency
     wsgc_float _f_chip; //!< Chip rate
     unsigned int _prn_per_symbol; //!< Number of PRNs per symbol that is also the number of PRNs per averaging block
     wsgc_float _delta_f; //!< Retain receiving frequency
+    bool _simulate_symbol_synchronization; //!< True if simulating external symbol synchronization
 };
 
 #endif /* __PILOTED_MESSAGE_CORRELATOR_H__ */
