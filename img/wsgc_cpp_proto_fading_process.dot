@@ -1,0 +1,15 @@
+digraph G {
+    rankdir=LR 
+    
+    source_generator [shape=box, label="Source generator"];
+    mean_power [shape=ellipse, label="Mean Power Calculation"];
+    fading_model [shape=box, label="Fading model"];
+    AWGN [shape=box, label="AWGN"];
+    correlator [shape=box, label="Correlator"];
+    
+    source_generator -> fading_model [label="samples"];
+    fading_model -> mean_power;
+    mean_power -> AWGN [label="mean power"];
+    fading_model -> AWGN [label="faded samples"];
+    AWGN -> correlator [label="signal samples"];
+}

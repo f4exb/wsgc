@@ -1,0 +1,13 @@
+digraph G {
+    rankdir=LR 
+    
+    source_generator [shape=box, label="Source generator"];
+    mean_power [shape=ellipse, label="Mean Power Calculation"];
+    AWGN [shape=box, label="AWGN"];
+    correlator [shape=box, label="Correlator"];
+    
+    source_generator -> AWGN [label="samples"];
+    source_generator -> mean_power;
+    mean_power -> AWGN [label="mean power"];
+    AWGN -> correlator [label="signal samples"];
+}

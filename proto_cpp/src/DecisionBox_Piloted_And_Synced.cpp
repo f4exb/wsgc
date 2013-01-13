@@ -33,7 +33,7 @@
 
 const wsgc_float DecisionBox_Piloted_And_Synced::max_to_avg_ok_threshold = 1.85;
 const wsgc_float DecisionBox_Piloted_And_Synced::max_to_avg_cdt_threshold = 1.6;
-const wsgc_float DecisionBox_Piloted_And_Synced::signal_to_noise_avg_ko_threshold = 1.2;
+const wsgc_float DecisionBox_Piloted_And_Synced::signal_to_noise_avg_ko_threshold = 1.0;
 const wsgc_float DecisionBox_Piloted_And_Synced::signal_to_noise_avg_cdt_threshold = 2.0;
 
 //=================================================================================================
