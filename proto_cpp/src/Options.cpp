@@ -441,12 +441,12 @@ bool Options::get_options(int argc, char *argv[])
                 
                 return true;
             }
-            else // create default generator polynomials for orders 5 to 11
+            else // create default generator polynomials for orders 5 to 11 with preferred pairs of m-sequences
             {
                 switch(gc_nb_stages)
                 {
                     case 5:
-                        g1_poly_powers.push_back(2); // G1 = X^5 + X^2 + 1
+                        g1_poly_powers.push_back(3); // G1 = X^5 + X^3 + 1
                         g2_poly_powers.push_back(4); // G2 = X^5 + X^4 + X^3 + X^2 + 1
                         g2_poly_powers.push_back(3);
                         g2_poly_powers.push_back(2);
@@ -480,10 +480,14 @@ bool Options::get_options(int argc, char *argv[])
                         g2_poly_powers.push_back(3);
                         return true;
                     case 10:
-                        g1_poly_powers.push_back(3); // G1 = X^10 + X^3 + 1
-                        g2_poly_powers.push_back(8); // G2 = X^10 + X^8 + X^3 + X^2 + 1
-                        g2_poly_powers.push_back(3);
-                        g2_poly_powers.push_back(2);
+                        g1_poly_powers.push_back(8); // was G1 = X^10 + X^3 + 1
+                        g1_poly_powers.push_back(5); // G1 = X^10 + X^8 + X^5 + X^1 + 1
+                        g1_poly_powers.push_back(1);
+                        g2_poly_powers.push_back(9); // was G2 = X^10 + X^8 + X^3 + X^2 + 1
+                        g2_poly_powers.push_back(7); // G2 = X^10 + X^9 + X^7 + X^6 + X^4 + X^1 + 1
+                        g2_poly_powers.push_back(6);
+                        g2_poly_powers.push_back(4);
+                        g2_poly_powers.push_back(1);
                         return true;
                     case 11:
                         g1_poly_powers.push_back(2); // G1 = X^11 + X^2 + 1
