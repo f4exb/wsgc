@@ -85,6 +85,15 @@ class PilotCorrelationAnalyzer
         wsgc_complex *get_samples(unsigned int prn_index);
         
         /**
+         * Get the samples for one PRN given its global index and sample shift index if available else null.
+         * Used for training sequence
+         * \param prn_index PRN global index
+         * \param shift_index start sample shift index within PRN
+         * \return Pointer to the first sample of PRN at start point of PRN if available (in buffer) else null
+         */
+        wsgc_complex *get_synchronized_samples(unsigned int prn_index, unsigned int shift_index);
+
+        /**
          * Get a pointer to the last entered source samples
          * \return Pointer to the first sample of PRN of the last PRN signal source entered in the analyzer
          */
@@ -390,6 +399,20 @@ class PilotCorrelationAnalyzer
             std::vector<PilotCorrelationRecord>& pilot_correlation_records, 
             unsigned int& best_time_shift_start,
             unsigned int& best_time_shift_length);        
+
+        /**
+         * Return pointer to the start of synchronized samples given arbitrarily synchronized PRN start and
+         * sample shift index of synchronization point
+         * \param arbitrary_start_index Starting index as in get_samples method
+         * \param shift_index Start sample shift index within PRN i.e. synchronization point
+         * \return Pointer to the first sample
+         */
+        wsgc_complex *get_synchronized_samples_at_arbitrary_index(
+        		unsigned int arbitrary_start_index,
+        		unsigned int shift_index);
+
+
+
 
 };
 

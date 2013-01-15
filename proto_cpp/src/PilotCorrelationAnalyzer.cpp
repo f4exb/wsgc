@@ -48,7 +48,7 @@ PilotCorrelationAnalyzer::PilotCorrelationAnalyzer(
     _prn_per_symbol(prn_per_symbol),
     _fft_N(fft_N),
     _two_pilots(two_pilots),
-    _time_index_tolerance(time_index_tolerance),
+    _time_index_tolerance(time_index_tolerance), //TODO: use time index tolerance
     _sample_buffer_len(2*analysis_window_size*prn_per_symbol),
     _samples_start_global_prn_index(0),
     _prn_index(0),
@@ -114,6 +114,81 @@ wsgc_complex *PilotCorrelationAnalyzer::get_samples(unsigned int global_prn_inde
 	}
 
 	return 0;
+}
+
+
+//=================================================================================================
+wsgc_complex *PilotCorrelationAnalyzer::get_synchronized_samples(unsigned int global_prn_index, unsigned int shift_index)
+{
+	unsigned int arbitrary_start_index; // starting index as in get_samples method
+	unsigned int start_index; // new starting index synchronized with the given shift_index
+	bool use_preceding_samples = shift_index > _fft_N / 2;
+
+	if (global_prn_index < _samples_start_global_prn_index)
+	{
+		if (global_prn_index < _samples_start_global_prn_index - _sample_buffer_len + _prn_index)
+		{
+			return 0; // gone
+		}
+		else
+		{
+			return get_synchronized_samples_at_arbitrary_index(
+					(global_prn_index - _samples_start_global_prn_index + _sample_buffer_len)*_fft_N,
+					shift_index);
+		}
+	}
+	else
+	{
+		if ((global_prn_index - _samples_start_global_prn_index) < _prn_index)
+		{
+			return get_synchronized_samples_at_arbitrary_index(
+					(global_prn_index - _samples_start_global_prn_index)*_fft_N,
+					shift_index);
+		}
+		else
+		{
+			return 0; // not there yet
+		}
+	}
+
+	return 0;
+}
+
+
+//=================================================================================================
+wsgc_complex *PilotCorrelationAnalyzer::get_synchronized_samples_at_arbitrary_index(
+		unsigned int arbitrary_start_index,
+		unsigned int shift_index)
+{
+	unsigned int start_index; // new starting index synchronized with the given shift_index
+
+	if (shift_index > _fft_N / 2) // use preceding samples
+	{
+		start_index = arbitrary_start_index - (_fft_N - shift_index);
+
+		if (start_index > 0)
+		{
+			return &_samples[start_index];
+		}
+		else
+		{
+			return 0;
+		}
+	}
+	else
+	{
+		start_index = arbitrary_start_index + shift_index;
+
+		if (start_index < _sample_buffer_len - _fft_N)
+		{
+			return &_samples[start_index];
+		}
+		else
+		{
+			return 0;
+		}
+	}
+
 }
 
 
@@ -226,6 +301,7 @@ void PilotCorrelationAnalyzer::validate_pilot_correlation_record(
 
 
 //=================================================================================================
+// TODO: get rid of alternate pilot thing
 bool PilotCorrelationAnalyzer::analyze(bool& alternate_pilot, unsigned int& best_time_shift_start, unsigned int& best_time_shift_length)
 {
     assert((!_two_pilots) || (_pilot1_correlation_records.size() == _pilot2_correlation_records.size())); // ensure both pilot records are at the same point if both are present

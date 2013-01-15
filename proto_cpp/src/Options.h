@@ -86,6 +86,7 @@ class Options
         unsigned int analysis_window_size;
         std::string samples_output_file;
         bool simulate_sync;
+        bool simulate_training;
         
     private:        
         int _indicator_int;

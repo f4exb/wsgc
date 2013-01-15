@@ -19,33 +19,33 @@
 
      Static not real time prototype in C++
 
-     MessageCorrelator_Host
+     PilotedTrainingMessageCorrelator_Host
 
      Given the frequency and time displacement of correlation peak given by the
-     Pilot Correlator it searches correlation for all PRNs of the message symbols
-     to select the one that was sent. It uses straightforward time correlation.
+     Pilot Correlator it searches correlation for all PRNs of the training sequence symbols
+     it shifts accumulates the result to detect a peak corresponding to the PRN at the 
+     start of the received sequence. It uses straightforward time correlation.
 
      This is the host implementation
 
 */
 
-#ifndef __MESSAGE_CORRELATOR_HOST_H__
-#define __MESSAGE_CORRELATOR_HOST_H__
+#ifndef __PILOTED_TRAINING_MESSAGE_CORRELATOR_HOST_H__
+#define __PILOTED_TRAINING_MESSAGE_CORRELATOR_HOST_H__
 
 #include "WsgcTypes.h"
-#include "CorrelationRecord.h"
 #include "ContinuousPhaseCarrier.h"
-#include "PilotedMessageCorrelator.h"
+#include "PilotedTrainingMessageCorrelator.h"
 #include <vector>
 
 class LocalCodes_Host;
 class PilotCorrelationAnalyzer;
 
 /**
- * \brief Correlator engine to acquire and track message PRN(s) using the frequency
+ * \brief Correlator engine to acquire starting point in time of the training sequence using the frequency
  * and time displacement of correlation peak given by the Pilot Correlator - Host implementation
  */
-class PilotedMessageCorrelator_Host : public PilotedMessageCorrelator
+class PilotedTrainingMessageCorrelator_Host : public PilotedTrainingMessageCorrelator
 {
 public:
     /**
@@ -53,13 +53,16 @@ public:
     * \param local_codes PRN signals local copy
     * \param f_sampling Sampling frequency
     * \param f_chip Chip rate (frequency)
-    * \param prn_per_symbol Number of PRNs per symbol or averaging block
+    * \param sequence_length Length of training sequence should be less than possible symbol numbers
     */
-	PilotedMessageCorrelator_Host(LocalCodes_Host& local_codes, wsgc_float f_sampling, wsgc_float f_chip, unsigned int prn_per_symbol);
-	virtual ~PilotedMessageCorrelator_Host();
+	PilotedTrainingMessageCorrelator_Host(LocalCodes_Host& local_codes,
+			wsgc_float f_sampling,
+			wsgc_float f_chip,
+			unsigned int sequence_length);
+	virtual ~PilotedTrainingMessageCorrelator_Host();
 
 	/**
-	 * Do the message correlation over the length of one analysis window.
+	 * Do the training sequence correlation over the length of one analysis window.
      * \param pilot_correlation_analyzer Reference to the pilot correlation analyzer
 	 */
 	virtual void execute(PilotCorrelationAnalyzer& pilot_correlation_analyzer);
@@ -67,12 +70,11 @@ public:
 protected:
     LocalCodes_Host& _local_codes; //!< Reference to the PRN signals local copy.
     ContinuousPhaseCarrier _local_oscillator; //!< Local oscillator for receiving frequency adjustment
-    unsigned int _nb_msg_prns; //!< Number of message PRNs to explore
+    unsigned int _nb_msg_prns; //!< Number of message PRNs in the code set
     unsigned int _fft_N; //!< Size of FFT
     wsgc_complex *_src; //!< Source samples of the current PRN multiplied by local oscillator
     wsgc_complex *_corr_results; //!< Result of correlation of PRNs.
-    wsgc_complex *_corr_avgsums; //!< Result of PRNs correlation averages. 
-    wsgc_complex *_noise_corr_results; //!< Result of correlation of noise PRN.
+    wsgc_float *_mag_avgsums; //!< Result of PRNs correlation magnitudes shifting averaging sums.
 };
 
-#endif /* __MESSAGE_CORRELATOR_HOST_H__ */
+#endif /* __PILOTED_TRAINING_MESSAGE_CORRELATOR_HOST_H__ */

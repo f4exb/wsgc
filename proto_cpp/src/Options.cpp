@@ -91,7 +91,8 @@ Options::Options() :
     noise_prn(0),
     use_cuda(false),
     analysis_window_size(4),
-    simulate_sync(false)
+    simulate_sync(false),
+    simulate_training(false)
 {
     srand(time(0));
 }
@@ -124,6 +125,7 @@ bool Options::get_options(int argc, char *argv[])
             {"help", no_argument, &_indicator_int, 1},
             {"cuda", no_argument, &_indicator_int, 1},
             {"simulate-sync", no_argument, &_indicator_int, 1},
+            {"simulate-trn", no_argument, &_indicator_int, 1},
             // these options do not set a flag
             {"f-sampling", required_argument, 0, 's'},
             {"f-chip", required_argument, 0, 'c'},
@@ -187,6 +189,11 @@ bool Options::get_options(int argc, char *argv[])
                 {
                     std::cout << "Simulate symbol synchronization" << std::endl;
                     simulate_sync = true;
+                }
+                else if (strcmp("simulate-trn", long_options[option_index].name) == 0)
+                {
+                    std::cout << "Simulate synchronization training sequence" << std::endl;
+                    simulate_training = true;
                 }
                 _indicator_int = 0;
                 break;
@@ -391,37 +398,74 @@ bool Options::get_options(int argc, char *argv[])
                 return false;
             }
             
-            // check given symbol PRNs
-            if (prns.size() == 0)
+            // Build PRN list
+
+            if (simulate_training) // Build training sequence and extra training simulation checks
             {
-                if (nb_random_prns < 4)
-                {
-                    std::cout << "Need at least 4 random symbols (-R option) when no symbols given (-p option)" << std::endl;
-                    return false;
-                }
-                
-                for (int i=0; i < nb_random_prns; i++)
-                {
-                    prns.push_back(rand() % nb_message_symbols);
-                }
+            	if (nb_pilot_prns < 2)
+            	{
+            		std::cout << "The number of pilot PRNs should be 2 for synchronization training sequence simulation" << std::endl;
+            		return false;
+            	}
+
+            	if (prns.size() > 0)
+            	{
+            		prns.clear();
+            	}
+
+            	if (prn_shift+nb_random_prns > nb_message_symbols)
+            	{
+            		std::cout << "Cannot create training sequence: exceeding number of message symbols" << std::endl;
+            		return false;
+            	}
+            	else if (nb_random_prns < 4)
+            	{
+            		std::cout << "Need at least 4 PRNs in the training sequence" << std::endl;
+            		return false;
+            	}
+            	else
+            	{
+            		for (unsigned int prni = prn_shift; prni < nb_random_prns; prni++)
+            		{
+            			prns.push_back(prni);
+            		}
+            	}
             }
-            else
+            else // Build PRN list for message simulation
             {
-                for (std::vector<unsigned int>::const_iterator it = prns.begin(); it != prns.end(); ++it)
-                {
-                    if ((*it < 0) || (*it > nb_message_symbols + nb_service_symbols - 1))
-                    {
-                        std::cout << "Wrong PRN number " << *it << " must be between 0 and " << nb_message_symbols + nb_service_symbols - 1 << " (options -p -M and -S)" << std::endl;
-                    }
-                }
-                
-                if (analysis_window_size > prns.size())
-                {
-                    analysis_window_size = prns.size();
-                }
+				// check given symbol PRNs
+				if (prns.size() == 0)
+				{
+					if (nb_random_prns < 4)
+					{
+						std::cout << "Need at least 4 random symbols (-R option) when no symbols given (-p option)" << std::endl;
+						return false;
+					}
+
+					for (int i=0; i < nb_random_prns; i++)
+					{
+						prns.push_back(rand() % nb_message_symbols);
+					}
+				}
+				else
+				{
+					for (std::vector<unsigned int>::const_iterator it = prns.begin(); it != prns.end(); ++it)
+					{
+						if ((*it < 0) || (*it > nb_message_symbols + nb_service_symbols - 1))
+						{
+							std::cout << "Wrong PRN number " << *it << " must be between 0 and " << nb_message_symbols + nb_service_symbols - 1 << " (options -p -M and -S)" << std::endl;
+						}
+					}
+				}
             }
-            
-            // last validation: generator polynomials
+
+            // control analysis window size vs number of PRNs in sequence
+			if (analysis_window_size > prns.size())
+			{
+				analysis_window_size = prns.size();
+			}
+
+			// last validation: generator polynomials
             if ((g1_poly_powers.size() > 0) && (g2_poly_powers.size() > 0)) // basic checks on given generator polynomials
             {
                 std::sort(g1_poly_powers.begin(), g1_poly_powers.end(), std::greater<unsigned int>());
@@ -526,6 +570,7 @@ void Options::get_help(std::ostringstream& os)
         {"", "--file-debugging", "Trigger debugging on files", "flag", "false"},    
         {"", "--cuda", "Trigger CUDA implementation", "flag", "false"},
         {"", "--simulate-sync", "Trigger external symbol synchronization simulation", "flag", "false"},
+        {"", "--simulate-trn", "Trigger synchronization training sequence simulation", "flag", "false"},
         {"-s", "--f-sampling", "Sampling frequency", "float", "4096.0"},    
         {"-c", "--f-chip", "Chip frequency", "float", "1023.0"},    
         {"-C", "--code-shift", "PRN code shift in number of samples", "int", "1020"},    
@@ -602,6 +647,14 @@ void Options::get_help(std::ostringstream& os)
     os << " - Watterson: -f \"W:<path params>/<path params>/...\"" << std::endl;
     os << "     path params: <delay (s)>,<amplitude>,<f Doppler (Hz)>,<f offset (Hz)>" << std::endl;
     os << std::endl;
+    os << "Training sequence simulation:" << std::endl;
+    os << "Some options are re-used in a different way:" << std::endl;
+    os << " - Random PRNs option becomes the number of PRNs in the training sequence (>= 16 recommended)" << std::endl;
+    os << " - PRN shift in symbol start becomes the PRN number at which the training sequence starts" << std::endl;
+    os << " => These two options should be arranged so as not to yield a PRN number higher than the number of message PRNs" << std::endl;
+    os << "The number if pilot PRNs should be 2" << std::endl;
+    os << std::endl;
+
     os << "Example: wsgc_test -s 4096 -c 1023 -C 1020 -t 100.0 -r 100.1 -n -24 -N 4 -I 0 -R 6" << std::endl;
 }
 
@@ -627,7 +680,15 @@ void Options::print_options(std::ostringstream& os)
     os << "Nb of generated symbols ...: " << std::setw(6) << std::right << prns.size() << std::endl;
     os << "PRNs per symbol ...........: " << std::setw(6) << std::right << nb_prns_per_symbol << std::endl;
     os << "Symbol period .............: " << std::setw(9) << std::setprecision(2) << std::right << symbol_period << std::endl;
-    os << "Start PRN shift in symbol .: " << std::setw(6) << std::right << prn_shift << std::endl;
+
+    if (simulate_training)
+    {
+    	os << "Start PRN number ..........: " << std::setw(6) << std::right << prn_shift << std::endl;
+    }
+    else
+    {
+    	os << "Start PRN shift in symbol .: " << std::setw(6) << std::right << prn_shift << std::endl;
+    }
 
     if (modulation.isFrequencyDependant())
     {

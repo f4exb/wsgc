@@ -39,6 +39,9 @@ wsgc_test_SOURCES = CodeModulator_BPSK.cpp \
     MultiplePrnCorrelator.cpp \
     MultiplePrnCorrelator_FreqDep.cpp \
     MultiplePrnCorrelator_FreqIndep.cpp \
+    PilotedTrainingMessageCorrelator.cpp \
+    PilotedTrainingMessageCorrelator_Host.cpp \
+    PilotedTrainingMultiplePrnCorrelator.cpp \
     Options.cpp \
     Path.cpp \
     PilotCorrelationAnalyzer.cpp \
@@ -113,6 +116,9 @@ wsgc_test_SOURCES = CodeModulator_BPSK.cpp \
     MultiplePrnCorrelator.cpp \
     MultiplePrnCorrelator_FreqDep.cpp \
     MultiplePrnCorrelator_FreqIndep.cpp \
+    PilotedTrainingMessageCorrelator.cpp \
+    PilotedTrainingMessageCorrelator_Host.cpp \
+    PilotedTrainingMultiplePrnCorrelator.cpp \
     Options.cpp \
     Path.cpp \
     PilotCorrelationAnalyzer.cpp \
