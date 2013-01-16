@@ -50,7 +50,7 @@ void TrainingCorrelationRecord::reset()
     _selected = false;         // PRN sample has been selected as valid for message correlation by the pilot correlation analyser
 }
         
-void TrainingCorrelationRecord::dump(std::ostringstream& os, unsigned int magnitude_factor) const
+void TrainingCorrelationRecord::dump(std::ostringstream& os, wsgc_float magnitude_factor) const
 {
     os << std::setiosflags(std::ios_base::fixed);
     //"-- %2d:%2d>" % ((bn-1)/self.N,Ni), "Fdi:", fd_i, "Ni:", Ni, "PRN:", "%03d"% prn_index_max, "Max:", "%07.1f"% value_max, "Shift:", "%04d" % bin_index_max, "Phase @ max: %5.2f" % phase_max, "Fd: %.2f" % fd, "Locked:", frequency_locked

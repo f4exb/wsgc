@@ -44,7 +44,7 @@ public:
 	~TrainingCorrelationRecord();
 
 	void reset();
-	void dump(std::ostringstream& os, unsigned int magnitude_factor=1.0) const;
+	void dump(std::ostringstream& os, wsgc_float magnitude_factor=1.0) const;
 	void dump_line(std::ostringstream& os, wsgc_float magnitude_factor=1.0) const;
 	static void dump_banner(std::ostringstream& os);
 
