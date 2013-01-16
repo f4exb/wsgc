@@ -33,7 +33,6 @@
 #define __MESSAGE_CORRELATOR_HOST_H__
 
 #include "WsgcTypes.h"
-#include "CorrelationRecord.h"
 #include "ContinuousPhaseCarrier.h"
 #include "PilotedMessageCorrelator.h"
 #include <vector>

@@ -29,6 +29,7 @@
 
 #include "PilotedMessageCorrelator_Host.h"
 #include "GoldCodeGenerator.h"
+#include "CorrelationRecord.h"
 #include "PilotCorrelationAnalyzer.h"
 #include "LocalCodes_Host.h"
 #include "WsgcUtils.h"

@@ -42,6 +42,7 @@ wsgc_test_SOURCES = CodeModulator_BPSK.cpp \
     PilotedTrainingMessageCorrelator.cpp \
     PilotedTrainingMessageCorrelator_Host.cpp \
     PilotedTrainingMultiplePrnCorrelator.cpp \
+    TrainingCorrelationRecord.cpp \
     Options.cpp \
     Path.cpp \
     PilotCorrelationAnalyzer.cpp \
@@ -119,6 +120,7 @@ wsgc_test_SOURCES = CodeModulator_BPSK.cpp \
     PilotedTrainingMessageCorrelator.cpp \
     PilotedTrainingMessageCorrelator_Host.cpp \
     PilotedTrainingMultiplePrnCorrelator.cpp \
+    TrainingCorrelationRecord.cpp \
     Options.cpp \
     Path.cpp \
     PilotCorrelationAnalyzer.cpp \

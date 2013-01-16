@@ -31,6 +31,7 @@
 #include "WsgcTypes.h"
 #include "PilotCorrelationRecord.h"
 #include "CorrelationRecord.h"
+#include "TrainingCorrelationRecord.h"
 #include "AutocorrelationRecord.h"
 #include <time.h>
 #include <vector>
@@ -113,6 +114,18 @@ class PilotCorrelationAnalyzer
          */
         CorrelationRecord& new_message_correlation_record(unsigned int global_prn_index);
 
+        /*
+         * Append a new training correlation record
+         * \param global_prn_index Global PRN index corresponding to this message PRN
+         * \param sequence_length Length of training sequence
+         * \param analysis_window_prn Length of analysis window in PRN numbers
+         * \return Reference to the training correlation record
+         */
+        TrainingCorrelationRecord& new_training_correlation_record(
+        		unsigned int global_prn_index,
+        		unsigned int sequence_length,
+        		unsigned int analysis_window_prn);
+
         /**
          * Validate pilot correlation records for pilot 1 and pilot 2 that many places from the end. 
          * This triggers the analysis process with these records.
@@ -154,7 +167,7 @@ class PilotCorrelationAnalyzer
          * Get index of pilot correlation records at start of analysis
          * \return Index of pilot correlation records at start of analysis
          */
-        unsigned int get_start_analysis_pilot_correlation_records_index()
+        unsigned int get_start_analysis_pilot_correlation_records_index() const
         {
         	return _start_pilot_correlation_records_index;
         }
@@ -163,7 +176,7 @@ class PilotCorrelationAnalyzer
          * Get index of message correlation records at start of analysis
          * \return Index of message correlation records at start of analysis
          */
-        unsigned int get_start_analysis_message_correlation_records_index()
+        unsigned int get_start_analysis_message_correlation_records_index() const
         {
         	return _start_message_correlation_records_index;
         }
@@ -172,16 +185,25 @@ class PilotCorrelationAnalyzer
          * Get analysis window size
          * \return Analysis window size
          */
-        unsigned int get_analysis_window_size()
+        unsigned int get_analysis_window_size() const
         {
         	return _analysis_window_size;
+        }
+
+        /**
+         * Get analysis window size in number of PRNs
+         * \return Analysis window size
+         */
+        unsigned int get_analysis_window_size_in_prns() const
+        {
+        	return _analysis_window_size*_prn_per_symbol;
         }
 
         /**
          * Get PRN time shift analysis size
          * \return PRN time shift analysis size
          */
-        unsigned int get_prn_time_shift_analysis_size()
+        unsigned int get_prn_time_shift_analysis_size() const
         {
         	return _fft_N;
         }
@@ -190,7 +212,7 @@ class PilotCorrelationAnalyzer
          * Get the current PRN global index that the one corresponding to the last entered sample
          * \return The PRN global index
          */
-        unsigned int get_prn_index()
+        unsigned int get_prn_index() const
         {
             return _prn_index -1 + _samples_start_global_prn_index;
         }
@@ -261,6 +283,12 @@ class PilotCorrelationAnalyzer
         void dump_message_correlation_records(std::ostringstream& os) const;
 
         /**
+         * Dumps the training correlation record vector to a string stream
+         * \param os The output string stream
+         */
+        void dump_training_correlation_records(std::ostringstream& os) const;
+
+        /**
          * Dumps the time shifts histogram vector 
          * \param os The output string stream
          */
@@ -288,6 +316,15 @@ class PilotCorrelationAnalyzer
         void set_message_mag_display_factor(wsgc_float mag_display_factor)
         {
             _message_mag_display_factor = mag_display_factor;
+        }
+
+        /**
+         * Sets the training PRNs magnitude display factor. Magnitudes are divided by this factor for display.
+         * \param mag_display_factor The magnitude display factor.
+         */
+        void set_training_mag_display_factor(wsgc_float mag_display_factor)
+        {
+            _training_mag_display_factor = mag_display_factor;
         }
 
         /**
@@ -345,10 +382,12 @@ class PilotCorrelationAnalyzer
         std::vector<unsigned int> _pilot_numbers; //!< Vector of pilot numbers detected
         unsigned int _analysis_index; //!< Current analysis window index
         std::vector<CorrelationRecord> _message_correlation_records; //!< Message correlation records filled by the message correlator
+        std::vector<TrainingCorrelationRecord> _training_correlation_records; //!< Synchronization training correlation records filled by the message correlator
         unsigned int _start_message_correlation_records_index; //!< Index at start of message correlation records analysis window
         unsigned int _validate_count; //!< Counter of number of pilot correlation records validated
         wsgc_float _pilot_mag_display_factor; //!< Pilot magnitudes are divided by this factor for display
         wsgc_float _message_mag_display_factor; //!< Message magnitudes are divided by this factor for display
+        wsgc_float _training_mag_display_factor; //!< Message magnitudes are divided by this factor for display
 
         static const wsgc_float _best_time_margin_threshold;  //<! selected correlation time delta difference with next / number of correlations ratio threshold
 

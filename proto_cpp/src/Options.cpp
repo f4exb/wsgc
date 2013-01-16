@@ -187,12 +187,10 @@ bool Options::get_options(int argc, char *argv[])
                 }
                 else if (strcmp("simulate-sync", long_options[option_index].name) == 0)
                 {
-                    std::cout << "Simulate symbol synchronization" << std::endl;
                     simulate_sync = true;
                 }
                 else if (strcmp("simulate-trn", long_options[option_index].name) == 0)
                 {
-                    std::cout << "Simulate synchronization training sequence" << std::endl;
                     simulate_training = true;
                 }
                 _indicator_int = 0;
@@ -425,7 +423,7 @@ bool Options::get_options(int argc, char *argv[])
             	}
             	else
             	{
-            		for (unsigned int prni = prn_shift; prni < nb_random_prns; prni++)
+            		for (unsigned int prni = prn_shift; prni < prn_shift+nb_random_prns; prni++)
             		{
             			prns.push_back(prni);
             		}
@@ -678,15 +676,17 @@ void Options::print_options(std::ostringstream& os)
     os << "Samples/code = FFT size ...: " << std::setw(6) << std::right << nb_samples_per_code << std::endl;
     os << "Code shift ................: " << std::setw(6) << std::right << code_shift << std::endl;
     os << "Nb of generated symbols ...: " << std::setw(6) << std::right << prns.size() << std::endl;
-    os << "PRNs per symbol ...........: " << std::setw(6) << std::right << nb_prns_per_symbol << std::endl;
-    os << "Symbol period .............: " << std::setw(9) << std::setprecision(2) << std::right << symbol_period << std::endl;
 
     if (simulate_training)
     {
+        os << "PRNs per pilot averaging ..: " << std::setw(6) << std::right << nb_prns_per_symbol << std::endl;
+        os << "Pilot averaging period ....: " << std::setw(9) << std::setprecision(2) << std::right << symbol_period << std::endl;
     	os << "Start PRN number ..........: " << std::setw(6) << std::right << prn_shift << std::endl;
     }
     else
     {
+        os << "PRNs per symbol ...........: " << std::setw(6) << std::right << nb_prns_per_symbol << std::endl;
+        os << "Symbol period .............: " << std::setw(9) << std::setprecision(2) << std::right << symbol_period << std::endl;
     	os << "Start PRN shift in symbol .: " << std::setw(6) << std::right << prn_shift << std::endl;
     }
 
@@ -718,7 +718,7 @@ void Options::print_options(std::ostringstream& os)
     }
     
     os << "Modulation ................: "; modulation.print_modulation_data(os); os << std::endl;
-    os << "Nb phase averaging cycles .: " << std::setw(6) << std::right << tracking_phase_average_cycles << std::endl;
+    //os << "Nb phase averaging cycles .: " << std::setw(6) << std::right << tracking_phase_average_cycles << std::endl;
     os << "Nb message symbols ........: " << std::setw(6) << std::right << nb_message_symbols << std::endl;
     os << "Nb service symbols ........: " << std::setw(6) << std::right << nb_service_symbols << std::endl;
     os << "Noise PRN .................: " << std::setw(6) << std::right << noise_prn << " (" << noise_prn - nb_message_symbols << ")" << std::endl;
@@ -735,7 +735,17 @@ void Options::print_options(std::ostringstream& os)
         os << "Frequency range ...........: " << std::setprecision(1) << "[" << f_step_low*freq_step_size << ":" << f_step_high*freq_step_size << "]" << std::endl;
         os << "Minor freq step size ......: " << std::setw(9) << std::setprecision(3) << std::right << (freq_step_size/f_step_division) << std::endl;
         os << "Batch size ................: " << std::setw(6) << std::right << batch_size << " PRNs" << std::endl;
-        os << "Analysis window size ......: " << std::setw(6) << std::right << analysis_window_size << " Symbols" << std::endl;
+
+        if (simulate_training)
+        {
+        	os << "Analysis window size ......: " << std::setw(6) << std::right << analysis_window_size*nb_prns_per_symbol << " PRNs" << std::endl;
+        }
+        else
+        {
+        	os << "Analysis window size ......: " << std::setw(6) << std::right << analysis_window_size << " Symbols" << std::endl;
+        }
+
+    	os << "Analysis window time ......: " << std::setw(9) << std::setprecision(2) << std::right << symbol_period << std::endl;
 
         if (pilot1 == pilot2)
         {
@@ -753,7 +763,15 @@ void Options::print_options(std::ostringstream& os)
 
     os << "Processing options:" << std::endl;
     os << " - " << (use_cuda ? "Using CUDA implementation" : "Using Host implementation") << std::endl;
-    os << " - " << (simulate_sync ? "Simulate external symbol synchronization" : "Use cyclic maximum detection for symbol synchronization") << std::endl;
+    if (simulate_training)
+    {
+        os << " - " << "Simulate synchronization training sequence" << std::endl;
+    }
+    else
+    {
+        os << " - " << "Simulate message correlation" << std::endl;
+        os << " - " << (simulate_sync ? "Simulate external (to message correlation) symbol synchronization" : "Use cyclic maximum detection for symbol synchronization") << std::endl;
+    }
     os << std::endl;
 
     os << "Generator polynomials:" << std::endl;

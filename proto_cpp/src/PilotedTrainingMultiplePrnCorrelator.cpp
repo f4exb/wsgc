@@ -85,21 +85,22 @@ void PilotedTrainingMultiplePrnCorrelator::make_correlation(unsigned int pilot_p
                 {
                     std::cout << "Preferred PRN time shift could not be identified - Analysis window is invalidated" << std::endl;
                 }
-                
-                _pilot_correlation_analyzer._message_times.push_back(PilotCorrelationAnalyzer::tmp_time);
-                clock_gettime(PilotCorrelationAnalyzer::_time_option, &_pilot_correlation_analyzer._message_times.back()._beg);
+                else
+                {
+					_pilot_correlation_analyzer._message_times.push_back(PilotCorrelationAnalyzer::tmp_time);
+					clock_gettime(PilotCorrelationAnalyzer::_time_option, &_pilot_correlation_analyzer._message_times.back()._beg);
 
-                _training_message_correlator.execute(_pilot_correlation_analyzer);
+					_training_message_correlator.execute(_pilot_correlation_analyzer);
 
-                clock_gettime(PilotCorrelationAnalyzer::_time_option, &_pilot_correlation_analyzer._message_times.back()._end);
+					clock_gettime(PilotCorrelationAnalyzer::_time_option, &_pilot_correlation_analyzer._message_times.back()._end);
 
-                // TODO: do an actual process here. For the time being just print the results
-                std::cout << "Training sequence correlation results:" << std::endl;
-                std::cout << "  Max to average max = " << _training_message_correlator._maxtoavg_max
-                		<< ", Max = " <<  _training_message_correlator._mag_max
-                		<< ", PRNi max = " << _training_message_correlator._prni_max
-                		<< ", Ai max = " << _training_message_correlator._prnai_max
-                		<< std::endl;
+					std::cout << "Training sequence correlation results:" << std::endl;
+					std::cout << " Ai max = " << _training_message_correlator._prnai_max
+							<< ", Max = " <<  _training_message_correlator._mag_max
+							<< ", Max to average max = " << _training_message_correlator._maxtoavg_max
+							<< " PRNi max = " << _training_message_correlator._prni_max
+							<< std::endl;
+                }
 
                 _pilot_correlation_analyzer.reset_analysis();
             }
