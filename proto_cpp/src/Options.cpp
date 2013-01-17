@@ -32,7 +32,6 @@
 #include <stdlib.h>
 #include <getopt.h>
 #include <cstring>
-#include <string>
 #include <stdlib.h>
 #include <time.h>
 #include <algorithm>
@@ -60,7 +59,8 @@ template<typename TOpt, typename TField> bool extract_option(TField& field, char
 }
 
 
-Options::Options() :
+Options::Options(std::string& _binary_name) :
+    binary_path(_binary_name),
     f_sampling(4096.0),
     f_chip(1023.0),
     snr(0.0),
@@ -559,42 +559,43 @@ void Options::get_help(std::ostringstream& os)
         const char *help_text;
         const char *type;
         const char *default_value;
+        const char *binary_name;
     };
     
     static struct help_struct help_lines[] =
     {       
-        {"", "--help", "Print this help and exit", "flag", "false"},
-        {"", "--noise-test", "Trigger noise test", "flag", "false"},    
-        {"", "--file-debugging", "Trigger debugging on files", "flag", "false"},    
-        {"", "--cuda", "Trigger CUDA implementation", "flag", "false"},
-        {"", "--simulate-sync", "Trigger external symbol synchronization simulation", "flag", "false"},
-        {"", "--simulate-trn", "Trigger synchronization training sequence simulation", "flag", "false"},
-        {"-s", "--f-sampling", "Sampling frequency", "float", "4096.0"},    
-        {"-c", "--f-chip", "Chip frequency", "float", "1023.0"},    
-        {"-C", "--code-shift", "PRN code shift in number of samples", "int", "1020"},    
-        {"-N", "--nb-prn-per-symbol", "Number of PRN code sequences per symbol", "int", "4"},
-        {"-I", "--prn-shift", "Start simulation at PRN shift in symbol", "int", "0"},
-        {"-t", "--f-tx", "Transmission frequency", "float", "100.0"},
-        {"-r", "--f-rx", "Initial receiving frequency", "float", "100.1"},
-        {"-n", "--snr", "Add Gaussian noise: signal to noise ratio in signal bandwidth in dB", "float", "-24.0"},    
-        {"-t", "--tracking-phase-average", "Number of phase averaging cycles for frequency tracking", "int", "4"},
-        {"-m", "--nb-stages", "Number of stages of the PRN generator LFSRs. This gives 2**N-1 chips", "int", "10"},
-        {"-g", "--g1-poly", "Generator 1 comma separated list of polynomial powers except N and 0", "string", "\"3\""},
-        {"-G", "--g2-poly", "Generator 2 comma separated list of polynomial powers except N and 0", "string", "\"8,3,2\""},
-        {"-M", "--nb-message-symbols", "Number of message symbols", "int", "64"},
-        {"-S", "--nb-service-symbols", "Number of service symbols", "int", "3"},
-        {"-P", "--pilot-prns", "Number of pilot PRNs (see documentation)", "int", "1"},
-        {"-A", "--pilot-gain-db", "Gain of the pilot PRN(s) vs Message PRNs", "float", "0.0"},
-        {"-F", "--df-steps", "Number of frequency steps to explore (step sized by FFT size and sampling frequency)", "int", "31"},
-        {"-U", "--df-sub-steps", "Number of frequency sub-steps of the above frequency step to explore", "int", "8"},
-        {"-B", "--batch-size", "Batch size in number of PRNs for pilot processing", "int", "3"},
-        {"-p", "--prns", "Symbol PRN numbers in a comma separated list (overrides -R)", "string", "null (uses random option)"},
-        {"-R", "--random-prns", "Number of random symbols to generate", "int", "4"},
-        {"-f", "--fading-model", "Fading model data (see short help below)", "string", "null (no fading)"},
-        {"-d", "--modulation-scheme", "Modulation scheme (see short help below)", "string", "BPSK"},
-        {"-z", "--analysis-window-size", "Pilot analysis window size in number of symbols", "int", "4"},
-        {"-o", "--samples-output-file", "Output file for generated samples", "string", ""},
-        {0,0,0,0,0}
+        {"", "--help", "Print this help and exit", "flag", "false", "any"},
+        {"", "--noise-test", "Trigger noise test", "flag", "false", ""},    
+        {"", "--file-debugging", "Trigger debugging on files", "flag", "false", ""},    
+        {"", "--cuda", "Trigger CUDA implementation", "flag", "false", "wsgc_test"},
+        {"", "--simulate-sync", "Trigger external symbol synchronization simulation", "flag", "false", "wsgc_test"},
+        {"", "--simulate-trn", "Trigger synchronization training sequence simulation", "flag", "false", "any"},
+        {"-s", "--f-sampling", "Sampling frequency", "float", "4096.0", "any"},    
+        {"-c", "--f-chip", "Chip frequency", "float", "1023.0", "any"},    
+        {"-C", "--code-shift", "PRN code shift in number of samples", "int", "1020", "any"},    
+        {"-N", "--nb-prn-per-symbol", "Number of PRN code sequences per symbol", "int", "4", "any"},
+        {"-I", "--prn-shift", "Start simulation at PRN shift in symbol", "int", "0", "any"},
+        {"-t", "--f-tx", "Transmission frequency", "float", "100.0", "any"},
+        {"-r", "--f-rx", "Initial receiving frequency", "float", "100.1", "wsgc_test"},
+        {"-n", "--snr", "Add Gaussian noise: signal to noise ratio in signal bandwidth in dB", "float", "-24.0", "any"},    
+        {"-t", "--tracking-phase-average", "Number of phase averaging cycles for frequency tracking", "int", "4", ""},
+        {"-m", "--nb-stages", "Number of stages of the PRN generator LFSRs. This gives 2**N-1 chips", "int", "10", "any"},
+        {"-g", "--g1-poly", "Generator 1 comma separated list of polynomial powers except N and 0", "string", "\"3\"", "any"},
+        {"-G", "--g2-poly", "Generator 2 comma separated list of polynomial powers except N and 0", "string", "\"8,3,2\"", "any"},
+        {"-M", "--nb-message-symbols", "Number of message symbols", "int", "64", "any"},
+        {"-S", "--nb-service-symbols", "Number of service symbols", "int", "3", "any"},
+        {"-P", "--pilot-prns", "Number of pilot PRNs (see documentation)", "int", "1", "any"},
+        {"-A", "--pilot-gain-db", "Gain of the pilot PRN(s) vs Message PRNs", "float", "0.0", "any"},
+        {"-F", "--df-steps", "Number of frequency steps to explore (step sized by FFT size and sampling frequency)", "int", "31", "wsgc_test"},
+        {"-U", "--df-sub-steps", "Number of frequency sub-steps of the above frequency step to explore", "int", "8", "wsgc_test"},
+        {"-B", "--batch-size", "Batch size in number of PRNs for pilot processing", "int", "3", "any"},
+        {"-p", "--prns", "Symbol PRN numbers in a comma separated list (overrides -R)", "string", "null (uses random option)", "any"},
+        {"-R", "--random-prns", "Number of random symbols to generate", "int", "4", "any"},
+        {"-f", "--fading-model", "Fading model data (see short help below)", "string", "null (no fading)", "any"},
+        {"-d", "--modulation-scheme", "Modulation scheme (see short help below)", "string", "BPSK", "any"},
+        {"-z", "--analysis-window-size", "Pilot analysis window size in number of symbols", "int", "4", "wsgc_test"},
+        {"-o", "--samples-output-file", "Output file for generated samples", "string", "", "wsgc_generator"},
+        {0,0,0,0,0,0}
     };
     
     // get maximum width of each column
@@ -620,17 +621,35 @@ void Options::get_help(std::ostringstream& os)
         i++;
     } while (help_lines[i].short_option);
     
+    std::vector<std::string> path_nodes;
+    WsgcUtils::extract_string_vector(path_nodes, binary_path);
+    std::string& binary_name = path_nodes.back();
+
+    std::cout << binary_name << std::endl;
+
     // display option help
     os << "Valid options (short, long, comment, type, default)" << std::endl;
     i = 0;    
 
     do
     {
-        os << std::setw(short_option_len) << help_lines[i].short_option << " " 
-           << std::setw(long_option_len) << std::left << std::setfill(' ') << help_lines[i].long_option << " "
-           << std::setw(help_text_len) << std::left << std::setfill(' ') << help_lines[i].help_text << " "
-           << std::setw(type_len) << std::left << std::setfill(' ') << help_lines[i].type << " "
-           << std::setw(default_value_len) << std::left << std::setfill(' ') << help_lines[i].default_value << std::endl;
+        char anystr[] = "any";
+        
+        if ((strcmp(help_lines[i].binary_name, binary_name.c_str()) == 0) || (strcmp(help_lines[i].binary_name, anystr) == 0))
+        {
+            os << std::setw(short_option_len) << help_lines[i].short_option << " " 
+               << std::setw(long_option_len) << std::left << std::setfill(' ') << help_lines[i].long_option << " "
+               << std::setw(help_text_len) << std::left << std::setfill(' ') << help_lines[i].help_text << " "
+               << std::setw(type_len) << std::left << std::setfill(' ') << help_lines[i].type << " "
+               << std::setw(default_value_len) << std::left << std::setfill(' ') << help_lines[i].default_value << std::endl;
+        }
+        else if (help_lines[i].binary_name[0] == '\0')
+        {
+            os << std::setw(short_option_len) << help_lines[i].short_option << " " 
+               << std::setw(long_option_len) << std::left << std::setfill(' ') << help_lines[i].long_option << " "
+               << std::setw(help_text_len) << std::left << std::setfill(' ') << help_lines[i].help_text << " "
+               << "-- deprecated -- " << std::endl;
+        }
         i++;
     } while (help_lines[i].short_option);
     
@@ -653,7 +672,14 @@ void Options::get_help(std::ostringstream& os)
     os << "The number if pilot PRNs should be 2" << std::endl;
     os << std::endl;
 
-    os << "Example: wsgc_test -s 4096 -c 1023 -C 1020 -t 100.0 -r 100.1 -n -24 -N 4 -I 0 -R 6" << std::endl;
+    if (binary_name == "wsgc_test")
+    {
+        os << "Example: wsgc_test -s 4096 -c 1023 -C 1020 -t 100.0 -r 100.1 -n -24 -N 4 -I 0 -R 6" << std::endl;
+    }
+    else if (binary_name == "wsgc_generator")
+    {
+        os << "Example: wsgc_generator -s 4096 -c 1023 -C 1020 -t 100.0 -n -24 -N 4 -I 0 -R 6 -o \"my_samples_iq_file.raw\"" << std::endl;
+    }
 }
 
         

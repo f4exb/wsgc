@@ -17,12 +17,16 @@
 #include "WsgcUtils.h"
 #include "SampleSequencer.h"
 #include "SourceMixer.h"
+#include "FIR_RCoef.h"
+
+void test_fir(wsgc_complex *inout, unsigned int& nb_samples);
 
 int main(int argc, char *argv[])
 {
     timespec time1, time2;
     int time_option = CLOCK_REALTIME;
-    Options options;
+    std::string binary_name(argv[0]);
+    Options options(binary_name);
 
     if (options.get_options(argc,argv))
     {
@@ -86,6 +90,9 @@ int main(int argc, char *argv[])
             	source_samples = message_source->get_samples();
             	nb_source_samples = message_source->get_nb_samples();
             }
+
+            // TODO: do a clean implementation. Experimental: low pass raised cosine FIR filter
+            test_fir(source_samples, nb_source_samples);
 
             // get fading model
             FadingModel *fading = options._fading_model;
@@ -190,3 +197,29 @@ int main(int argc, char *argv[])
     }
 }
 
+
+//=================================================================================================
+// TODO: do it with FIR coefficients generator and pad appropriately
+void test_fir(wsgc_complex *inout, unsigned int& nb_samples)
+{
+	wsgc_float a_fir_coef[] = {0.001344, -0.000000, -0.030310, 0.000000, 0.280490, 0.753080, 1.000000, 0.753080, 0.280490, 0.000000, -0.030310, -0.000000, 0.001344};
+	std::vector<wsgc_float> fir_coef(a_fir_coef, a_fir_coef+(sizeof(a_fir_coef)/sizeof(wsgc_float)));
+	unsigned int nb_taps = fir_coef.size();
+	std::cout << nb_taps << std::endl;
+	FIR_RCoef fir_filter(fir_coef);
+	static const wsgc_complex c_zero = (0.0, 0.0);
+
+	for (unsigned int i = 0; i<nb_samples; i++)
+	{
+		inout[i] = fir_filter.calc(inout[i]);
+	}
+
+	/*
+	for (unsigned int i = 0; i<nb_taps; i++)
+	{
+		inout[i] = fir_filter.calc(c_zero);
+	}
+
+	nb_samples += nb_taps;
+	*/
+}

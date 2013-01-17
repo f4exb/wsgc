@@ -31,12 +31,13 @@
 #include "FadingModel.h"
 #include "Modulation.h"
 #include <vector>
+#include <string>
 #include <sstream>
 
 class Options
 {
     public:
-        Options();
+        Options(std::string& _binary_name);
         ~Options();
 
         bool get_options(int argc, char *argv[]);
@@ -52,6 +53,7 @@ class Options
             return _fading_model;
         }
 
+        std::string binary_path;
         wsgc_float f_sampling;
         wsgc_float f_chip;
         wsgc_float snr;
