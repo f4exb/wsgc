@@ -41,7 +41,7 @@ public:
 	 * Construct an new Complex FIR filter with real tap coefficients
 	 * \param nb_taps Number of taps. Must be odd and > 1. Forced to be odd by adding one if even number is given.
 	 */
-	FIR_RCoef(std::vector<wsgc_float>& tap_coefs);
+	FIR_RCoef(const std::vector<wsgc_float>& tap_coefs);
 	virtual ~FIR_RCoef();
 
 	/**
@@ -51,7 +51,7 @@ public:
 
 protected:
 	wsgc_complex *_delay_line;
-	std::vector<wsgc_float>& _tap_coefs;
+	const std::vector<wsgc_float>& _tap_coefs;
 	unsigned int _last_index;
 	unsigned int _nb_taps;
 	static const wsgc_complex _c_zero;

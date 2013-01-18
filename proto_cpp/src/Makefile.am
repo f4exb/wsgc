@@ -62,6 +62,8 @@ wsgc_test_SOURCES = CodeModulator_BPSK.cpp \
     wsgc_test.cpp \
     WsgcUtils.cpp \
     FIR_RCoef.cpp \
+    FIRCoefGenerator.cpp \
+    FIRCoefGenerator_RCos.cpp \
     CudaManager.cu \
     LocalCodesFFT_Cuda.cu \
     PilotCorrelator_Cuda.cu \
@@ -140,7 +142,9 @@ wsgc_test_SOURCES = CodeModulator_BPSK.cpp \
     SourceMixer.cpp \
     wsgc_test.cpp \
     WsgcUtils.cpp \
-    FIR_RCoef.cpp
+    FIR_RCoef.cpp \
+    FIRCoefGenerator.cpp \
+    FIRCoefGenerator_RCos.cpp
 
 wsgc_test_LDADD = -lrt $(FFTW3F_LIBS)
 
@@ -166,7 +170,9 @@ wsgc_generator_SOURCES = wsgc_generator.cpp \
     Modulation.cpp \
     SampleSequencer.cpp \
     SourceMixer.cpp \
-    FIR_RCoef.cpp
+    FIR_RCoef.cpp \
+    FIRCoefGenerator.cpp \
+    FIRCoefGenerator_RCos.cpp
 
 wsgc_generator_LDADD = -lrt $(FFTW3F_LIBS)
 

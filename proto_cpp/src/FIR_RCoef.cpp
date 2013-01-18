@@ -30,7 +30,7 @@
 
 const wsgc_complex FIR_RCoef::_c_zero = (0.0, 0.0);
 
-FIR_RCoef::FIR_RCoef(std::vector<wsgc_float>& tap_coefs) :
+FIR_RCoef::FIR_RCoef(const std::vector<wsgc_float>& tap_coefs) :
 	_tap_coefs(tap_coefs),
 	_last_index(0)
 {

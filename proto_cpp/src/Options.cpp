@@ -29,6 +29,7 @@
 #include "FadingModelNone.h"
 #include "FadingModelClarke.h"
 #include "FadingModelWatterson.h"
+#include "FIRCoefGenerator_RCos.h"
 #include <stdlib.h>
 #include <getopt.h>
 #include <cstring>
@@ -53,7 +54,8 @@ template<typename TOpt, typename TField> bool extract_option(TField& field, char
     }
     catch (boost::bad_lexical_cast &)
     {
-        std::cout << "wrong argument for -" << short_option << ": " << optarg << " leave default (" << field << ")" << std::endl;
+        std::cout << "wrong argument for -" << short_option << ": " << optarg << " leave default (" << field << ")";
+        std::cout << std::endl;
         return false;
     }
 }
@@ -92,7 +94,8 @@ Options::Options(std::string& _binary_name) :
     use_cuda(false),
     analysis_window_size(4),
     simulate_sync(false),
-    simulate_training(false)
+    simulate_training(false),
+	_fir_coef_generator(0)
 {
     srand(time(0));
 }
@@ -153,11 +156,12 @@ bool Options::get_options(int argc, char *argv[])
             {"batch-size", required_argument, 0, 'B'},
             {"analysis-window-size", required_argument, 0, 'z'},
             {"samples-output-file", required_argument, 0, 'o'},
+            {"fir-filter-model", required_argument, 0, 'L'},
         };
         
         int option_index = 0;
         
-        c = getopt_long (argc, argv, "s:c:n:t:C:p:N:I:r:R:T:m:M:S:g:G:f:d:a:P:A:F:B:z:U:o:", long_options, &option_index);
+        c = getopt_long (argc, argv, "s:c:n:t:C:p:N:I:r:R:T:m:M:S:g:G:f:d:a:P:A:F:B:z:U:o:L:", long_options, &option_index);
         
         if (c == -1) // end of options
         {
@@ -276,6 +280,9 @@ bool Options::get_options(int argc, char *argv[])
             case 'o':
             	samples_output_file = std::string(optarg);
             	status = true;
+                break;
+            case 'L':
+                status = parse_fir_filter_model_data(std::string(optarg));
                 break;
             case '?':
                 std::ostringstream os;
@@ -595,6 +602,7 @@ void Options::get_help(std::ostringstream& os)
         {"-d", "--modulation-scheme", "Modulation scheme (see short help below)", "string", "BPSK", "any"},
         {"-z", "--analysis-window-size", "Pilot analysis window size in number of symbols", "int", "4", "wsgc_test"},
         {"-o", "--samples-output-file", "Output file for generated samples", "string", "", "wsgc_generator"},
+        {"-L", "--fir-filter-model", "Lowpass FIR filter model (see short help below)", "string", "", "any"},
         {0,0,0,0,0,0}
     };
     
@@ -670,6 +678,11 @@ void Options::get_help(std::ostringstream& os)
     os << " - PRN shift in symbol start becomes the PRN number at which the training sequence starts" << std::endl;
     os << " => These two options should be arranged so as not to yield a PRN number higher than the number of message PRNs" << std::endl;
     os << "The number if pilot PRNs should be 2" << std::endl;
+    os << std::endl;
+    os << "Lowpass FIR filter models:" << std::endl;
+    os << " - Raised cosine: \"RCOS:<nb_taps>,<rolloff>,<cutoff frequency>\"" << std::endl;
+    os << "   Rolloff factor must be between 0.0 and 1.0. Invalid values yield 1.0" << std::endl;
+    os << " Cutoff frequency must be lower or equal to half the sampling frequency. Invalid values yield fs/2" << std::endl;
     os << std::endl;
 
     if (binary_name == "wsgc_test")
@@ -787,6 +800,13 @@ void Options::print_options(std::ostringstream& os)
     os << "Message time ..............: " << std::setw(9) << std::setprecision(2) << std::right << message_time << std::endl; 
     os << std::endl;
 
+    if (_fir_coef_generator != 0)
+    {
+    	os << "Lowpass FIR filter model:" << std::endl;
+    	_fir_coef_generator->dump(os);
+    	os << std::endl;
+    }
+
     os << "Processing options:" << std::endl;
     os << " - " << (use_cuda ? "Using CUDA implementation" : "Using Host implementation") << std::endl;
     if (simulate_training)
@@ -829,6 +849,42 @@ void Options::print_fading_model_data(std::ostringstream& os)
     }
 }
 
+
+bool Options::parse_fir_filter_model_data(std::string fir_data_str)
+{
+    bool status = false;
+
+    size_t colon_pos = fir_data_str.find(":");
+
+    if ((fir_data_str.length() > 3) && (colon_pos != std::string::npos) && (colon_pos > 0))
+    {
+        std::vector<wsgc_float> raw_float_parameters;
+        std::vector<std::string> raw_string_parameters;
+        std::string parameter_str = fir_data_str.substr(colon_pos+1);
+        std::string filter_type(fir_data_str.substr(0,colon_pos));
+        std::transform(filter_type.begin(), filter_type.end(), filter_type.begin(), ::toupper);
+
+        if (filter_type == "RCOS")
+        {
+        	status = extract_vector<wsgc_float>(raw_float_parameters, parameter_str);
+
+        	if (raw_float_parameters.size() > 2)
+        	{
+        		unsigned int nb_taps = int(raw_float_parameters[0]);
+        		_fir_coef_generator = new FIRCoefGenerator_RCos(f_sampling, raw_float_parameters[2], raw_float_parameters[1], nb_taps);
+        	}
+
+            status = true;
+        }
+    }
+
+    if (!status)
+    {
+        std::cout << "Invalid FIR filter model specification" << std::endl;
+    }
+
+    return status;
+}
 
 bool Options::parse_fading_model_data(std::string fading_data_str)
 {

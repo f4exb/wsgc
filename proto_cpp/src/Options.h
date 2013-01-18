@@ -30,6 +30,7 @@
 #include "WsgcTypes.h"
 #include "FadingModel.h"
 #include "Modulation.h"
+#include "FIRCoefGenerator.h"
 #include <vector>
 #include <string>
 #include <sstream>
@@ -89,6 +90,7 @@ class Options
         std::string samples_output_file;
         bool simulate_sync;
         bool simulate_training;
+        FIRCoefGenerator *_fir_coef_generator;
         
     private:        
         int _indicator_int;
@@ -99,6 +101,7 @@ class Options
         bool parse_fading_model_data(std::string fading_data_str);
         bool parse_modulation_data(std::string modulation_data_str);
         bool parse_pilot_prns_data(std::string pilot_data_str);
+        bool parse_fir_filter_model_data(std::string fir_data_str);
 };
 
 #endif // __OPTIONS_H__
