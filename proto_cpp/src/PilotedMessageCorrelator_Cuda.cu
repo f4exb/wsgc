@@ -89,6 +89,12 @@ void PilotedMessageCorrelator_Cuda::execute(PilotCorrelationAnalyzer& pilot_corr
     	unsigned int delta_t = pilot_correlation_records[pi].t_index_max;
     	std::complex<float> *prn_src = pilot_correlation_analyzer.get_samples(pilot_correlation_records[pi].prn_index);
 
+        // if external sync then zero out _d_corr_out array at each start of symbol
+        if ((_simulate_symbol_synchronization) && (pai % _prn_per_symbol == 0))
+        {
+            thrust::fill(_d_corr_out.begin(), _d_corr_out.end(), _c_zero);
+        }
+        
     	// make input samples if necessary
     	if (pilot_correlation_records[pi].selected)
     	{
@@ -139,12 +145,6 @@ void PilotedMessageCorrelator_Cuda::execute(PilotCorrelationAnalyzer& pilot_corr
         thrust::reduce_by_key(key_counter.begin(), key_counter.end(), _d_mul_out.begin(), _d_keys.begin(), d_corr_out_avg_in.begin(), thrust::equal_to<int>(), caddc_functor());
 
         // Averaging sum
-        
-        // if external sync then zero out _d_corr_out_avg array at each start of symbol
-        if ((_simulate_symbol_synchronization) && (pai % _prn_per_symbol == 0))
-        {
-            thrust::fill(_d_corr_out_avg.begin(), _d_corr_out_avg.end(), _c_zero);
-        }
         
         //thrust::copy(d_corr_out_avg_in.begin(), d_corr_out_avg_in.end(), _d_corr_out_avg.begin());
         repeat_values<thrust::counting_iterator<int> > key_counter_avg(thrust::make_counting_iterator(0), thrust::make_counting_iterator((int)_nb_msg_prns), _prn_per_symbol);
