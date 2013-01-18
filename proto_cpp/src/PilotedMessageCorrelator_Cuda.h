@@ -80,6 +80,7 @@ protected:
     thrust::device_vector<cuComplex> _d_corr_out; //!< Correlation result (reduce by key values), one sample per PRN
     thrust::device_vector<cuComplex> _d_corr_out_avg; //!< intermediate results for averaging
     thrust::device_vector<int> _d_keys; //!< Keys for the reduce by key (unused), one key per PRN
+    static const cuComplex _c_zero; //!< Complex zero for initializations
 
 };
 
