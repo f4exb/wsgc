@@ -60,6 +60,7 @@ public:
     void set_prn_index_start(unsigned int prn_index_start)
     {
     	_preferred_symbol_prn_i = prn_index_start;
+        _prni_at_max_invalid = false;
     }
 
     /**
