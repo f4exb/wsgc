@@ -121,8 +121,7 @@ void FadingModel::apply_awgn(wsgc_complex *samples, unsigned int nb_samples, uns
     }
     else
     {
-        
-        wsgc_complex noise_samples[nb_samples];
+    	wsgc_complex *noise_samples = new wsgc_complex[nb_samples];
         wsgc_fftw_complex *noise_samples_fftw = reinterpret_cast<wsgc_fftw_complex *>(noise_samples);
         
         for (unsigned int sample_i=0; sample_i<nb_samples; sample_i++)
@@ -146,6 +145,8 @@ void FadingModel::apply_awgn(wsgc_complex *samples, unsigned int nb_samples, uns
         
         std::cout << "Noise power: " << noise_power << " S/N (dB): " << 10.0*log10(mean_signal_power/noise_power) << std::endl;
         std::cout << "New signal power: " << get_mean_signal_power(&samples[signal_shift], nb_samples - signal_shift) << std::endl;
+
+        delete[] noise_samples;
     }
 }
         

@@ -594,6 +594,12 @@ void message_processing(
 
     if (decision_box)
     {
+#ifdef _CUDA
+        if (options.use_cuda)
+        {
+        	decision_box->set_mag_display_adj_factor(fft_N/2);
+        }
+#endif
         decision_box->analyze_records();
 
         if (decision_box->is_prni_at_max_invalid())

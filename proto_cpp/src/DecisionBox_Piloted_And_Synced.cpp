@@ -96,7 +96,7 @@ void DecisionBox_Piloted_And_Synced::estimate_symbols()
             std::ostringstream os;
             os << std::setw(3) << std::setfill('0') << record_nb / _prn_per_symbol << " ";
             //record_it->dump(_fft_size * _prn_per_symbol, os);
-            record_it->dump(1.0, os);
+            record_it->dump(_mag_display_adj_factor, os);
             
             symbol_cycle_nb = record_i / _prn_per_symbol; 
             prn_index_in_cycle = record_i % _prn_per_symbol;
