@@ -13,6 +13,7 @@
 #include "Cuda_RepeatRange.h"
 #include "Cuda_RepeatValue.h"
 #include "Cuda_ShiftedRange.h"
+#include "Cuda_StridedShiftedRange.h"
 #include "Cuda_ShiftedBySegmentsRange.h"
 #include "Cuda_StridedFoldedRange.h"
 #include "Cuda_RepeatIncrementalRange.h"
@@ -508,6 +509,47 @@ void test_cuda::test_shift_range()
     // print shifted data
     std::cout << "data <- 3: ";
     thrust::copy(data_bwd_3.begin(), data_bwd_3.end(), std::ostream_iterator<int>(std::cout, " "));  std::cout << std::endl;
+}
+
+
+void test_cuda::test_strided_shifted_range()
+{
+	thrust::device_vector<int> data(9);
+	data[0] = 0;
+	data[1] = 1;
+	data[2] = 2;
+	data[3] = 3;
+	data[4] = 4;
+	data[5] = 5;
+	data[6] = 6;
+	data[7] = 7;
+	data[8] = 8;
+
+    // print the initial data
+    std::cout << "data     : ";
+    thrust::copy(data.begin(), data.end(), std::ostream_iterator<int>(std::cout, " "));  std::cout << std::endl;
+
+    // stride 3 shift 0
+    strided_shifted_range<thrust::device_vector<int>::iterator> data_fwd_3_0(data.begin(), data.end(), 3, 0);
+
+    // print strided shifted data
+    std::cout << "data -> (3,0): ";
+    thrust::copy(data_fwd_3_0.begin(), data_fwd_3_0.end(), std::ostream_iterator<int>(std::cout, " "));  std::cout << std::endl;
+
+    // stride 3 shift 1
+    strided_shifted_range<thrust::device_vector<int>::iterator> data_fwd_3_1(data.begin(), data.end(), 3, 1);
+
+    // print strided shifted data
+    std::cout << "data -> (3,1): ";
+    thrust::copy(data_fwd_3_1.begin(), data_fwd_3_1.end(), std::ostream_iterator<int>(std::cout, " "));  std::cout << std::endl;
+
+    // stride 3 shift 2
+    strided_shifted_range<thrust::device_vector<int>::iterator> data_fwd_3_2(data.begin(), data.end(), 3, 2);
+
+    // print strided shifted data
+    std::cout << "data -> (3,2): ";
+    thrust::copy(data_fwd_3_2.begin(), data_fwd_3_2.end(), std::ostream_iterator<int>(std::cout, " "));  std::cout << std::endl;
+
 }
 
 

@@ -45,6 +45,9 @@ int main(int argc, char *argv[])
     //std::cout << "-- test shifted range: shifted range iterator --" << std::endl;
     //test_cuda_instance.test_shift_range();
 
+    std::cout << "-- test strided shifted range: shifted range iterator --" << std::endl;
+    test_cuda_instance.test_strided_shifted_range();
+
     //std::cout << "-- test shifted by segments range: shifted by segments range iterator --" << std::endl;
     //test_cuda_instance.test_shifted_by_segments_range();
 

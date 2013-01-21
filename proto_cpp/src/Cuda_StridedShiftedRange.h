@@ -33,13 +33,12 @@
 #include <thrust/functional.h>
 
 /**
- * \brief Strided range of values
+ * \brief Strided and shifted range of values
  *
- * These examples illustrate how to make strided access to a range of values:
- *   strided_range([0, 1, 2, 3, 4, 5, 6], 1) -> [0, 1, 2, 3, 4, 5, 6]
- *   strided_range([0, 1, 2, 3, 4, 5, 6], 2) -> [0, 2, 4, 6]
- *   strided_range([0, 1, 2, 3, 4, 5, 6], 3) -> [0, 3, 6]
- *   ...
+ * These examples illustrate how to make strided and shifted access to a range of values:
+ *   strided_shifted_range([0, 1, 2, 3, 4, 5, 6, 7 ,8], 3, 0) -> [0, 3, 6] : this is like the strided_range with stride 3
+ *   strided_shifted_range([0, 1, 2, 3, 4, 5, 6, 7 ,8], 3, 1) -> [1, 4, 7]
+ *   strided_shifted_range([0, 1, 2, 3, 4, 5, 6, 7 ,8], 3, 2) -> [2, 5, 8]
  */
 template<typename Iterator>
 class strided_shifted_range
@@ -70,10 +69,10 @@ public:
 	typedef typename thrust::transform_iterator<stride_shift_functor, CountingIterator> TransformIterator;
 	typedef typename thrust::permutation_iterator<Iterator, TransformIterator> PermutationIterator;
 
-	// type of the strided_range iterator
+	// type of the strided_shifted_range iterator
 	typedef PermutationIterator iterator;
 
-	// construct strided_range for the range [first,last)
+	// construct strided_shifted_range for the range [first,last)
 	strided_shifted_range(Iterator first, Iterator last, difference_type stride, difference_type shift) :
 			first(first), last(last), stride(stride), shift(shift)
 	{

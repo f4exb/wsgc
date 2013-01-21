@@ -41,6 +41,7 @@ public:
 	void test_repeat_range();
 	void test_repeat_values();
 	void test_shift_range();
+	void test_strided_shifted_range();
 	void test_shifted_by_segments_range();
 	void test_strided_folded_range();
 	void test_repeat_incremental_range();
