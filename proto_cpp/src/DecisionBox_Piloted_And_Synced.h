@@ -54,16 +54,6 @@ public:
     virtual ~DecisionBox_Piloted_And_Synced();
 
     /**
-     * Sets the PRN index in symbol of the symbol start. Should be set before estimate_symbols is invoked
-     * \param prn_index_start PRN index in arbitrary symbol sequence of the actual symbol start boundary
-     */
-    void set_prn_index_start(unsigned int prn_index_start)
-    {
-    	_preferred_symbol_prn_i = prn_index_start;
-        _prni_at_max_invalid = false;
-    }
-
-    /**
 	 * Does the preparatory analysis phase
 	 */
     virtual void analyze_records();

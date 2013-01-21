@@ -42,6 +42,9 @@ DecisionBox_Piloted_And_Synced::DecisionBox_Piloted_And_Synced(unsigned int prn_
     _pilot_correlation_analyzer(pilot_correlation_analyzer)
 {
 	std::cout << "using DecisionBox_Piloted_And_Synced" << std::endl;
+    _preferred_symbol_prn_i = _prn_per_symbol-1;
+    _prni_at_max_invalid = false;
+
 }
 
 
@@ -76,7 +79,7 @@ void DecisionBox_Piloted_And_Synced::estimate_symbols()
         const std::vector<CorrelationRecord>::const_iterator records_end = _pilot_correlation_analyzer.get_message_correlation_records().end();
         std::vector<CorrelationRecord>::const_iterator matching_record_it;
         
-        unsigned int start_of_cycle_index = (_preferred_symbol_prn_i) %  _prn_per_symbol; // preferred index is the start of symbol for this type of decision box
+        unsigned int start_of_cycle_index = (_preferred_symbol_prn_i+1) %  _prn_per_symbol;
         std::cout << "Start of cycle index: " << start_of_cycle_index << std::endl;
         unsigned int record_i = _prn_per_symbol - start_of_cycle_index; //= 0; position of 0 in the cycle
         unsigned int symbol_cycle_nb;

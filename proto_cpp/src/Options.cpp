@@ -334,6 +334,12 @@ bool Options::get_options(int argc, char *argv[])
             	batch_size = nb_prns_per_symbol-1;
             }
 
+            if (simulate_sync)
+            {
+            	prn_shift = 0;
+            	std::cout << "Index of the PRN in symbol where the simulation starts is 0 if simulating synchronization" << std::endl;
+            }
+
             if ((prn_shift < 0) || (prn_shift > nb_prns_per_symbol - 1))
             {
                 std::cout << "Index of the PRN in symbol where the simulation starts must be between 0 and " << nb_prns_per_symbol << " (-I option)" << std::endl;

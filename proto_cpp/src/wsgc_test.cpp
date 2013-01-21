@@ -560,7 +560,6 @@ void message_processing(
         if (options.simulate_sync)
         {
             decision_box = new DecisionBox_Piloted_And_Synced(options.nb_prns_per_symbol, fft_N, *pilot_correlation_analyzer);
-            ((DecisionBox_Piloted_And_Synced *)decision_box)->set_prn_index_start(0); //TODO: use the PRN in symbol shift option
         }
         else
         {
