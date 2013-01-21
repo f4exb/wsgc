@@ -149,10 +149,13 @@ protected:
     	unsigned int _local_codes_code;
     	unsigned int _local_codes_fft_matrix;
     	unsigned int _local_codes_fft_code;
-    	unsigned int _pil_msg_corr_corr_in;
-    	unsigned int _pil_msg_corr_mul_out;
-    	unsigned int _pil_msg_corr_corr_out;
-    	unsigned int _pil_msg_corr_corr_out_avg;
+    	unsigned int _pil_msg_corr_corr_in; //!< PilotedMessageCorrelator_Cuda::_d_corr_in
+    	unsigned int _pil_msg_corr_mul_out; //!< PilotedMessageCorrelator_Cuda::_d_mul_out
+    	unsigned int _pil_msg_corr_corr_out; //!< PilotedMessageCorrelator_Cuda::_d_corr_out
+    	unsigned int _pil_msg_corr_corr_mag; //!< PilotedMessageCorrelator_Cuda::_d_corr_mag
+    	unsigned int _pil_msg_corr_corr_mag_avgsum; //!< PilotedMessageCorrelator_Cuda::_d_corr_mag_avgsum
+    	unsigned int _pil_msg_corr_corr_mag_avgsum_sums; //!< PilotedMessageCorrelator_Cuda::_d_corr_mag_avgsum_sums
+    	unsigned int _pil_msg_corr_keys; //!< PilotedMessageCorrelator_Cuda::_d_keys
     	unsigned int _sprn_corr_fdep_ifft_in;
     	unsigned int _sprn_corr_fdep_ifft_out;
         unsigned int _sprn_corr_fdep_avg_keys;
@@ -167,7 +170,10 @@ protected:
         	_pil_msg_corr_corr_in(0),
         	_pil_msg_corr_mul_out(0),
         	_pil_msg_corr_corr_out(0),
-        	_pil_msg_corr_corr_out_avg(0),
+        	_pil_msg_corr_corr_mag(0),
+        	_pil_msg_corr_corr_mag_avgsum(0),
+        	_pil_msg_corr_corr_mag_avgsum_sums(0),
+        	_pil_msg_corr_keys(0),
         	_sprn_corr_fdep_ifft_in(0),
         	_sprn_corr_fdep_ifft_out(0),
             _sprn_corr_fdep_avg_keys(0),
@@ -185,6 +191,7 @@ protected:
 	unsigned int _nb_pilots;
 	unsigned int _nb_code_samples;
 	unsigned int _complex_size;
+	unsigned int _float_size;
 	unsigned int _int_size;
 	unsigned int _nb_prns_per_symbol;
 	unsigned int _batch_size;

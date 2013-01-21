@@ -45,6 +45,7 @@ CudaManager::CudaManager(
 	_nb_pilots(nb_pilots),
 	_nb_code_samples(nb_code_samples),
 	_complex_size(sizeof(cuComplex)),
+	_float_size(sizeof(float)),
 	_int_size(sizeof(int)),
 	_batch_size(batch_size),
 	_df_steps(df_steps),
@@ -246,13 +247,17 @@ void CudaManager::WsgcMemoryProfile::dump(std::ostringstream& os) const
 	   << "Piloted Msg correlator in ............: " << std::right << std::setw(11) << _pil_msg_corr_corr_in << std::endl
 	   << "Piloted Msg correlator mul ...........: " << std::right << std::setw(11) << _pil_msg_corr_mul_out << std::endl
 	   << "Piloted Msg correlator corr ..........: " << std::right << std::setw(11) << _pil_msg_corr_corr_out << std::endl
-	   << "Piloted Msg correlator corr avg ......: " << std::right << std::setw(11) << _pil_msg_corr_corr_out_avg << std::endl;
+	   << "Piloted Msg correlator mag ...........: " << std::right << std::setw(11) << _pil_msg_corr_corr_mag << std::endl
+	   << "Piloted Msg correlator mag avgsum ....: " << std::right << std::setw(11) << _pil_msg_corr_corr_mag_avgsum << std::endl
+	   << "Piloted Msg correlator corr keys .....: " << std::right << std::setw(11) << _pil_msg_corr_keys << std::endl;
 	total = _local_codes_matrix
 			+ _local_codes_code
 			+ _pil_msg_corr_corr_in
 			+ _pil_msg_corr_mul_out
 			+ _pil_msg_corr_corr_out
-			+ _pil_msg_corr_corr_out_avg;
+			+ _pil_msg_corr_corr_mag
+			+ _pil_msg_corr_corr_mag_avgsum
+			+ _pil_msg_corr_keys;
 	os << "Total Message ........................: " << std::right << std::setw(11) << total << std::endl;
 }
 
@@ -262,13 +267,19 @@ void CudaManager::analyze_memory_profile()
 	_wsgc_memory_profile._local_codes_code = _nb_code_samples*_complex_size; // transient
 	_wsgc_memory_profile._local_codes_fft_matrix = _nb_code_samples*_nb_pilots*_complex_size;
 	_wsgc_memory_profile._local_codes_fft_code = _nb_code_samples*_nb_pilots*_complex_size; // transient
-	_wsgc_memory_profile._pil_msg_corr_corr_in = _nb_code_samples*_complex_size;
-	_wsgc_memory_profile._pil_msg_corr_mul_out = _nb_code_samples*_nb_message_symbols*_complex_size;
-	_wsgc_memory_profile._pil_msg_corr_corr_out = _nb_message_symbols*_nb_prns_per_symbol*_complex_size;
-	_wsgc_memory_profile._pil_msg_corr_corr_out_avg = _nb_message_symbols*_complex_size;
+
+	_wsgc_memory_profile._pil_msg_corr_corr_in = _nb_code_samples*_complex_size; // _d_corr_in
+	_wsgc_memory_profile._pil_msg_corr_mul_out = _nb_code_samples*_nb_message_symbols*_complex_size; // _d_mul_out
+	_wsgc_memory_profile._pil_msg_corr_corr_out = _nb_message_symbols*_nb_prns_per_symbol*_complex_size; // _d_corr_out
+	_wsgc_memory_profile._pil_msg_corr_corr_mag = _nb_message_symbols*_nb_prns_per_symbol*_float_size; // _d_corr_mag
+	_wsgc_memory_profile._pil_msg_corr_corr_mag_avgsum = _nb_message_symbols*_nb_prns_per_symbol*_float_size; // _d_corr_mag_avgsum
+	_wsgc_memory_profile._pil_msg_corr_corr_mag_avgsum_sums = _nb_prns_per_symbol*_float_size; // _d_corr_mag_avgsum_sums
+	_wsgc_memory_profile._pil_msg_corr_keys = _nb_message_symbols*_int_size; // _d_keys
+
 	_wsgc_memory_profile._sprn_corr_fdep_ifft_in = 2*_batch_size*_nb_code_samples*_f_step_division*_df_steps*_complex_size;
 	_wsgc_memory_profile._sprn_corr_fdep_ifft_out = _wsgc_memory_profile._sprn_corr_fdep_ifft_in;
 	_wsgc_memory_profile._sprn_corr_fdep_avg_keys = _batch_size*_nb_code_samples*_f_step_division*_df_steps*_int_size;
+
 	_wsgc_memory_profile._source_fft_fft_in = _nb_code_samples*_f_step_division*_complex_size;
 	_wsgc_memory_profile._source_fft_fft_out = _wsgc_memory_profile._source_fft_fft_in;
 }
