@@ -29,6 +29,7 @@
 #define __DECISION_BOX_H__
 
 #include "CorrelationRecord.h"
+#include "DecisionRecord.h"
 #include <vector>
 #include <map>
 
@@ -77,12 +78,42 @@ class DecisionBox
         	_mag_display_adj_factor = mag_display_adj_factor;
         }
 
+        /**
+         * Set CUDA indicator
+         * \param use_cuda True if using CUDA
+         */
+        void set_use_cuda(bool use_cuda)
+        {
+        	_use_cuda = use_cuda;
+        }
+
         bool is_prni_at_max_invalid() const
         {
         	return _prni_at_max_invalid;
         }
 
+        /**
+         * Append a new decision record
+         * \return Reference to the decision record
+         */
+        DecisionRecord& new_decision_record();
 
+        /**
+         * Get a reference to the decision records
+         * \return Reference to the vector of decision records
+         */
+        const std::vector<DecisionRecord>& get_decision_records() const
+        {
+            return _decision_records;
+        }
+        
+        /**
+         * Print decision records to output stream
+         * \param os The output stream
+         */
+        void dump_decision_records(std::ostringstream& os) const;
+        
+        
     protected:
         /**
         * \brief Specialized class to sort PRN index in symbol histogram
@@ -113,9 +144,11 @@ class DecisionBox
         unsigned int _preferred_symbol_prn_i; //!< Preferred PRN index in symbol for symbol estimation
         unsigned int _mag_display_adj_factor; //!< Adjustement factor for magnitude displays
         bool _prni_at_max_invalid; //!< Cannot estimate preferred PRN index in symbol with confidence
+        bool _use_cuda; //!< Set if using CUDA. Calculations may be different so different criteria could be used.
         std::map<unsigned int, unsigned int> _symbol_prn_i_at_max; //!< Maxumum module PRN index in symbol occurences dictionnary
         std::vector<std::pair<unsigned int, unsigned int> > _histo_symbol_prn_i_at_max; //!< Maxumum module PRN index in symbol histogram
         std::vector<int> _decoded_symbols; //!< Symbols decoded, -1 for erasure
+        std::vector<DecisionRecord> _decision_records; //!< Decision records giving details on decision process
 
         static const unsigned int preferred_symbol_prn_i_margin_threshold; //!< minimum margin between preferred PRN index in symbol and next preferred to have confidence
         static const unsigned int single_preferred_symbol_prn_i_threshold; //!< minimum number of occurences of preferred PRN index in symbol when single to have confidence

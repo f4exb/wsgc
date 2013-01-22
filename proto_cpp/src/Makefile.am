@@ -15,6 +15,7 @@ wsgc_test_SOURCES = CodeModulator_BPSK.cpp \
     ContinuousPhaseCarrier.cpp \
     CorrelationRecord.cpp \
     AutocorrelationRecord.cpp \
+    DecisionRecord.cpp \
     DecisionBox.cpp \
     DecisionBox_Piloted.cpp \
     DecisionBox_Piloted_And_Synced.cpp \
@@ -98,6 +99,7 @@ wsgc_test_SOURCES = CodeModulator_BPSK.cpp \
     ContinuousPhaseCarrier.cpp \
     CorrelationRecord.cpp \
     AutocorrelationRecord.cpp \
+    DecisionRecord.cpp \
     DecisionBox.cpp \
     DecisionBox_Piloted.cpp \
     DecisionBox_Piloted_And_Synced.cpp \

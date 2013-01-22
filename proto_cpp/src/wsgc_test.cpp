@@ -597,6 +597,7 @@ void message_processing(
         if (options.use_cuda)
         {
         	decision_box->set_mag_display_adj_factor(fft_N/2);
+        	decision_box->set_use_cuda(true);
         }
 #endif
         decision_box->analyze_records();

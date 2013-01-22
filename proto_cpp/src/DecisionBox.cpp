@@ -41,7 +41,8 @@ DecisionBox::DecisionBox(unsigned int prn_per_symbol, unsigned int _fft_size) :
 	_fft_size(_fft_size),
 	_preferred_symbol_prn_i(0),
 	_mag_display_adj_factor(1.0),
-	_prni_at_max_invalid(true)
+	_prni_at_max_invalid(true),
+	_use_cuda(false)
 {}
 
 
@@ -187,3 +188,27 @@ bool DecisionBox::histo_order(const std::pair<unsigned int, unsigned int>& i, co
     return j.second < i.second;
 }
 
+
+//=================================================================================================
+DecisionRecord& DecisionBox::new_decision_record()
+{
+    static const DecisionRecord tmp_decision_record;
+    _decision_records.push_back(tmp_decision_record);
+
+    return _decision_records.back();
+}
+
+
+//=================================================================================================
+void DecisionBox::dump_decision_records(std::ostringstream& os) const
+{
+    std::vector<DecisionRecord>::const_iterator it = _decision_records.begin();
+    const std::vector<DecisionRecord>::const_iterator it_end = _decision_records.end();
+    
+    DecisionRecord::dump_banner(os);
+    
+    for (; it != it_end; ++it)
+    {
+        it->dump_line(os);
+    }
+}

@@ -67,9 +67,13 @@ protected:
     const PilotCorrelationAnalyzer& _pilot_correlation_analyzer;
         
 	static const wsgc_float max_to_avg_ok_threshold;   //<! max / average ratio threshold of unconditionnal acceptance
+	static const wsgc_float max_to_avg_ok_threshold_cuda; //<! max / average ratio threshold of unconditionnal acceptance for CUDA version
 	static const wsgc_float max_to_avg_cdt_threshold;   //<! max / average ratio threshold of conditionnal acceptance
+	static const wsgc_float max_to_avg_cdt_threshold_cuda;   //<! max / average ratio threshold of conditionnal acceptance for CUDA version
 	static const wsgc_float signal_to_noise_avg_ko_threshold; //<! signal / noise average threshold of unconditional rejection
+	static const wsgc_float signal_to_noise_avg_ko_threshold_cuda; //<! signal / noise average threshold of unconditional rejection for CUDA version
 	static const wsgc_float signal_to_noise_avg_cdt_threshold; //<! signal / noise average threshold of conditional acceptance
+	static const wsgc_float signal_to_noise_avg_cdt_threshold_cuda; //<! signal / noise average threshold of conditional acceptance for CUDA version
 
 	bool challenge_matching_symbol(std::vector<CorrelationRecord>::const_iterator& matching_record_it);
 

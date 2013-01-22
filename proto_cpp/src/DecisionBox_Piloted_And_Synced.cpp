@@ -36,6 +36,12 @@ const wsgc_float DecisionBox_Piloted_And_Synced::max_to_avg_cdt_threshold = 1.6;
 const wsgc_float DecisionBox_Piloted_And_Synced::signal_to_noise_avg_ko_threshold = 1.0;
 const wsgc_float DecisionBox_Piloted_And_Synced::signal_to_noise_avg_cdt_threshold = 2.0;
 
+const wsgc_float DecisionBox_Piloted_And_Synced::max_to_avg_ok_threshold_cuda = 3.0;
+const wsgc_float DecisionBox_Piloted_And_Synced::max_to_avg_cdt_threshold_cuda = 2.6;
+const wsgc_float DecisionBox_Piloted_And_Synced::signal_to_noise_avg_ko_threshold_cuda = 3.0;
+const wsgc_float DecisionBox_Piloted_And_Synced::signal_to_noise_avg_cdt_threshold_cuda = 3.5;
+
+
 //=================================================================================================
 DecisionBox_Piloted_And_Synced::DecisionBox_Piloted_And_Synced(unsigned int prn_per_symbol, unsigned int fft_size, const PilotCorrelationAnalyzer& pilot_correlation_analyzer) :
     DecisionBox(prn_per_symbol, fft_size),
@@ -226,33 +232,32 @@ bool DecisionBox_Piloted_And_Synced::select_record(std::vector<CorrelationRecord
 //=================================================================================================
 bool DecisionBox_Piloted_And_Synced::challenge_matching_symbol(std::vector<CorrelationRecord>::const_iterator& matching_record_it)
 {
-	std::cout << "    +  challenge rec # " << matching_record_it->global_prn_index << std::endl;
-
 	if (matching_record_it->magnitude_avg == 0)
 	{
 		return true; // disabled
 	}
 
     wsgc_float max_to_avg = matching_record_it->magnitude_max / matching_record_it->magnitude_avg;
+	std::cout << "    +  challenge rec # " << matching_record_it->global_prn_index << std::endl;
     
     if (matching_record_it->noise_avg == 0)
     {
-        return max_to_avg > max_to_avg_ok_threshold; // noise test disabled
+        return max_to_avg > (_use_cuda ? max_to_avg_ok_threshold_cuda : max_to_avg_ok_threshold); // noise test disabled
     }
     else
     {
         wsgc_float signal_to_noise = matching_record_it->magnitude_max / matching_record_it->noise_avg;
-        if (signal_to_noise < signal_to_noise_avg_ko_threshold)
+        if (signal_to_noise < (_use_cuda ? signal_to_noise_avg_ko_threshold_cuda : signal_to_noise_avg_ko_threshold))
         {
         	return false;
         }
-        else if (max_to_avg > max_to_avg_ok_threshold)
+        else if (max_to_avg > (_use_cuda ? max_to_avg_ok_threshold_cuda : max_to_avg_ok_threshold))
         {
         	return true;
         }
-        else if (max_to_avg > max_to_avg_cdt_threshold)
+        else if (max_to_avg > (_use_cuda ? max_to_avg_cdt_threshold_cuda : max_to_avg_cdt_threshold))
         {
-        	if (signal_to_noise > signal_to_noise_avg_cdt_threshold)
+        	if (signal_to_noise > (_use_cuda ? signal_to_noise_avg_cdt_threshold_cuda : signal_to_noise_avg_cdt_threshold))
         	{
         		return true;
         	}
