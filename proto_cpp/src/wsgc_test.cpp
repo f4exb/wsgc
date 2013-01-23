@@ -617,6 +617,10 @@ void message_processing(
             }
             
             std::ostringstream os_result;
+            os_result << std::endl << "Decision box records:" << std::endl;
+            decision_box->dump_decision_records(os_result);
+            os_result << std::endl << "Decisions status:" << std::endl;
+            decision_box->dump_decision_status(os_result, options.prns);
             os_result << std::endl << "Index, original and decoded symbols (-1 denotes an erasure):";
             os_result << std::endl << "-----------------------------------------------------------" << std::endl;
             print_vector<unsigned int, unsigned int>(symbol_indices, 4, os_result); os_result << std::endl;

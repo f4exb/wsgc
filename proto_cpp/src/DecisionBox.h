@@ -41,6 +41,15 @@
 class DecisionBox
 {
     public:
+
+		typedef enum
+		{
+			decision_status_true_accept,
+			decision_status_true_reject,
+			decision_status_false_accept,
+			decision_status_false_reject
+		} decision_status_t;
+
 		/**
 		 * Constructor
 		 * \param prn_per_symbol Number of PRNs per symbol
@@ -78,6 +87,15 @@ class DecisionBox
         	_mag_display_adj_factor = mag_display_adj_factor;
         }
 
+		/**
+		 * Get magnitude value displayed adjustment factor
+		 * \return Adjustement factor
+		 */
+        wsgc_float get_mag_display_adj_factor() const
+        {
+        	return _mag_display_adj_factor;
+        }
+
         /**
          * Set CUDA indicator
          * \param use_cuda True if using CUDA
@@ -113,6 +131,14 @@ class DecisionBox
          */
         void dump_decision_records(std::ostringstream& os) const;
         
+        /**
+         * Print decision errors
+         * \param os The output stream
+         * \param original_symbols The symbols that were sent
+         * \param no_trivial Do not print trivial results (true accept status and no_record decision)
+         */
+        void dump_decision_status(std::ostringstream& os, std::vector<unsigned int>& original_symbols, bool no_trivial=true) const;
+
         
     protected:
         /**
@@ -164,6 +190,11 @@ class DecisionBox
          * Common histogram data ordering method for sorting
          */
         static bool histo_order(const std::pair<unsigned int, unsigned int>& i, const std::pair<unsigned int, unsigned int>& j); //!< Method to sort simple histograms
+
+        /**
+         * Print decoding status
+         */
+        void dump_decoding_status(std::ostringstream& os, decision_status_t decision_status) const;
 };
 
 #endif // __DECISION_BOX_H__

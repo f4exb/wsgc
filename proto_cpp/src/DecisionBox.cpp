@@ -209,6 +209,87 @@ void DecisionBox::dump_decision_records(std::ostringstream& os) const
     
     for (; it != it_end; ++it)
     {
-        it->dump_line(os);
+        it->dump_line(os, _mag_display_adj_factor);
     }
+}
+
+
+//=================================================================================================
+void DecisionBox::dump_decision_status(std::ostringstream& os, std::vector<unsigned int>& original_symbols, bool no_trivial) const
+{
+	os << "St ";
+	DecisionRecord::dump_banner(os);
+
+	for (unsigned int i=0; i < original_symbols.size(); i++)
+	{
+		if (i < _decision_records.size())
+		{
+			decision_status_t decision_status;
+			bool print = true;
+
+			if ((_decision_records[i].select_count > 0) && (original_symbols[i] == _decision_records[i].prn_index_max))
+			{
+				if (_decision_records[i].validated)
+				{
+					decision_status = decision_status_true_accept;
+
+					if (_decision_records[i].decision_type == DecisionRecord::decision_ok_strong)
+					{
+						print = false;
+					}
+				}
+				else
+				{
+					decision_status = decision_status_false_reject;
+				}
+			}
+			else
+			{
+				if (_decision_records[i].validated)
+				{
+					decision_status = decision_status_false_accept;
+				}
+				else
+				{
+					decision_status = decision_status_true_reject;
+
+					if (_decision_records[i].decision_type == DecisionRecord::decision_ko_no_valid_rec)
+					{
+						print = false;
+					}
+				}
+			}
+
+			if (!(no_trivial) || print)
+			{
+				dump_decoding_status(os, decision_status);
+				os << " ";
+				_decision_records[i].dump_line(os, _mag_display_adj_factor);
+			}
+		}
+	}
+}
+
+
+//=================================================================================================
+void DecisionBox::dump_decoding_status(std::ostringstream& os, decision_status_t decision_status) const
+{
+	switch (decision_status)
+	{
+	case decision_status_false_accept:
+		os << "FA";
+		break;
+	case decision_status_false_reject:
+		os << "FR";
+		break;
+	case decision_status_true_accept:
+		os << "TA";
+		break;
+	case decision_status_true_reject:
+		os << "TR";
+		break;
+	default:
+		os << "XX";
+		break;
+	}
 }

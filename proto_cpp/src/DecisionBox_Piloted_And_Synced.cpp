@@ -27,16 +27,19 @@
 #include "WsgcUtils.h"
 #include "DecisionBox_Piloted_And_Synced.h"
 #include "PilotCorrelationAnalyzer.h"
+#include "DecisionRecord.h"
 #include <iostream>
 #include <iomanip>
 #include <algorithm>
 
 const wsgc_float DecisionBox_Piloted_And_Synced::max_to_avg_ok_threshold = 1.85;
+const wsgc_float DecisionBox_Piloted_And_Synced::max_to_avg_ok_threshold_ner = 4.0; // guessed
 const wsgc_float DecisionBox_Piloted_And_Synced::max_to_avg_cdt_threshold = 1.6;
 const wsgc_float DecisionBox_Piloted_And_Synced::signal_to_noise_avg_ko_threshold = 1.0;
 const wsgc_float DecisionBox_Piloted_And_Synced::signal_to_noise_avg_cdt_threshold = 2.0;
 
-const wsgc_float DecisionBox_Piloted_And_Synced::max_to_avg_ok_threshold_cuda = 3.0;
+const wsgc_float DecisionBox_Piloted_And_Synced::max_to_avg_ok_threshold_cuda = 3.4; // was 3.0
+const wsgc_float DecisionBox_Piloted_And_Synced::max_to_avg_ok_threshold_ner_cuda = 7.0;
 const wsgc_float DecisionBox_Piloted_And_Synced::max_to_avg_cdt_threshold_cuda = 2.6;
 const wsgc_float DecisionBox_Piloted_And_Synced::signal_to_noise_avg_ko_threshold_cuda = 3.0;
 const wsgc_float DecisionBox_Piloted_And_Synced::signal_to_noise_avg_cdt_threshold_cuda = 3.5;
@@ -77,7 +80,6 @@ void DecisionBox_Piloted_And_Synced::estimate_symbols()
     if (nb_symbols < 4)
     {
         std::cout << "DecisionBox: not enough symbols to do a proper estimation" << std::endl;
-        
     }
     else
     {
@@ -85,19 +87,13 @@ void DecisionBox_Piloted_And_Synced::estimate_symbols()
         const std::vector<CorrelationRecord>::const_iterator records_end = _pilot_correlation_analyzer.get_message_correlation_records().end();
         std::vector<CorrelationRecord>::const_iterator matching_record_it;
         
-        unsigned int start_of_cycle_index = (_preferred_symbol_prn_i+1) %  _prn_per_symbol;
-        std::cout << "Start of cycle index: " << start_of_cycle_index << std::endl;
-        unsigned int record_i = _prn_per_symbol - start_of_cycle_index; //= 0; position of 0 in the cycle
+        unsigned int record_i = 0; // always start at 0 for synced message
         unsigned int symbol_cycle_nb;
         unsigned int prn_index_in_cycle;
         unsigned int select_count;
         
-        unsigned int last_prn_index_max = -1;
-        unsigned int last_validated_symbol = -2; // init to erasure different from below to prevent possible start condition conflicts
-        int symbol_matching_not_at_preferred_index = -1;
-        unsigned int symbol_found_for_cycle_nb = -1;
         unsigned int record_nb = 0;
-        bool started = false;
+        bool matching_at_preferred_index;
         
         for (; record_it != records_end; ++record_it, record_nb++)
         {
@@ -116,26 +112,88 @@ void DecisionBox_Piloted_And_Synced::estimate_symbols()
             // start of cycle: append erasure symbol and reset symbol found in the cycle outside the preferred index
             if (prn_index_in_cycle == 0)
             {
-                if (!started)
-                {
-                    std::cout << "Synchronize start of cycle 0" << std::endl;
-                    record_i = 0;
-                    started = true; 
-                }
-                
-                _decoded_symbols.push_back(-1); // erasure symbol by default
-                symbol_matching_not_at_preferred_index = -1; // reset symbol
-                matching_record_it = record_it;
-                select_count = (record_it->selected ? 1 : 0);
-            }
-            else
-            {
-            	select_count += (record_it->selected ? 1 : 0);
+                matching_record_it = records_end; // reset matching record iterator (not found)
+                select_count = 0;
             }
             
-            // process only from the first start and prevent symbol spillover 
-            if ((started) && (prn_index_in_cycle > 1))
+			// try to find eligible record
+			if (select_record(record_it))
+			{
+	            // do not store first in cycle (low confidence)
+	            if (prn_index_in_cycle > 0)
+	            {
+					matching_record_it = record_it;
+					matching_at_preferred_index = (record_it->prn_per_symbol_index == _preferred_symbol_prn_i); // preferred PRN index in symbol (maximum integration)
+	            }
+
+				select_count++;
+            }
+            
+            // take decision on last PRN of the current symbol cycle
+            if (prn_index_in_cycle == _prn_per_symbol - 1) 
             {
+                DecisionRecord& decision_record = new_decision_record();
+            
+                if (matching_record_it == records_end)
+                {
+                    std::cout << "    +  no valid PRN found in cycle" << std::endl;
+                    decision_record.decision_type = DecisionRecord::decision_ko_no_valid_rec;
+                    _decoded_symbols.push_back(-1); // nothing found => erasure symbol 
+                }
+                else 
+                {
+                    decision_record.symbol_index = matching_record_it->global_prn_index / _prn_per_symbol;
+                    decision_record.global_prn_index = matching_record_it->global_prn_index;
+                    decision_record.prn_per_symbol_index = matching_record_it->global_prn_index % _prn_per_symbol;
+                    decision_record.prn_index_max = matching_record_it->prn_index_max;
+                    decision_record.select_count = select_count;
+                    decision_record.magnitude_max = matching_record_it->magnitude_max;
+                    decision_record.magnitude_avg = matching_record_it->magnitude_avg;
+                    decision_record.noise_avg = matching_record_it->noise_avg;
+                    decision_record.shift_index_max = matching_record_it->pilot_shift;
+                    decision_record.f_rx = matching_record_it->f_rx;
+                    
+                    if (select_count < _prn_per_symbol / 2)
+                    {
+                    	if (test_maxavg_override(matching_record_it))
+                    	{
+							std::cout << "    +  symbol validated at end of cycle even if there are not enough selected records for this cycle" << std::endl;
+							decision_record.decision_type = DecisionRecord::decision_ok_not_enough_rec;
+							decision_record.validated = true;
+							_decoded_symbols.push_back(matching_record_it->prn_index_max);
+                    	}
+                    	else
+                    	{
+							std::cout << "    +  symbol rejected at end of cycle because there are not enough selected records for this cycle" << std::endl;
+							decision_record.decision_type = DecisionRecord::decision_ko_not_enough_rec;
+							_decoded_symbols.push_back(-1); // not valid => erasure symbol
+                    	}
+                    }
+                    else if (challenge_matching_symbol(matching_record_it))
+                    {
+                        if (matching_at_preferred_index)
+                        {
+                            std::cout << "    +  symbol validated at preferred index" << std::endl;
+                        }
+                        else
+                        {
+                            std::cout << "    +  symbol validated not at preferred index" << std::endl;
+                        }
+                        
+                        decision_record.decision_type = DecisionRecord::decision_ok_strong;
+                        decision_record.validated = true;
+                        _decoded_symbols.push_back(matching_record_it->prn_index_max);
+                    }
+                    else
+                    {
+                        std::cout << "    +  symbol not validated because it is too weak" << std::endl;
+                        decision_record.decision_type = DecisionRecord::decision_ko_too_weak;
+                        _decoded_symbols.push_back(-1); // not valid => erasure symbol 
+                    }
+                }
+            }
+            
+            /*
                 // preferred shift encountered
                 // challenged last condition because it skips the next identical symbol if this occurs in a sequence. 
                 // it can be validated at preferred index and skipped at other indexes
@@ -215,6 +273,7 @@ void DecisionBox_Piloted_And_Synced::estimate_symbols()
                 
                 last_prn_index_max = record_it->prn_index_max;
             }
+            */
             
             record_i++;
         }
@@ -273,3 +332,19 @@ bool DecisionBox_Piloted_And_Synced::challenge_matching_symbol(std::vector<Corre
         //return (max_to_avg > max_to_avg_threshold) && (signal_to_noise > signal_to_noise_avg_threshold);
     }
 }
+
+
+//=================================================================================================
+bool DecisionBox_Piloted_And_Synced::test_maxavg_override(std::vector<CorrelationRecord>::const_iterator& matching_record_it)
+{
+	if (matching_record_it->magnitude_avg == 0)
+	{
+		return true; // disabled
+	}
+
+    wsgc_float max_to_avg = matching_record_it->magnitude_max / matching_record_it->magnitude_avg;
+	std::cout << "    +  maxavg override test rec # " << matching_record_it->global_prn_index << std::endl;
+
+	return max_to_avg > (_use_cuda ? max_to_avg_ok_threshold_ner_cuda : max_to_avg_ok_threshold_ner);
+}
+

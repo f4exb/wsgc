@@ -68,6 +68,8 @@ protected:
         
 	static const wsgc_float max_to_avg_ok_threshold;   //<! max / average ratio threshold of unconditionnal acceptance
 	static const wsgc_float max_to_avg_ok_threshold_cuda; //<! max / average ratio threshold of unconditionnal acceptance for CUDA version
+	static const wsgc_float max_to_avg_ok_threshold_ner; //<! max / average ratio threshold of unconditionnal acceptance when not enough valid records
+	static const wsgc_float max_to_avg_ok_threshold_ner_cuda; //<! max / average ratio threshold of unconditionnal acceptance when not enough valid records
 	static const wsgc_float max_to_avg_cdt_threshold;   //<! max / average ratio threshold of conditionnal acceptance
 	static const wsgc_float max_to_avg_cdt_threshold_cuda;   //<! max / average ratio threshold of conditionnal acceptance for CUDA version
 	static const wsgc_float signal_to_noise_avg_ko_threshold; //<! signal / noise average threshold of unconditional rejection
@@ -76,6 +78,7 @@ protected:
 	static const wsgc_float signal_to_noise_avg_cdt_threshold_cuda; //<! signal / noise average threshold of conditional acceptance for CUDA version
 
 	bool challenge_matching_symbol(std::vector<CorrelationRecord>::const_iterator& matching_record_it);
+	bool test_maxavg_override(std::vector<CorrelationRecord>::const_iterator& matching_record_it);
 
     /**
      * Select PRN for the estimation process depending on corresponding correlation record values and the preferred PRN time shift
