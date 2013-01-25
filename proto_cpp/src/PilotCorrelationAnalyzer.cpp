@@ -111,20 +111,26 @@ wsgc_complex *PilotCorrelationAnalyzer::get_samples(unsigned int global_prn_inde
 
     if (global_prn_index < _global_prn_index_bot) // no more in buffer
     {
+        std::cout << "    + not in buffer anymore" << std::endl;
         return 0;
     }
     else if (global_prn_index >= _global_prn_index_bot + _buffer_prn_count) // not yet in buffer
     {
+        std::cout << "    + not yet in buffer" << std::endl;
         return 0;
     }
     else
     {
-        if ((global_prn_index - _global_prn_index_bot + _buffer_prn_index_bot) == _sample_buffer_len - 1) // last element
+        unsigned int source_index = ((global_prn_index - _global_prn_index_bot) + _buffer_prn_index_bot) % _sample_buffer_len;
+    
+        if (source_index == _sample_buffer_len - 1) // last element
         {
-        	memcpy((void *) &_samples_ext, (void *) &_samples[(global_prn_index - _global_prn_index_bot + _buffer_prn_index_bot)*_fft_N], _fft_N*sizeof(wsgc_complex)); // re-copy at extra begin
+        	memcpy((void *) _samples_ext, (void *) &_samples[source_index*_fft_N], _fft_N*sizeof(wsgc_complex)); // re-copy at extra begin
         }
 
-        return &_samples[(global_prn_index - _global_prn_index_bot + _buffer_prn_index_bot)*_fft_N];
+        std::cout << "    + return: " << source_index << std::endl;
+        
+        return &_samples[source_index*_fft_N];
     }
 }
 
@@ -133,7 +139,7 @@ wsgc_complex *PilotCorrelationAnalyzer::get_samples(unsigned int global_prn_inde
 wsgc_complex *PilotCorrelationAnalyzer::get_synchronized_samples(unsigned int global_prn_index, unsigned int shift_index)
 {
 	bool use_preceding_samples = shift_index > _fft_N / 2;
-	unsigned int source_index = global_prn_index - _global_prn_index_bot + _buffer_prn_index_bot + (use_preceding_samples ? -1 : 0);
+	unsigned int source_index = (global_prn_index - _global_prn_index_bot + _buffer_prn_index_bot + (use_preceding_samples ? -1 : 0)) % _sample_buffer_len;
 	std::cout << "get_samples: global_prn_index=" << global_prn_index
 			  << ", _global_prn_index_bot=" << _global_prn_index_bot
 			  << ", _buffer_prn_index_bot=" << _buffer_prn_index_bot
@@ -142,10 +148,12 @@ wsgc_complex *PilotCorrelationAnalyzer::get_synchronized_samples(unsigned int gl
 
     if (global_prn_index < _global_prn_index_bot) // no more in buffer
     {
+        std::cout << "    + not in buffer anymore" << std::endl;
         return 0;
     }
     else if (global_prn_index >= _global_prn_index_bot + _buffer_prn_count) // not yet in buffer
     {
+        std::cout << "    + not yet in buffer" << std::endl;
         return 0;
     }
     else // current is in buffer
@@ -159,10 +167,12 @@ wsgc_complex *PilotCorrelationAnalyzer::get_synchronized_samples(unsigned int gl
         {
             if (global_prn_index == _global_prn_index_bot)
             {
+                std::cout << "    + previous not in buffer anymore" << std::endl;
                 return 0; // cannot serve before start. previous no more in buffer
             }
             else 
             {
+                std::cout << "    + return: " <<source_index << "(" << shift_index << ")" << std::endl;
                 return &_samples[source_index*_fft_N + shift_index];
             }
         }
@@ -170,10 +180,12 @@ wsgc_complex *PilotCorrelationAnalyzer::get_synchronized_samples(unsigned int gl
         {
             if (global_prn_index == _global_prn_index_bot + _buffer_prn_count - 1)
             {
+                std::cout << "    + next not yet in buffer" << std::endl;
                 return 0; // cannot serve past end. next is not yet in buffer
             }
             else 
             {
+                std::cout << "    + return: " <<source_index << "(" << shift_index << ")" << std::endl;
                 return &_samples[source_index*_fft_N + shift_index];
             }
         }
@@ -269,14 +281,17 @@ bool PilotCorrelationAnalyzer::validate_pilot_correlation_records_back(unsigned 
     assert((!_two_pilots) || (_pilot1_correlation_records.size() == _pilot2_correlation_records.size())); // ensure both pilot records are at the same point if both are present
 
     validate_pilot_correlation_record(get_pilot_correlation_record_back(_pilot1_correlation_records, reverse_index), _pilot1_time_shift_occurences, _sum_max_pilot1);
-    _validate_count++;
 
     if (_two_pilots)
     {
         validate_pilot_correlation_record(get_pilot_correlation_record_back(_pilot2_correlation_records, reverse_index), _pilot2_time_shift_occurences, _sum_max_pilot2);
     }
     
-    return _validate_count == _analysis_window_size * _prn_per_symbol;
+    _validate_count++;
+
+    // return the trigger analysis condition
+    // need one PRN past the analysis window size in the buffer to allow overflow in case of synchronized source samples access
+    return _validate_count == _analysis_window_size * _prn_per_symbol; 
 }
 
 

@@ -163,10 +163,10 @@ class PilotCorrelationAnalyzer
 
         /**
          * Validate pilot correlation records for pilot 1 and pilot 2 that many places from the end. 
-         * This triggers the analysis process with these records.
+         * This can trigger the analysis process with these records when the analysis window is complete.
          * \param reverse_index Reverse index in the pilot correlation records vector
          * \param alternate_pilot Reference to a boolean set to true if pilot 2 has been selected, else false
-         * \return True if a cycle is completed and therefore the analysis using this pilot can take place
+         * \return True if a cycle is completed and therefore the analysis and message processing using this pilot can take place
          */
         bool validate_pilot_correlation_records_back(unsigned int reverse_index);
 
