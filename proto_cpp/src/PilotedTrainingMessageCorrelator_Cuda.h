@@ -19,23 +19,23 @@
 
      Static not real time prototype in C++
 
-     MessageCorrelator_Cuda
+     PilotedTrainingMessageCorrelator_Cuda
 
      Given the frequency and time displacement of correlation peak given by the
-     Pilot Correlator it searches correlation for all PRNs of the message symbols
-     to select the one that was sent. It uses straightforward time correlation.
+     Pilot Correlator it searches correlation for all PRNs of the training sequence symbols
+     it shifts accumulates the result to detect a peak corresponding to the PRN at the 
+     start of the received sequence. It uses straightforward time correlation.
 
      This is the CUDA implementation
 
 */
 
-#ifndef __PILOTED_MESSAGE_CORRELATOR_CUDA_H__
-#define __PILOTED_MESSAGE_CORRELATOR_CUDA_H__
+#ifndef __PILOTED_TRAINING_MESSAGE_CORRELATOR_CUDA_H__
+#define __PILOTED_TRAINING_MESSAGE_CORRELATOR_CUDA_H__
 
 #include "WsgcTypes.h"
-#include "CorrelationRecord.h"
 #include "ContinuousPhaseCarrier.h"
-#include "PilotedMessageCorrelator.h"
+#include "PilotedTrainingMessageCorrelator.h"
 
 #include <thrust/device_vector.h>
 #include <cuComplex.h>
@@ -44,13 +44,12 @@
 
 class LocalCodes_Cuda;
 class PilotCorrelationAnalyzer;
-// TODO: make the CUDA and Host classes create their own flavour of local codes object. Pass Gold Code generator and modulator references to the super class.
 
 /**
- * \brief Correlator engine to acquire and track message PRN(s) using the frequency
+ * \brief Correlator engine to acquire starting point in time of the training sequence using the frequency
  * and time displacement of correlation peak given by the Pilot Correlator - Host implementation
  */
-class PilotedMessageCorrelator_Cuda : public PilotedMessageCorrelator
+class PilotedTrainingMessageCorrelator_Cuda : public PilotedTrainingMessageCorrelator
 {
 public:
     /**
@@ -58,10 +57,16 @@ public:
     * \param local_codes PRN signals local copy
     * \param f_sampling Sampling frequency
     * \param f_chip Chip rate (frequency)
-    * \param prn_per_symbol Number of PRNs per symbol or averaging block
+    * \param analysis_window_size Analysis window size in number of PRNs
+    * \param sequence_length Length of training sequence should be less than possible symbol numbers
     */
-	PilotedMessageCorrelator_Cuda(LocalCodes_Cuda& local_codes, wsgc_float f_sampling, wsgc_float f_chip, unsigned int prn_per_symbol);
-	virtual ~PilotedMessageCorrelator_Cuda();
+	PilotedTrainingMessageCorrelator_Cuda(LocalCodes_Cuda& local_codes, 
+            wsgc_float f_sampling, 
+            wsgc_float f_chip, 
+            unsigned int analysis_window_size,
+            unsigned int sequence_length);
+            
+	virtual ~PilotedTrainingMessageCorrelator_Cuda();
 
 	/**
 	 * Do the message correlation over the length of one analysis window.
@@ -70,34 +75,23 @@ public:
 	virtual void execute(PilotCorrelationAnalyzer& pilot_correlation_analyzer);
 
 protected:
-    typedef struct transient_corr_value_s
-    {
-        bool selected;
-        unsigned int global_prn_i;
-        wsgc_float delta_t;
-        wsgc_float delta_f;
-        wsgc_float pilot_phase_at_max;
-    } transient_corr_value_t;
-
     LocalCodes_Cuda& _local_codes; //!< Reference to the PRN signals local copy.
     ContinuousPhaseCarrier _local_oscillator; //!< Local oscillator for receiving frequency adjustment
     unsigned int _nb_msg_prns; //!< Number of message PRNs to explore
     unsigned int _fft_N; //!< Size of FFT
+    unsigned int _analysis_window_size; //!< Analysis window size in number of PRNs
     wsgc_complex *_src; //!< Source samples of the current PRN multiplied by local oscillator
     thrust::device_vector<cuComplex> _d_corr_in; //!< Frequency mixed source to correlate
     thrust::device_vector<cuComplex> _d_mul_out; //!< Result of fixed delay multiplications, one FFT size block per PRN, stride for averaging (average first strategy)
     thrust::device_vector<cuComplex> _d_corr_out; //!< Correlation result (reduce by key values), one sample per PRN
     thrust::device_vector<float> _d_corr_mag; //!< Correlation result magnitudes. Magnitude (squared norm) of the above
-    thrust::host_vector<float> _h_corr_mag; //!< Correlation result magnitudes. Magnitude (squared norm) of the above
     thrust::device_vector<float> _d_corr_mag_avgsum; //!< averaging sum results
     thrust::device_vector<int> _d_keys; //!< Keys for the reduce by key (unused), one key per PRN
+    thrust::host_vector<int> _h_keys; //!< Keys for the reduce by key (unused), one key per PRN
     thrust::host_vector<float> _h_corr_mag_avgsum; //!< Correlation result magnitudes (host copy)
-    std::vector<wsgc_float> _max_avg; //!< Maxima of averaging sum results
-    std::vector<wsgc_float> _mag_avgsum_sums; //!< sum of PRNs magnitudes
-    std::vector<unsigned int> _max_avg_index; //!< Index of maxima of averaging sum results
-    std::vector<transient_corr_value_t> _transient_corr_values; //!< Transient correlation values obtained at each PRN round and put in correlation records at each symbol round
     static const cuComplex _c_zero; //!< Complex zero for initializations
-    static const transient_corr_value_t _init_transient_corr_value;
+    wsgc_float _max_avg; //!< Maximum shifted average sum of magnitudes
+    unsigned int _max_avg_index ; //!< Index of the maximum
 };
 
-#endif /* __PILOTED_MESSAGE_CORRELATOR_CUDA_H__ */
+#endif /* __PILOTED_TRAINING_MESSAGE_CORRELATOR_CUDA_H__ */

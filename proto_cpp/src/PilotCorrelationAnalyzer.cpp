@@ -49,9 +49,11 @@ PilotCorrelationAnalyzer::PilotCorrelationAnalyzer(
     _fft_N(fft_N),
     _two_pilots(two_pilots),
     _time_index_tolerance(time_index_tolerance), //TODO: use time index tolerance
-    _sample_buffer_len(2*analysis_window_size*prn_per_symbol),
-    _samples_start_global_prn_index(0),
-    _prn_index(0),
+    _sample_buffer_len(_analysis_window_size*_prn_per_symbol*2),
+    _global_prn_index_bot(0),
+    _buffer_prn_index_bot(0),
+    _buffer_prn_index_top(0),
+    _buffer_prn_count(0),
     _start_pilot_correlation_records_index(0),
     _sum_max_pilot1(0),
     _sum_max_pilot2(0),
@@ -62,141 +64,127 @@ PilotCorrelationAnalyzer::PilotCorrelationAnalyzer(
     _message_mag_display_factor(1.0),
     _training_mag_display_factor(1.0)
 {
-    _samples = (wsgc_complex *) WSGC_FFTW_MALLOC(analysis_window_size*prn_per_symbol*fft_N*2*sizeof(wsgc_fftw_complex));
+    _samples_ext = (wsgc_complex *) WSGC_FFTW_MALLOC((_sample_buffer_len+2)*fft_N*sizeof(wsgc_fftw_complex));
+    _samples = &_samples_ext[_fft_N]; // start is one PRN ahead
+    std::cout << "_analysis_window_size = " << _analysis_window_size <<std::endl;
+    std::cout << "_prn_per_symbol = " << _prn_per_symbol << std::endl;
+    std::cout << "_sample_buffer_len = " << _sample_buffer_len << std::endl;
 }
 
 
 //=================================================================================================
 PilotCorrelationAnalyzer::~PilotCorrelationAnalyzer()
 {
-    WSGC_FFTW_FREE(_samples);
+    WSGC_FFTW_FREE(_samples_ext);
 }
 
 
 //=================================================================================================
 void PilotCorrelationAnalyzer::store_prn_samples(wsgc_complex *samples)
 {
-	if (_prn_index >= _sample_buffer_len)
+    if (_buffer_prn_count < _sample_buffer_len)
+    {
+        _buffer_prn_index_top = (_buffer_prn_index_bot + _buffer_prn_count) % _sample_buffer_len;
+        _buffer_prn_count++;
+    }
+    else
+    {
+        _buffer_prn_index_top = _buffer_prn_index_bot;
+        _buffer_prn_index_bot = (_buffer_prn_index_bot + 1) % _sample_buffer_len;
+        _global_prn_index_bot++;
+    }
+
+	std::cout << "store_prn_samples: _global_prn_index_bot=" << _global_prn_index_bot << ", _buffer_prn_index_top=" << _buffer_prn_index_top << ", _buffer_prn_count=" << _buffer_prn_count << std::endl;
+	memcpy((void *) &_samples[_buffer_prn_index_top*_fft_N], (void *) samples, _fft_N*sizeof(wsgc_complex));
+
+	if (_buffer_prn_index_top == 0) // first element
 	{
-		_prn_index = 0;
-		_samples_start_global_prn_index += _sample_buffer_len;
-
+		memcpy((void *) &_samples[_sample_buffer_len*_fft_N], (void *) samples, _fft_N*sizeof(wsgc_complex)); // re-copy at extra end
 	}
-
-	memcpy((void *) &_samples[_prn_index*_fft_N], (void *) samples, _fft_N*sizeof(wsgc_complex));
-	_prn_index++;
 }
 
 
 //=================================================================================================
 wsgc_complex *PilotCorrelationAnalyzer::get_samples(unsigned int global_prn_index)
 {
-	if (global_prn_index < _samples_start_global_prn_index)
-	{
-		if (global_prn_index < _samples_start_global_prn_index - _sample_buffer_len + _prn_index)
-		{
-			return 0; // gone
-		}
-		else
-		{
-			return &_samples[(global_prn_index - _samples_start_global_prn_index + _sample_buffer_len)*_fft_N];
-		}
-	}
-	else
-	{
-		if ((global_prn_index - _samples_start_global_prn_index) < _prn_index)
-		{
-			return &_samples[(global_prn_index - _samples_start_global_prn_index)*_fft_N];
-		}
-		else
-		{
-			return 0; // not there yet
-		}
-	}
+	std::cout << "get_samples: global_prn_index=" << global_prn_index << ", _global_prn_index_bot=" << _global_prn_index_bot << ", _buffer_prn_index_bot=" << _buffer_prn_index_bot << ", _buffer_prn_count=" << _buffer_prn_count << std::endl;
 
-	return 0;
+    if (global_prn_index < _global_prn_index_bot) // no more in buffer
+    {
+        return 0;
+    }
+    else if (global_prn_index >= _global_prn_index_bot + _buffer_prn_count) // not yet in buffer
+    {
+        return 0;
+    }
+    else
+    {
+        if ((global_prn_index - _global_prn_index_bot + _buffer_prn_index_bot) == _sample_buffer_len - 1) // last element
+        {
+        	memcpy((void *) &_samples_ext, (void *) &_samples[(global_prn_index - _global_prn_index_bot + _buffer_prn_index_bot)*_fft_N], _fft_N*sizeof(wsgc_complex)); // re-copy at extra begin
+        }
+
+        return &_samples[(global_prn_index - _global_prn_index_bot + _buffer_prn_index_bot)*_fft_N];
+    }
 }
 
 
 //=================================================================================================
 wsgc_complex *PilotCorrelationAnalyzer::get_synchronized_samples(unsigned int global_prn_index, unsigned int shift_index)
 {
-	unsigned int arbitrary_start_index; // starting index as in get_samples method
-	unsigned int start_index; // new starting index synchronized with the given shift_index
 	bool use_preceding_samples = shift_index > _fft_N / 2;
+	unsigned int source_index = global_prn_index - _global_prn_index_bot + _buffer_prn_index_bot + (use_preceding_samples ? -1 : 0);
+	std::cout << "get_samples: global_prn_index=" << global_prn_index
+			  << ", _global_prn_index_bot=" << _global_prn_index_bot
+			  << ", _buffer_prn_index_bot=" << _buffer_prn_index_bot
+			  << ", _buffer_prn_count=" << _buffer_prn_count
+			  << ", result=" << source_index << std::endl;
 
-	if (global_prn_index < _samples_start_global_prn_index)
-	{
-		if (global_prn_index < _samples_start_global_prn_index - _sample_buffer_len + _prn_index)
-		{
-			return 0; // gone
-		}
-		else
-		{
-			return get_synchronized_samples_at_arbitrary_index(
-					(global_prn_index - _samples_start_global_prn_index + _sample_buffer_len)*_fft_N,
-					shift_index);
-		}
-	}
-	else
-	{
-		if ((global_prn_index - _samples_start_global_prn_index) < _prn_index)
-		{
-			return get_synchronized_samples_at_arbitrary_index(
-					(global_prn_index - _samples_start_global_prn_index)*_fft_N,
-					shift_index);
-		}
-		else
-		{
-			return 0; // not there yet
-		}
-	}
+    if (global_prn_index < _global_prn_index_bot) // no more in buffer
+    {
+        return 0;
+    }
+    else if (global_prn_index >= _global_prn_index_bot + _buffer_prn_count) // not yet in buffer
+    {
+        return 0;
+    }
+    else // current is in buffer
+    {
+        if ((global_prn_index - _global_prn_index_bot + _buffer_prn_index_bot) == _sample_buffer_len - 1) // last element
+        {
+        	memcpy((void *) _samples_ext, (void *) &_samples[source_index*_fft_N], _fft_N*sizeof(wsgc_complex)); // re-copy at extra begin
+        }
 
-	return 0;
-}
-
-
-//=================================================================================================
-wsgc_complex *PilotCorrelationAnalyzer::get_synchronized_samples_at_arbitrary_index(
-		unsigned int arbitrary_start_index,
-		unsigned int shift_index)
-{
-	unsigned int start_index; // new starting index synchronized with the given shift_index
-
-	if (shift_index > _fft_N / 2) // use preceding samples
-	{
-		start_index = arbitrary_start_index - (_fft_N - shift_index);
-
-		if (start_index > 0)
-		{
-			return &_samples[start_index];
-		}
-		else
-		{
-			return 0;
-		}
-	}
-	else
-	{
-		start_index = arbitrary_start_index + shift_index;
-
-		if (start_index < _sample_buffer_len - _fft_N)
-		{
-			return &_samples[start_index];
-		}
-		else
-		{
-			return 0;
-		}
-	}
-
+        if (use_preceding_samples)
+        {
+            if (global_prn_index == _global_prn_index_bot)
+            {
+                return 0; // cannot serve before start. previous no more in buffer
+            }
+            else 
+            {
+                return &_samples[source_index*_fft_N + shift_index];
+            }
+        }
+        else 
+        {
+            if (global_prn_index == _global_prn_index_bot + _buffer_prn_count - 1)
+            {
+                return 0; // cannot serve past end. next is not yet in buffer
+            }
+            else 
+            {
+                return &_samples[source_index*_fft_N + shift_index];
+            }
+        }
+    }
 }
 
 
 //=================================================================================================
 const wsgc_complex *PilotCorrelationAnalyzer::get_last_samples() const
 {
-	return &_samples[(_prn_index - 1)*_fft_N];
+	return &_samples[(_buffer_prn_index_top)*_fft_N];
 }
 
 

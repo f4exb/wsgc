@@ -104,6 +104,7 @@ void PilotedTrainingMessageCorrelator_Host::execute(PilotCorrelationAnalyzer& pi
     	unsigned int delta_t = pilot_correlation_records[pi].t_index_max;
     	wsgc_complex *prn_src;
     	TrainingCorrelationRecord& correlation_record = pilot_correlation_analyzer.new_training_correlation_record(pilot_correlation_records[pi].prn_index, _sequence_length, pilot_correlation_analyzer.get_analysis_window_size_in_prns());
+        correlation_record._selected = pilot_correlation_records[pi].selected;
 
     	// make input samples if necessary
     	if (pilot_correlation_records[pi].selected)
@@ -113,22 +114,24 @@ void PilotedTrainingMessageCorrelator_Host::execute(PilotCorrelationAnalyzer& pi
     		// if samples are not available skip to next PRN
     		if (prn_src ==  0)
     		{
-    			continue;
-    		}
-
-        	// make input samples by multiplying PRN samples by local oscillator samples
-    		if (delta_f == 0.0)
-    		{
-    			memcpy((void *) _src, (void *) prn_src, _fft_N*sizeof(wsgc_fftw_complex)); // no frequency correction, just copy
+                std::cout << "no samples available or only partially available" << std::endl;
     		}
     		else
     		{
-    			 _local_oscillator.make_next_samples(delta_f);
-    			 const wsgc_complex *lo_source_block = _local_oscillator.get_samples();
-
-				for (unsigned int i=0; i < _fft_N; i++)
+				// make input samples by multiplying PRN samples by local oscillator samples
+				if (delta_f == 0.0)
 				{
-					_src[i] = prn_src[i] * lo_source_block[i];
+					memcpy((void *) _src, (void *) prn_src, _fft_N*sizeof(wsgc_fftw_complex)); // no frequency correction, just copy
+				}
+				else
+				{
+					 _local_oscillator.make_next_samples(delta_f);
+					 const wsgc_complex *lo_source_block = _local_oscillator.get_samples();
+
+					for (unsigned int i=0; i < _fft_N; i++)
+					{
+						_src[i] = prn_src[i] * lo_source_block[i];
+					}
 				}
     		}
     	}
@@ -140,7 +143,7 @@ void PilotedTrainingMessageCorrelator_Host::execute(PilotCorrelationAnalyzer& pi
 
     	for (unsigned int prni=0; prni < _sequence_length; prni++)
     	{
-    		if (pilot_correlation_records[pi].selected)
+    		if ((pilot_correlation_records[pi].selected) && (prn_src)) // data available and validated by pilot
     		{
     			// do correlation with PRNi
 				local_code = _local_codes.get_local_code(prni);
@@ -159,8 +162,14 @@ void PilotedTrainingMessageCorrelator_Host::execute(PilotCorrelationAnalyzer& pi
 
     		// shifting averaging sum of magnitudes
     		WsgcUtils::magnitude_estimation(&_corr_results[prni], &mag_corr);
-    		_mag_avgsums[(prni-pai+_sequence_length)%_sequence_length] += mag_corr;
-    		mag_avgsums_sum += _mag_avgsums[(prni-pai+_sequence_length)%_sequence_length];
+
+    		// optimization: we don't need negative relative index values to be wrapped around
+    		// they correspond to treated positions and represent just noise
+    		if (prni-pai >= 0)
+    		{
+    			_mag_avgsums[(prni-pai)%_sequence_length] += mag_corr;
+        		mag_avgsums_sum += _mag_avgsums[(prni-pai)%_sequence_length];
+    		}
     	}
         
         // estimate point in time of message start (message epoch) at the best (max/avg) PRN available
@@ -182,9 +191,9 @@ void PilotedTrainingMessageCorrelator_Host::execute(PilotCorrelationAnalyzer& pi
 
         //std::cout << "Corr   : " << pai << " : " << corr_max << " : " << prni_corr_max << " : " << mag_max << " : " << mag_max/mag_avgsums_sum << " : " << prni_max << " : " << std::endl;
 
-    	if (mag_max/mag_avgsums_sum > _maxtoavg_max)
+    	if (mag_max/(mag_avgsums_sum-mag_max) > _maxtoavg_max)
     	{
-    		_maxtoavg_max = mag_max/mag_avgsums_sum;
+    		_maxtoavg_max = mag_max/(mag_avgsums_sum-mag_max);
     		_mag_max = mag_max;
     		_prni_max = prni_max;
     		_prnai_max = pai;
@@ -194,7 +203,7 @@ void PilotedTrainingMessageCorrelator_Host::execute(PilotCorrelationAnalyzer& pi
 
 		if (pilot_correlation_records[pi].selected)
 		{
-			correlation_record._magnitude_avgsum = mag_avgsums_sum;
+			correlation_record._magnitude_avgsum = mag_avgsums_sum-mag_max;
 			correlation_record._magnitude_max = mag_max;
 			correlation_record._prn_index_max = prni_max;
 		}
@@ -206,7 +215,6 @@ void PilotedTrainingMessageCorrelator_Host::execute(PilotCorrelationAnalyzer& pi
 		}
 
 		correlation_record._pilot_shift = delta_t;
-		correlation_record._selected = pilot_correlation_records[pi].selected;
     }
 }
 

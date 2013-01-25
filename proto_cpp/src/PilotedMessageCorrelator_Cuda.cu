@@ -164,7 +164,7 @@ void PilotedMessageCorrelator_Cuda::execute(PilotCorrelationAnalyzer& pilot_corr
             
 			// progressive averaging sum (that is inclusive scan) of magnitudes for each PRN. This gives the successive averaging sums for each PRN in the symbol.
 			repeat_values<thrust::counting_iterator<int> > key_counter_avg(thrust::make_counting_iterator(0), thrust::make_counting_iterator((int)_nb_msg_prns), _prn_per_symbol);
-			thrust::inclusive_scan_by_key(key_counter_avg.begin(), key_counter_avg.end(), _d_corr_mag.begin(), _d_corr_mag_avgsum.begin());
+			thrust::reduce_by_key(key_counter_avg.begin(), key_counter_avg.end(), _d_corr_mag.begin(), _d_keys.begin(), _d_corr_mag_avgsum.begin());
 
             // copy results to host
             thrust::copy(_d_corr_mag_avgsum.begin(), _d_corr_mag_avgsum.end(), _h_corr_mag_avgsum.begin());

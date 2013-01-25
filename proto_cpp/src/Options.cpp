@@ -340,12 +340,6 @@ bool Options::get_options(int argc, char *argv[])
             	std::cout << "Index of the PRN in symbol where the simulation starts is 0 if simulating synchronization" << std::endl;
             }
 
-            if ((prn_shift < 0) || (prn_shift > nb_prns_per_symbol - 1))
-            {
-                std::cout << "Index of the PRN in symbol where the simulation starts must be between 0 and " << nb_prns_per_symbol << " (-I option)" << std::endl;
-                return false;
-            }
-            
             if (tracking_phase_average_cycles < 2)
             {
                 std::cout << "Frequency tracking phase average must be done at least on two valid phase measurements (-T option)" << std::endl;
@@ -444,6 +438,12 @@ bool Options::get_options(int argc, char *argv[])
             }
             else // Build PRN list for message simulation
             {
+				if (prn_shift > nb_prns_per_symbol - 1)
+				{
+					std::cout << "Index of the PRN in symbol where the simulation starts must be between 0 and " << nb_prns_per_symbol << " (-I option)" << std::endl;
+					return false;
+				}
+
 				// check given symbol PRNs
 				if (prns.size() == 0)
 				{

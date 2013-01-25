@@ -48,6 +48,7 @@
 #ifdef _CUDA
 #include "SinglePrnCorrelator_FreqDep_Cuda.h"
 #include "PilotedMessageCorrelator_Cuda.h"
+#include "PilotedTrainingMessageCorrelator_Cuda.h"
 #include "LocalCodes_Cuda.h"
 #include "LocalCodesFFT_Cuda.h"
 #include "PilotCorrelator_Cuda.h"
@@ -744,9 +745,26 @@ void training_processing(
     {
         std::cout << "Creating managing objects..." << std::endl;
         pilot_correlation_analyzer = new PilotCorrelationAnalyzer(options.analysis_window_size, options.nb_prns_per_symbol, options.nb_samples_per_code);    
+#ifdef _CUDA
+        if (options.use_cuda)
+        {
+            pilot_correlation_analyzer->set_pilot_mag_display_factor((fft_N/2)*(fft_N/2));
+            //pilot_correlation_analyzer->set_training_mag_display_factor(fft_N/8);
+            local_codes = new LocalCodes_Cuda(*localCodeModulator, gc_generator, options.f_sampling, options.f_chip, training_prn_numbers); // make local codes time domain
+            pilot_correlator = new PilotCorrelator_Cuda(gc_generator, *localCodeModulator, options.f_sampling, options.f_chip, pilot_prn_numbers, options.nb_prns_per_symbol, options.df_steps, options.batch_size, options.f_step_division);
+        	tr_message_correlator = new PilotedTrainingMessageCorrelator_Cuda(*((LocalCodes_Cuda *) local_codes), options.f_sampling, options.f_chip, pilot_correlation_analyzer->get_analysis_window_size_in_prns(), options.nb_random_prns);
+        }
+        else
+        {
+            local_codes = new LocalCodes_Host(*localCodeModulator, gc_generator, options.f_sampling, options.f_chip, training_prn_numbers); // make local codes time domain
+            pilot_correlator = new PilotCorrelator_Host(gc_generator, *localCodeModulator, options.f_sampling, options.f_chip, pilot_prn_numbers, options.nb_prns_per_symbol, options.df_steps, options.batch_size, options.f_step_division);
+        	tr_message_correlator = new PilotedTrainingMessageCorrelator_Host(*((LocalCodes_Host *) local_codes), options.f_sampling, options.f_chip, options.nb_random_prns);
+        }
+#else
         local_codes = new LocalCodes_Host(*localCodeModulator, gc_generator, options.f_sampling, options.f_chip, training_prn_numbers); // make local codes time domain
         pilot_correlator = new PilotCorrelator_Host(gc_generator, *localCodeModulator, options.f_sampling, options.f_chip, pilot_prn_numbers, options.nb_prns_per_symbol, options.df_steps, options.batch_size, options.f_step_division);
         tr_message_correlator = new PilotedTrainingMessageCorrelator_Host(*((LocalCodes_Host *) local_codes), options.f_sampling, options.f_chip, options.nb_random_prns);
+#endif
         piloted_tr_mprn_correlator = new PilotedTrainingMultiplePrnCorrelator(*pilot_correlation_analyzer, *pilot_correlator, *tr_message_correlator);
         
         // Do the correlation

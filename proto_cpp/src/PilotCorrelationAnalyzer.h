@@ -100,21 +100,21 @@ class PilotCorrelationAnalyzer
          */
         const wsgc_complex *get_last_samples() const;
 
-        /*
+        /**
          * Append a new pilot correlation record
          * \param alternate_pilot Reference to a boolean set to true if pilot 2 has been selected, else false
          * \return Reference to the pilot correlation record
          */
         PilotCorrelationRecord& new_pilot_correlation_record(bool alternate = false);
 
-        /*
+        /**
          * Append a new message correlation record
          * \param global_prn_index Global PRN index corresponding to this message PRN
          * \return Reference to the message correlation record
          */
         CorrelationRecord& new_message_correlation_record(unsigned int global_prn_index);
 
-        /*
+        /**
          * Append a new training correlation record
          * \param global_prn_index Global PRN index corresponding to this message PRN
          * \param sequence_length Length of training sequence
@@ -125,6 +125,41 @@ class PilotCorrelationAnalyzer
         		unsigned int global_prn_index,
         		unsigned int sequence_length,
         		unsigned int analysis_window_prn);
+                
+        /**
+         * Get a reference to the pilot correlation records vector
+         * \param alternate True for pilot2, false for pilot1
+         * \return Reference to the pilot correlation records vector
+         */
+        const std::vector<PilotCorrelationRecord>& get_pilot_correlation_records(bool alternate = false) const
+		{
+        	if (alternate)
+        	{
+        		return _pilot2_correlation_records;
+        	}
+        	else
+        	{
+        		return _pilot1_correlation_records;
+        	}
+		}
+        
+        /**
+         * Get a reference to the message correlation records vector
+         * \return Reference to the message correlation records vector
+         */
+        const std::vector<CorrelationRecord>& get_message_correlation_records() const
+		{
+        	return _message_correlation_records;
+		}
+
+        /**
+         * Get a reference to the training correlation records vector
+         * \return Reference to the training correlation records vector
+         */
+        std::vector<TrainingCorrelationRecord>& get_training_correlation_records() 
+		{
+        	return _training_correlation_records;
+		}
 
         /**
          * Validate pilot correlation records for pilot 1 and pilot 2 that many places from the end. 
@@ -214,34 +249,8 @@ class PilotCorrelationAnalyzer
          */
         unsigned int get_prn_index() const
         {
-            return _prn_index -1 + _samples_start_global_prn_index;
+            return _global_prn_index_bot + _buffer_prn_count - 1;
         }
-
-        /**
-         * Get a reference to the pilot correlation records vector
-         * \param alternate True for pilot2, false for pilot1
-         * \return Reference to the pilot correlation records vector
-         */
-        const std::vector<PilotCorrelationRecord>& get_pilot_correlation_records(bool alternate = false) const
-		{
-        	if (alternate)
-        	{
-        		return _pilot2_correlation_records;
-        	}
-        	else
-        	{
-        		return _pilot1_correlation_records;
-        	}
-		}
-        
-        /**
-         * Get a reference to the message correlation records vector
-         * \return Reference to the message correlation records vector
-         */
-        const std::vector<CorrelationRecord>& get_message_correlation_records() const
-		{
-        	return _message_correlation_records;
-		}
 
         /**
          * Get a reference to the time shifts dictionnary
@@ -360,38 +369,53 @@ class PilotCorrelationAnalyzer
             unsigned int peak_max;
         };
 
+        // analysis window
         unsigned int _analysis_window_size; //!< Size of analysis window in number symbols
+        unsigned int _analysis_index; //!< Current analysis window index
+
+        // PRN stuff
         unsigned int _prn_per_symbol; //!< Number of PRNs per symbol
         unsigned int _fft_N; //!< Size of the FFT, this is also the number of samples in one PRN
+        std::vector<std::vector<PrnTimeShiftRecord> > _histo_time_shift_occurences_vector; //!< Vector of histogram of time shift occurences for selected pilot (ordered by occurence number)
+        std::vector<std::pair<unsigned int, unsigned int> > _histo_basic_time_shift_occurences; //!< Histogram of time shift occurences for selected pilot (ordered by occurence number)
+        
+        // pilot stuff
         bool _two_pilots; //!< True if the system supports message synchronization with two pilots
-        unsigned int _time_index_tolerance; //!< Tolerance +/- to validate the best time index
-		wsgc_complex *_samples; //!< Copy of source samples. This is a double buffer twice the size of the analysis window to allow parrallel or pipelined processing
-		unsigned int _sample_buffer_len; //!< Length of sample buffer in number of PRNs
-        unsigned int _samples_start_global_prn_index; //!< Global PRN index at start of the copy of source samples
-        unsigned int _prn_index; //!< Current PRN index
-        unsigned int _start_pilot_correlation_records_index; //!< Index at start of pilot(s) correlation records analysis window
         wsgc_float _sum_max_pilot1; //!< Sum of the magnitude maxima of pilot1 over an analysis window
         wsgc_float _sum_max_pilot2; //!< Sum of the magnitude maxima of pilot2 over an analysis window
-        std::vector<PilotCorrelationRecord> _pilot1_correlation_records; //!< Pilot correlation records corresponding to the stored samples for pilot 1
-        std::vector<PilotCorrelationRecord> _pilot2_correlation_records; //!< Pilot correlation records corresponding to the stored samples for pilot 2
         std::map<unsigned int, unsigned int> _pilot1_time_shift_occurences; //!< Dictionnary (by time shift) of pilot1 PRN time shifts occurences
         std::map<unsigned int, unsigned int> _pilot2_time_shift_occurences; //!< Dictionnary (by time shift) of pilot2 PRN time shifts occurences
-        std::vector<std::pair<unsigned int, unsigned int> > _histo_basic_time_shift_occurences; //!< Histogram of time shift occurences for selected pilot (ordered by occurence number)
-        //std::vector<PrnTimeShiftRecord> _histo_time_shift_occurences; //!< Histogram of time shift occurences for selected pilot (ordered by occurence number)
-        std::vector<std::vector<PrnTimeShiftRecord> > _histo_time_shift_occurences_vector; //!< Vector of histogram of time shift occurences for selected pilot (ordered by occurence number)
         std::vector<unsigned int> _pilot_numbers; //!< Vector of pilot numbers detected
-        unsigned int _analysis_index; //!< Current analysis window index
+
+        // correlation records
+        std::vector<PilotCorrelationRecord> _pilot1_correlation_records; //!< Pilot correlation records corresponding to the stored samples for pilot 1
+        std::vector<PilotCorrelationRecord> _pilot2_correlation_records; //!< Pilot correlation records corresponding to the stored samples for pilot 2
         std::vector<CorrelationRecord> _message_correlation_records; //!< Message correlation records filled by the message correlator
         std::vector<TrainingCorrelationRecord> _training_correlation_records; //!< Synchronization training correlation records filled by the message correlator
+        unsigned int _start_pilot_correlation_records_index; //!< Index at start of pilot(s) correlation records analysis window
         unsigned int _start_message_correlation_records_index; //!< Index at start of message correlation records analysis window
         unsigned int _validate_count; //!< Counter of number of pilot correlation records validated
+
+        // process tuning
+        unsigned int _time_index_tolerance; //!< Tolerance +/- to validate the best time index
+        
+        // display factors
         wsgc_float _pilot_mag_display_factor; //!< Pilot magnitudes are divided by this factor for display
         wsgc_float _message_mag_display_factor; //!< Message magnitudes are divided by this factor for display
         wsgc_float _training_mag_display_factor; //!< Message magnitudes are divided by this factor for display
+        
+        // memory buffer of samples management
+		wsgc_complex *_samples_ext; //!< Copy of source samples. This is a double buffer twice the size of the analysis window plus one PRN extension at each end for synchronized access
+		wsgc_complex *_samples; //!< Pointer to the core copy of source samples (without extension). It is the base for access
+		unsigned int _sample_buffer_len; //!< Length of complete sample buffer in number of PRNs
+        unsigned int _buffer_prn_index_bot; //!< Current bottom PRN index local to buffer (inclusive)
+        unsigned int _buffer_prn_index_top; //!< Current top PRN index local to buffer (inclusive)
+        unsigned int _global_prn_index_bot; //!< Current global bottom PRN index (absolute index value of _buffer_prn_index_bot PRN)
+        unsigned int _buffer_prn_count; //!< Current count of PRNs in buffer
 
+        // static
         static const wsgc_float _best_time_margin_threshold;  //<! selected correlation time delta difference with next / number of correlations ratio threshold
 
-        
         /**
          * Append a new pilot correlation record
          * \param Reference to the pilot correlation records vector

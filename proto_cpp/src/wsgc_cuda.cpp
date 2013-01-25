@@ -39,8 +39,8 @@ int main(int argc, char *argv[])
     //std::cout << "-- test repeat range : repeat iterator --" << std::endl;
     //test_cuda_instance.test_repeat_range();
 
-    //std::cout << "-- test repeat values: repeat values iterator --" << std::endl;
-    //test_cuda_instance.test_repeat_values();
+    std::cout << "-- test repeat values: repeat values iterator --" << std::endl;
+    test_cuda_instance.test_repeat_values();
 
     //std::cout << "-- test shifted range: shifted range iterator --" << std::endl;
     //test_cuda_instance.test_shift_range();

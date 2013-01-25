@@ -42,6 +42,7 @@ wsgc_test_SOURCES = CodeModulator_BPSK.cpp \
     MultiplePrnCorrelator_FreqIndep.cpp \
     PilotedTrainingMessageCorrelator.cpp \
     PilotedTrainingMessageCorrelator_Host.cpp \
+    PilotedTrainingMessageCorrelator_Cuda.cu \
     PilotedTrainingMultiplePrnCorrelator.cpp \
     TrainingCorrelationRecord.cpp \
     Options.cpp \
