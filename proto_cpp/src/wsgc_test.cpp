@@ -749,7 +749,7 @@ void training_processing(
         if (options.use_cuda)
         {
             pilot_correlation_analyzer->set_pilot_mag_display_factor((fft_N/2)*(fft_N/2));
-            //pilot_correlation_analyzer->set_training_mag_display_factor(fft_N/8);
+            pilot_correlation_analyzer->set_training_mag_display_factor(fft_N/8);
             local_codes = new LocalCodes_Cuda(*localCodeModulator, gc_generator, options.f_sampling, options.f_chip, training_prn_numbers); // make local codes time domain
             pilot_correlator = new PilotCorrelator_Cuda(gc_generator, *localCodeModulator, options.f_sampling, options.f_chip, pilot_prn_numbers, options.nb_prns_per_symbol, options.df_steps, options.batch_size, options.f_step_division);
         	tr_message_correlator = new PilotedTrainingMessageCorrelator_Cuda(*((LocalCodes_Cuda *) local_codes), options.f_sampling, options.f_chip, pilot_correlation_analyzer->get_analysis_window_size_in_prns(), options.nb_random_prns);

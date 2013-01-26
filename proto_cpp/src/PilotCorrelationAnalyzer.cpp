@@ -94,7 +94,7 @@ void PilotCorrelationAnalyzer::store_prn_samples(wsgc_complex *samples)
         _global_prn_index_bot++;
     }
 
-	std::cout << "store_prn_samples: _global_prn_index_bot=" << _global_prn_index_bot << ", _buffer_prn_index_top=" << _buffer_prn_index_top << ", _buffer_prn_count=" << _buffer_prn_count << std::endl;
+	//std::cout << "store_prn_samples: _global_prn_index_bot=" << _global_prn_index_bot << ", _buffer_prn_index_top=" << _buffer_prn_index_top << ", _buffer_prn_count=" << _buffer_prn_count << std::endl;
 	memcpy((void *) &_samples[_buffer_prn_index_top*_fft_N], (void *) samples, _fft_N*sizeof(wsgc_complex));
 
 	if (_buffer_prn_index_top == 0) // first element
@@ -107,15 +107,15 @@ void PilotCorrelationAnalyzer::store_prn_samples(wsgc_complex *samples)
 //=================================================================================================
 wsgc_complex *PilotCorrelationAnalyzer::get_samples(unsigned int global_prn_index)
 {
-	std::cout << "get_samples: global_prn_index=" << global_prn_index << ", _global_prn_index_bot=" << _global_prn_index_bot << ", _buffer_prn_index_bot=" << _buffer_prn_index_bot << ", _buffer_prn_count=" << _buffer_prn_count << std::endl;
-
     if (global_prn_index < _global_prn_index_bot) // no more in buffer
     {
+    	std::cout << "get_samples: global_prn_index=" << global_prn_index << ", _global_prn_index_bot=" << _global_prn_index_bot << ", _buffer_prn_index_bot=" << _buffer_prn_index_bot << ", _buffer_prn_count=" << _buffer_prn_count << std::endl;
         std::cout << "    + not in buffer anymore" << std::endl;
         return 0;
     }
     else if (global_prn_index >= _global_prn_index_bot + _buffer_prn_count) // not yet in buffer
     {
+    	std::cout << "get_samples: global_prn_index=" << global_prn_index << ", _global_prn_index_bot=" << _global_prn_index_bot << ", _buffer_prn_index_bot=" << _buffer_prn_index_bot << ", _buffer_prn_count=" << _buffer_prn_count << std::endl;
         std::cout << "    + not yet in buffer" << std::endl;
         return 0;
     }
@@ -128,7 +128,7 @@ wsgc_complex *PilotCorrelationAnalyzer::get_samples(unsigned int global_prn_inde
         	memcpy((void *) _samples_ext, (void *) &_samples[source_index*_fft_N], _fft_N*sizeof(wsgc_complex)); // re-copy at extra begin
         }
 
-        std::cout << "    + return: " << source_index << std::endl;
+        //std::cout << "    + return: " << source_index << std::endl;
         
         return &_samples[source_index*_fft_N];
     }
@@ -140,19 +140,16 @@ wsgc_complex *PilotCorrelationAnalyzer::get_synchronized_samples(unsigned int gl
 {
 	bool use_preceding_samples = shift_index > _fft_N / 2;
 	unsigned int source_index = (global_prn_index - _global_prn_index_bot + _buffer_prn_index_bot + (use_preceding_samples ? -1 : 0)) % _sample_buffer_len;
-	std::cout << "get_samples: global_prn_index=" << global_prn_index
-			  << ", _global_prn_index_bot=" << _global_prn_index_bot
-			  << ", _buffer_prn_index_bot=" << _buffer_prn_index_bot
-			  << ", _buffer_prn_count=" << _buffer_prn_count
-			  << ", result=" << source_index << std::endl;
 
     if (global_prn_index < _global_prn_index_bot) // no more in buffer
     {
+    	std::cout << "get_samples: global_prn_index=" << global_prn_index << ", _global_prn_index_bot=" << _global_prn_index_bot << ", _buffer_prn_index_bot=" << _buffer_prn_index_bot << ", _buffer_prn_count=" << _buffer_prn_count << ", result=" << source_index << std::endl;
         std::cout << "    + not in buffer anymore" << std::endl;
         return 0;
     }
     else if (global_prn_index >= _global_prn_index_bot + _buffer_prn_count) // not yet in buffer
     {
+    	std::cout << "get_samples: global_prn_index=" << global_prn_index << ", _global_prn_index_bot=" << _global_prn_index_bot << ", _buffer_prn_index_bot=" << _buffer_prn_index_bot << ", _buffer_prn_count=" << _buffer_prn_count << ", result=" << source_index << std::endl;
         std::cout << "    + not yet in buffer" << std::endl;
         return 0;
     }
@@ -167,12 +164,13 @@ wsgc_complex *PilotCorrelationAnalyzer::get_synchronized_samples(unsigned int gl
         {
             if (global_prn_index == _global_prn_index_bot)
             {
+            	std::cout << "get_samples: global_prn_index=" << global_prn_index << ", _global_prn_index_bot=" << _global_prn_index_bot << ", _buffer_prn_index_bot=" << _buffer_prn_index_bot << ", _buffer_prn_count=" << _buffer_prn_count << ", result=" << source_index << std::endl;
                 std::cout << "    + previous not in buffer anymore" << std::endl;
                 return 0; // cannot serve before start. previous no more in buffer
             }
             else 
             {
-                std::cout << "    + return: " <<source_index << "(" << shift_index << ")" << std::endl;
+                //std::cout << "    + return: " <<source_index << "(" << shift_index << ")" << std::endl;
                 return &_samples[source_index*_fft_N + shift_index];
             }
         }
@@ -180,12 +178,13 @@ wsgc_complex *PilotCorrelationAnalyzer::get_synchronized_samples(unsigned int gl
         {
             if (global_prn_index == _global_prn_index_bot + _buffer_prn_count - 1)
             {
+            	std::cout << "get_samples: global_prn_index=" << global_prn_index << ", _global_prn_index_bot=" << _global_prn_index_bot << ", _buffer_prn_index_bot=" << _buffer_prn_index_bot << ", _buffer_prn_count=" << _buffer_prn_count << ", result=" << source_index << std::endl;
                 std::cout << "    + next not yet in buffer" << std::endl;
                 return 0; // cannot serve past end. next is not yet in buffer
             }
             else 
             {
-                std::cout << "    + return: " <<source_index << "(" << shift_index << ")" << std::endl;
+                //std::cout << "    + return: " <<source_index << "(" << shift_index << ")" << std::endl;
                 return &_samples[source_index*_fft_N + shift_index];
             }
         }
