@@ -167,7 +167,7 @@ void PilotedTrainingMessageCorrelator_Cuda::execute(PilotCorrelationAnalyzer& pi
     	}
 
 
-    	std::cout << "pai = " << pai << " pi = " << pi << std::endl;
+    	//std::cout << "pai = " << pai << " pi = " << pi << std::endl;
 
     	// calculate averaging sums etc... for whole window at once
 
@@ -194,7 +194,7 @@ void PilotedTrainingMessageCorrelator_Cuda::execute(PilotCorrelationAnalyzer& pi
 
             for (unsigned int pi=0; pi<_sequence_length; pi++)
             {
-            	std::cout << "pi=" << pi << ": " << _h_corr_mag_avgsum[pi] << std::endl;
+            	//std::cout << "pi=" << pi << ": " << _h_corr_mag_avgsum[pi] << std::endl;
             	mag_avgsums_sum += _h_corr_mag_avgsum[pi];
 
             	if (_h_corr_mag_avgsum[pi] > _max_avg)
@@ -230,10 +230,15 @@ void PilotedTrainingMessageCorrelator_Cuda::execute(PilotCorrelationAnalyzer& pi
                 }
             }
             */
-            
             correlation_record._magnitude_avgsum = mag_avgsums_sum-_max_avg;
             correlation_record._magnitude_max = _max_avg;
             correlation_record._prn_index_max = _max_avg_index;
+
+            // pass results to high level correlator
+            _mag_max = _max_avg;
+            _maxtoavg_max = (_max_avg / correlation_record._magnitude_avgsum) * _sequence_length;
+            _prni_max = _max_avg_index;
+            _prnai_max = pai;
 
             // TODO: do something useful with the result...
             std::cout << "Max: " << _max_avg_index << " : " << _max_avg << std::endl;
