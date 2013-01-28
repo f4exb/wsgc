@@ -33,13 +33,15 @@
 #include <algorithm>
 
 const wsgc_float DecisionBox_Piloted_And_Synced::max_to_avg_ok_threshold = 1.85;
-const wsgc_float DecisionBox_Piloted_And_Synced::max_to_avg_ok_threshold_ner = 4.0; // guessed
+const wsgc_float DecisionBox_Piloted_And_Synced::max_to_avg_ok_threshold_ner_0_5 = 4.0; // guessed
+const wsgc_float DecisionBox_Piloted_And_Synced::max_to_avg_ok_threshold_ner_0_75 = 3.0; // guessed
 const wsgc_float DecisionBox_Piloted_And_Synced::max_to_avg_cdt_threshold = 1.6;
 const wsgc_float DecisionBox_Piloted_And_Synced::signal_to_noise_avg_ko_threshold = 1.0;
 const wsgc_float DecisionBox_Piloted_And_Synced::signal_to_noise_avg_cdt_threshold = 2.0;
 
 const wsgc_float DecisionBox_Piloted_And_Synced::max_to_avg_ok_threshold_cuda = 3.4; // was 3.0
-const wsgc_float DecisionBox_Piloted_And_Synced::max_to_avg_ok_threshold_ner_cuda = 7.0;
+const wsgc_float DecisionBox_Piloted_And_Synced::max_to_avg_ok_threshold_ner_0_5_cuda = 7.0;
+const wsgc_float DecisionBox_Piloted_And_Synced::max_to_avg_ok_threshold_ner_0_75_cuda = 5.0;
 const wsgc_float DecisionBox_Piloted_And_Synced::max_to_avg_cdt_threshold_cuda = 2.6;
 const wsgc_float DecisionBox_Piloted_And_Synced::signal_to_noise_avg_ko_threshold_cuda = 3.0;
 const wsgc_float DecisionBox_Piloted_And_Synced::signal_to_noise_avg_cdt_threshold_cuda = 3.5;
@@ -153,9 +155,9 @@ void DecisionBox_Piloted_And_Synced::estimate_symbols()
                     decision_record.shift_index_max = matching_record_it->pilot_shift;
                     decision_record.f_rx = matching_record_it->f_rx;
                     
-                    if (select_count < _prn_per_symbol / 2)
+                    if (select_count < (3 * _prn_per_symbol) / 4)
                     {
-                    	if (test_maxavg_override(matching_record_it))
+                    	if (test_maxavg_override(matching_record_it, (wsgc_float)select_count / (wsgc_float)_prn_per_symbol))
                     	{
 							std::cout << "    +  symbol validated at end of cycle even if there are not enough selected records for this cycle" << std::endl;
 							decision_record.decision_type = DecisionRecord::decision_ok_not_enough_rec;
@@ -335,7 +337,9 @@ bool DecisionBox_Piloted_And_Synced::challenge_matching_symbol(std::vector<Corre
 
 
 //=================================================================================================
-bool DecisionBox_Piloted_And_Synced::test_maxavg_override(std::vector<CorrelationRecord>::const_iterator& matching_record_it)
+bool DecisionBox_Piloted_And_Synced::test_maxavg_override(
+		std::vector<CorrelationRecord>::const_iterator& matching_record_it,
+		wsgc_float ratio)
 {
 	if (matching_record_it->magnitude_avg == 0)
 	{
@@ -345,6 +349,17 @@ bool DecisionBox_Piloted_And_Synced::test_maxavg_override(std::vector<Correlatio
     wsgc_float max_to_avg = matching_record_it->magnitude_max / matching_record_it->magnitude_avg;
 	std::cout << "    +  maxavg override test rec # " << matching_record_it->global_prn_index << std::endl;
 
-	return max_to_avg > (_use_cuda ? max_to_avg_ok_threshold_ner_cuda : max_to_avg_ok_threshold_ner);
+	if (ratio < 0.5)
+	{
+		return max_to_avg > (_use_cuda ? max_to_avg_ok_threshold_ner_0_5_cuda : max_to_avg_ok_threshold_ner_0_5);
+	}
+	else if (ratio < 0.75)
+	{
+		return max_to_avg > (_use_cuda ? max_to_avg_ok_threshold_ner_0_75_cuda : max_to_avg_ok_threshold_ner_0_75);
+	}
+	else
+	{
+		return true;
+	}
 }
 
