@@ -10,6 +10,7 @@ AM_CXXFLAGS += $(CUDA_CFLAGS)
 
 # ls *.cpp -1 | awk '{printf "%s \\\n", $1}'
 wsgc_test_SOURCES = CodeModulator_BPSK.cpp \
+    CodeModulator_DBPSK.cpp \
     CodeModulator_OOK.cpp \
     CodeModulator_OOK_detection.cpp \
     ContinuousPhaseCarrier.cpp \
@@ -95,6 +96,7 @@ wsgc_cuda_LDADD = -lrt $(FFTW3F_LIBS) $(NVLDFLAGS)
 else
 
 wsgc_test_SOURCES = CodeModulator_BPSK.cpp \
+    CodeModulator_DBPSK.cpp \
     CodeModulator_OOK.cpp \
     CodeModulator_OOK_detection.cpp \
     ContinuousPhaseCarrier.cpp \
@@ -155,6 +157,7 @@ endif
                     
 wsgc_generator_SOURCES = wsgc_generator.cpp \
 	CodeModulator_BPSK.cpp \
+	CodeModulator_DBPSK.cpp \
 	ContinuousPhaseCarrier.cpp \
 	GoldCodeGenerator.cpp \
     LocalCodesFFT.cpp \

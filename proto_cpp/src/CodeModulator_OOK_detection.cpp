@@ -23,6 +23,7 @@
      
 */
 #include "CodeModulator_OOK_detection.h"
+#include <assert.h>
 
 
 void CodeModulator_OOK_detection::fill_code_samples(wsgc_fftw_complex *fftw_code_in, std::vector<char>& code_bits)
@@ -39,6 +40,29 @@ void CodeModulator_OOK_detection::fill_code_samples(wsgc_fftw_complex *fftw_code
 }
 
 
+void CodeModulator_OOK_detection::fill_code_samples(wsgc_fftw_complex *fftw_code_in, std::vector<char>& code_bits, wsgc_float f_sampling, wsgc_float f_chip)
+{
+	wsgc_float fractional_index_increment;
+	unsigned int number_of_samples = ((code_bits.size()/f_chip)*f_sampling);
+
+    assert(!(f_sampling < f_chip));
+    fractional_index_increment = ((wsgc_float) code_bits.size()) / number_of_samples;
+
+    wsgc_float fractional_index = 0.0;
+    unsigned int index = 0;
+
+    for (int i=0; i<number_of_samples; i++)
+    {
+        index = int(fractional_index);
+        fftw_code_in[i][0] = code_bits[index];
+        fftw_code_in[i][1] = 0;
+
+        fractional_index += fractional_index_increment;
+    }
+}
+
+
+
 void CodeModulator_OOK_detection::modulate(const wsgc_fftw_complex *in, wsgc_fftw_complex *out, std::vector<char>& code_bits)
 {
     std::vector<char>::const_iterator it = code_bits.begin();
@@ -50,3 +74,26 @@ void CodeModulator_OOK_detection::modulate(const wsgc_fftw_complex *in, wsgc_fft
         out[i][1] = 0;
     }
 }
+
+
+void CodeModulator_OOK_detection::modulate(const wsgc_fftw_complex *in, wsgc_fftw_complex *out, std::vector<char>& code_bits, wsgc_float f_sampling, wsgc_float f_chip)
+{
+	wsgc_float fractional_index_increment;
+	unsigned int number_of_samples = ((code_bits.size()/f_chip)*f_sampling);
+
+    assert(!(f_sampling < f_chip));
+    fractional_index_increment = ((wsgc_float) code_bits.size()) / number_of_samples;
+
+    wsgc_float fractional_index = 0.0;
+    unsigned int index = 0;
+
+    for (int i=0; i<number_of_samples; i++)
+    {
+        out[i][0] = code_bits[index];
+        out[i][1] = 0;
+
+        fractional_index += fractional_index_increment;
+    }
+}
+
+

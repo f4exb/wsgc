@@ -24,6 +24,7 @@
 */
 #include "CodeModulator_CW_Test.h"
 #include <cstring>
+#include <assert.h>
 
 
 void CodeModulator_CW_Test::fill_code_samples(wsgc_fftw_complex *fftw_code_in, std::vector<char>& code_bits)
@@ -40,7 +41,31 @@ void CodeModulator_CW_Test::fill_code_samples(wsgc_fftw_complex *fftw_code_in, s
 }
 
 
+void CodeModulator_CW_Test::fill_code_samples(wsgc_fftw_complex *fftw_code_in, std::vector<char>& code_bits, wsgc_float f_sampling, wsgc_float f_chip)
+{
+	unsigned int number_of_samples = ((code_bits.size()/f_chip)*f_sampling);
+
+    assert(!(f_sampling < f_chip));
+
+    for (int i=0; i<number_of_samples; i++)
+    {
+        fftw_code_in[i][0] = 1;
+        fftw_code_in[i][1] = 0;
+    }
+}
+
+
 void CodeModulator_CW_Test::modulate(const wsgc_fftw_complex *in, wsgc_fftw_complex *out, std::vector<char>& code_bits)
 {
     memcpy(out, in, code_bits.size()*sizeof(wsgc_fftw_complex));
+}
+
+
+void CodeModulator_CW_Test::modulate(const wsgc_fftw_complex *in, wsgc_fftw_complex *out, std::vector<char>& code_bits, wsgc_float f_sampling, wsgc_float f_chip)
+{
+	unsigned int number_of_samples = ((code_bits.size()/f_chip)*f_sampling);
+
+    assert(!(f_sampling < f_chip));
+
+    memcpy(out, in, number_of_samples*sizeof(wsgc_fftw_complex));
 }

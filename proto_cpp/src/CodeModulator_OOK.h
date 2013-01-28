@@ -31,9 +31,11 @@ class CodeModulator_OOK : public CodeModulator
 {
     public:
         CodeModulator_OOK() {}
-        ~CodeModulator_OOK() {}
+        virtual ~CodeModulator_OOK() {}
         virtual void fill_code_samples(wsgc_fftw_complex *fftw_code_in, std::vector<char>& code_bits);
         virtual void modulate(const wsgc_fftw_complex *in, wsgc_fftw_complex *out, std::vector<char>& code_bits);
+        virtual void fill_code_samples(wsgc_fftw_complex *fftw_code_in, std::vector<char>& code_bits, wsgc_float f_sampling, wsgc_float f_chip);
+        virtual void modulate(const wsgc_fftw_complex *in, wsgc_fftw_complex *out, std::vector<char>& code_bits, wsgc_float f_sampling, wsgc_float f_chip);
 };
 
 #endif // __CODE_MODULATOR_OOK_H__

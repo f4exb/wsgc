@@ -49,6 +49,19 @@ class CodeModulator
          * \param code_bits samples of code bits taking binary {0,1} values
          */
         virtual void modulate(const wsgc_fftw_complex *in, wsgc_fftw_complex *out, std::vector<char>& code_bits) = 0;
+        /**
+         * Fills samples in the given array according to given {0,1} code bits
+         * \param fftw_code_in pointer to first element in the array. Array must be allocated with enough memory to fit all samples
+         * \param code_bits samples of code bits taking binary {0,1} values
+         */
+        virtual void fill_code_samples(wsgc_fftw_complex *fftw_code_in, std::vector<char>& code_bits, wsgc_float f_sampling, wsgc_float f_chip) = 0;
+        /**
+         * Modulates a waveform according to given {0,1} code bits
+         * \param in pointer to first element in the input waveform array. It must be at least of the size of the code_bits vector.
+         * \param out pointer to the first element in the output waveform array. It must be allocated with at least of the size of the code_bits vector.
+         * \param code_bits samples of code bits taking binary {0,1} values
+         */
+        virtual void modulate(const wsgc_fftw_complex *in, wsgc_fftw_complex *out, std::vector<char>& code_bits, wsgc_float f_sampling, wsgc_float f_chip) = 0;
 };
 
 #endif // __CODE_MODULATOR_H__

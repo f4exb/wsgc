@@ -34,7 +34,7 @@ class CodeModulator_BPSK : public CodeModulator
 {
     public:
         CodeModulator_BPSK() {}
-        ~CodeModulator_BPSK() {}
+        virtual ~CodeModulator_BPSK() {}
         /**
          * Fills samples in the given array according to given {0,1} code bit samples
          * \param fftw_code_in pointer to first element in the array. Array must be allocated with enough memory to fit all samples
@@ -48,6 +48,8 @@ class CodeModulator_BPSK : public CodeModulator
          * \param code_bits samples of code bits taking binary {0,1} values
          */
         virtual void modulate(const wsgc_fftw_complex *in, wsgc_fftw_complex *out, std::vector<char>& code_bits);
+        virtual void fill_code_samples(wsgc_fftw_complex *fftw_code_in, std::vector<char>& code_bits, wsgc_float f_sampling, wsgc_float f_chip);
+        virtual void modulate(const wsgc_fftw_complex *in, wsgc_fftw_complex *out, std::vector<char>& code_bits, wsgc_float f_sampling, wsgc_float f_chip);
 };
 
 #endif // __CODE_MODULATOR_BPSK_H__
