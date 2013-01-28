@@ -155,7 +155,11 @@ int main(int argc, char *argv[])
             codeModulator = new CodeModulator_OOK();
             localCodeModulator = new CodeModulator_OOK_detection();
         }
-        
+        else if (options.modulation.getScheme() == Modulation::Modulation_DBPSK)
+        {
+        	std::cout << "DBPSK is still unsupported" << std::endl;
+        	return 1;
+        }
         
         if (codeModulator) // if a code modulator is available then the actual signal processing can take place
         {

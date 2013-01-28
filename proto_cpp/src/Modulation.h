@@ -31,6 +31,7 @@ public:
     typedef enum
     {
         Modulation_BPSK,
+        Modulation_DBPSK,
         Modulation_OOK,
         Modulation_CW
     } ModulationScheme_t;
@@ -50,6 +51,7 @@ public:
 
     bool isFrequencyDependant();
     bool isCodeDivisionCapable();
+    bool isDifferential();
     void print_modulation_data(std::ostringstream& os);
 
 private:

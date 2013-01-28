@@ -42,6 +42,8 @@ SimulatedSource::SimulatedSource(GoldCodeGenerator& gc_generator, std::vector<un
     _f_tx(f_tx),
     _code_shift(code_shift % gc_generator.get_nb_code_samples(f_sampling, f_chip)),
     _prns_per_symbol(prns_per_symbol),
+    _snr_db(0),
+    _make_noise(false),
     _start_phase(start_phase),
     _nb_code_samples(gc_generator.get_nb_code_samples(f_sampling, f_chip)),
     _nb_samples(gc_generator.get_nb_code_samples(f_sampling, f_chip)*prns_per_symbol*prn_list.size() + code_shift), // symbol samples + shift preamble zeroes

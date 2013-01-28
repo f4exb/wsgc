@@ -98,6 +98,12 @@ Options::Options(std::string& _binary_name) :
 	_fir_coef_generator(0)
 {
     srand(time(0));
+
+    std::vector<std::string> path_nodes;
+    WsgcUtils::extract_string_vector(path_nodes, binary_path);
+    binary_name = path_nodes.back();
+
+    std::cout << binary_name << std::endl;
 }
 
 
@@ -635,12 +641,6 @@ void Options::get_help(std::ostringstream& os)
         i++;
     } while (help_lines[i].short_option);
     
-    std::vector<std::string> path_nodes;
-    WsgcUtils::extract_string_vector(path_nodes, binary_path);
-    std::string& binary_name = path_nodes.back();
-
-    std::cout << binary_name << std::endl;
-
     // display option help
     os << "Valid options (short, long, comment, type, default)" << std::endl;
     i = 0;    
@@ -669,9 +669,10 @@ void Options::get_help(std::ostringstream& os)
     
     os << std::endl;
     os << "Modulation schemes:" << std::endl;
-    os << " - BPSK: BPSK" << std::endl;
-    os << " - OOK : OOK"  << std::endl;
-    os << " - CW  : CW (no message: only to test fading models with wsgc_generator)" << std::endl;
+    os << " - BPSK : BPSK" << std::endl;
+    os << " - DBPSK: DBPSK (incomplete and experimental for now, work is in progress...)" << std::endl;
+    os << " - OOK  : OOK"  << std::endl;
+    os << " - CW   : CW (no message: only to test fading models with wsgc_generator)" << std::endl;
     os << std::endl;
     os << "Fading models:" << std::endl;
     os << " - Clarke:    -f \"C:<nb paths>,<frequency spread (Hz)>\"" << std::endl;
@@ -735,16 +736,8 @@ void Options::print_options(std::ostringstream& os)
     	os << "Start PRN shift in symbol .: " << std::setw(6) << std::right << prn_shift << std::endl;
     }
 
-    if (modulation.isFrequencyDependant())
-    {
-        os << "Tx frequency ..............: " << std::setw(9) << std::setprecision(2) << std::right << f_tx << std::endl;
-        os << "Initial Rx frequency ......: " << std::setw(9) << std::setprecision(2) << std::right << f_init_rx << std::endl;
-    }
-    else
-    {
-        os << "Tx frequency ..............: N/A" << std::endl;
-        os << "Initial Rx frequency ......: N/A" << std::endl;
-    }
+	os << "Tx frequency ..............: " << std::setw(9) << std::setprecision(2) << std::right << f_tx << std::endl;
+	os << "Initial Rx frequency ......: " << std::setw(9) << std::setprecision(2) << std::right << f_init_rx << std::endl;
 
     os << "SNR(dB) ...................: ";
     
@@ -920,7 +913,6 @@ bool Options::parse_fading_model_data(std::string fading_data_str)
                 
                 break;
             
-            // WARNING: This is a shitty implementation - avoid it completely for the moment
             case 'W': // Watterson
             case 'w':
                 status = WsgcUtils::extract_string_vector(raw_string_parameters, parameter_str);
@@ -983,6 +975,11 @@ bool Options::parse_modulation_data(std::string modulation_data_str)
 	if (modulation_data_str == "BPSK")
 	{
 		modulation.setScheme(Modulation::Modulation_BPSK);
+		return true;
+	}
+	if (modulation_data_str == "DBPSK")
+	{
+		modulation.setScheme(Modulation::Modulation_DBPSK);
 		return true;
 	}
 	else if (modulation_data_str == "OOK")

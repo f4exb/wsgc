@@ -55,6 +55,7 @@ class Options
         }
 
         std::string binary_path;
+        std::string binary_name;
         wsgc_float f_sampling;
         wsgc_float f_chip;
         wsgc_float snr;

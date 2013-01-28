@@ -10,6 +10,7 @@
 #include "GoldCodeGenerator.h"
 #include "SimulatedSource.h"
 #include "CodeModulator_BPSK.h"
+#include "CodeModulator_DBPSK.h"
 #include "CodeModulator_OOK.h"
 #include "CodeModulator_CW_Test.h"
 #include "LocalCodesFFT.h"
@@ -46,6 +47,10 @@ int main(int argc, char *argv[])
         if (options.modulation.getScheme() == Modulation::Modulation_BPSK)
         {
             codeModulator = new CodeModulator_BPSK();
+        }
+        if (options.modulation.getScheme() == Modulation::Modulation_DBPSK)
+        {
+            codeModulator = new CodeModulator_DBPSK();
         }
         else if (options.modulation.getScheme() == Modulation::Modulation_OOK)
         {

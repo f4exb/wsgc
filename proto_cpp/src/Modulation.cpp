@@ -58,11 +58,27 @@ void Modulation::print_modulation_data(std::ostringstream& os)
         case Modulation_BPSK:
             os << "BPSK";
             break;
+        case Modulation_DBPSK:
+            os << "DBPSK";
+            break;
         case Modulation_OOK:
             os << "OOK";
             break;
         default:
             os << "None";
             break;
+    }
+}
+
+
+bool Modulation::isDifferential()
+{
+    if (_modulation_scheme == Modulation_DBPSK)
+    {
+        return true;
+    }
+    else
+    {
+        return false;
     }
 }

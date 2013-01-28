@@ -24,6 +24,7 @@
 */
 #include "CodeModulator_DBPSK.h"
 #include "WsgcException.h"
+#include <iostream>
 #include <assert.h>
 
 
@@ -90,34 +91,30 @@ void CodeModulator_DBPSK::modulate(const wsgc_fftw_complex *in, wsgc_fftw_comple
     fractional_index_increment = ((wsgc_float) code_bits.size()) / number_of_samples;
 
     wsgc_float fractional_index = 0.0;
-    unsigned int index = 0;
-    unsigned int prev_index = 0;
-    char memory_bit = _seed_bit;
-    char code;
+    int index;
+    int index_1;
+    char memory_bit = _seed_bit; // from last batch or init
+    char code; // current code bit sample
 
     for (int i=0; i<number_of_samples; i++)
     {
         index = int(fractional_index);
+        index_1 = int(fractional_index-fractional_index_increment);
 
-        if ((index != prev_index) || (i == 0))
+        if ((index > index_1) || (i == 0)) // chip change
         {
-        	if (code_bits[index] == 1) // maintain phase
-        	{
-        		code = memory_bit;
-        	}
-        	else // reverse phase
+        	if (code_bits[index] == 0) // phase change
         	{
         		code = (memory_bit ? 0 : 1);
         	}
-
-        	memory_bit = code;
         }
 
         out[i][0] = in[i][0] * (2*(code) - 1);
         out[i][1] = in[i][1] * (2*(code) - 1);
 
         fractional_index += fractional_index_increment;
+        memory_bit = code;
     }
 
-    _seed_bit = memory_bit; // for next batch
+    _seed_bit = code; // for next batch
 }
