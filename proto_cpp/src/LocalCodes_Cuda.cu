@@ -73,8 +73,8 @@ void LocalCodes_Cuda::fill_codes_matrix()
     {
         assert(*prni_it < _gc_generator.get_nb_codes());
 
-        _gc_generator.make_code(code, *prni_it, _f_sampling, _f_chip); // 0/1 bits
-        _code_modulator.fill_code_samples(reinterpret_cast<wsgc_fftw_complex *>(_h_fft_code_in), code);   // This is the modulation specific part
+        _gc_generator.make_code(code, *prni_it); // 0/1 bits
+        _code_modulator.fill_code_samples(reinterpret_cast<wsgc_fftw_complex *>(_h_fft_code_in), code, _f_sampling, _f_chip);   // This is the modulation specific part
         
         // copy to device vector of codes
         thrust::copy(

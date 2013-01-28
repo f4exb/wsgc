@@ -69,8 +69,8 @@ void LocalCodes_Host::fill_codes_matrix()
     {
         wsgc_complex *code_array = (wsgc_complex *) WSGC_FFTW_MALLOC(_nb_code_samples*sizeof(wsgc_fftw_complex));
         wsgc_fftw_complex *code_in = reinterpret_cast<wsgc_fftw_complex *>(code_array);
-        _gc_generator.make_code(code, *prni_it, _f_sampling, _f_chip); // 0/1 bits
-        _code_modulator.fill_code_samples(code_in, code); // This is the modulation specific part
+        _gc_generator.make_code(code, *prni_it); // 0/1 bits
+        _code_modulator.fill_code_samples(code_in, code, _f_sampling, _f_chip); // This is the modulation specific part
         _codes_matrix.push_back(code_array);
     }
 }

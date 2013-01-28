@@ -78,7 +78,7 @@ void SimulatedSource::create_samples()
     
     for (; prn_it < prns_end; ++prn_it)
     {
-        _gc_generator.make_code(code, *prn_it, _f_sampling, _f_chip);
+        _gc_generator.make_code(code, *prn_it);
     
         for (unsigned int n=0; n < _prns_per_symbol; n++)
         {
@@ -86,7 +86,7 @@ void SimulatedSource::create_samples()
             lo_samples = _localOscillator.get_samples();
             const wsgc_fftw_complex *lo_samples_fftw = reinterpret_cast<const wsgc_fftw_complex *>(lo_samples);
             
-            _code_modulator->modulate(lo_samples_fftw, &samples_fftw[sample_i], code);
+            _code_modulator->modulate(lo_samples_fftw, &samples_fftw[sample_i], code, _f_sampling, _f_chip);
             
             sample_i += _nb_code_samples;
         }
