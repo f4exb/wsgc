@@ -35,6 +35,7 @@ wsgc_test_SOURCES = CodeModulator_BPSK.cpp \
     PilotedMessageCorrelator.cpp \
     PilotedMessageCorrelator_Host.cpp \
     PilotedMessageCorrelator_Cuda.cu \
+    UnpilotedMessageCorrelator.cpp \
     UnpilotedMessageCorrelator_Host.cpp \
     UnpilotedMultiplePrnCorrelator.cpp \
     Modulation.cpp \
@@ -121,6 +122,7 @@ wsgc_test_SOURCES = CodeModulator_BPSK.cpp \
     LocalCodesFFT_Host.cpp \
     PilotedMessageCorrelator.cpp \
     PilotedMessageCorrelator_Host.cpp \
+    UnpilotedMessageCorrelator.cpp \
     UnpilotedMessageCorrelator_Host.cpp \
     UnpilotedMultiplePrnCorrelator.cpp \
     Modulation.cpp \

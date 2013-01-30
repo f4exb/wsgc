@@ -33,13 +33,9 @@
 
 UnpilotedMultiplePrnCorrelator::UnpilotedMultiplePrnCorrelator(
     		std::vector<CorrelationRecord>& correlation_records,
-    		std::vector<AutocorrelationRecord>& autocorrelation_records,
-            UnpilotedMessageCorrelator& message_correlator,
-            PrnAutocorrelator& prn_autocorrelator) :
+            UnpilotedMessageCorrelator& message_correlator) :
     _correlation_records(correlation_records),
-    _autocorrelation_records(autocorrelation_records),
     _message_correlator(message_correlator),
-    _prn_autocorrelator(prn_autocorrelator),
     _global_prn_index(0)
 {}
 
@@ -92,19 +88,5 @@ void UnpilotedMultiplePrnCorrelator::dump_message_correlation_records(wsgc_float
     for (;corr_it != corr_end; ++corr_it)
     {
         corr_it->dump_line(mag_factor, os);
-    }
-}
-
-
-void UnpilotedMultiplePrnCorrelator::dump_prn_autocorrelation_records(wsgc_float mag_factor, std::ostringstream& os) const
-{
-    AutocorrelationRecord::dump_banner(os);
-
-    std::vector<AutocorrelationRecord>::const_iterator acorr_it = _autocorrelation_records.begin();
-    const std::vector<AutocorrelationRecord>::const_iterator acorr_end = _autocorrelation_records.end();
-
-    for (;acorr_it != acorr_end; ++acorr_it)
-    {
-        acorr_it->dump_line(mag_factor, os);
     }
 }

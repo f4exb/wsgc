@@ -33,6 +33,7 @@
 #include "GoldCodeGenerator.h"
 #include "SimulatedSource.h"
 #include "CodeModulator_BPSK.h"
+#include "CodeModulator_DBPSK.h"
 #include "CodeModulator_OOK.h"
 #include "CodeModulator_OOK_detection.h"
 #include "LocalCodes.h"
@@ -75,6 +76,8 @@
 #include "SampleSequencer.h"
 #include "SourceMixer.h"
 #include "FIR_RCoef.h"
+#include "DifferentialModulationMultiplePrnCorrelator.h"
+#include "DifferentialModulationMultiplePrnCorrelator_Host.h"
 
 #ifdef _CUDA
 #include "CudaManager.h"
@@ -85,6 +88,17 @@ void message_processing(
     CudaManager& cuda_manager,
 #endif    
     Options& options, 
+    GoldCodeGenerator& gc_generator,
+    CodeModulator *localCodeModulator,
+    wsgc_complex *faded_source_samples,
+    unsigned int nb_faded_source_samples
+);
+
+void message_processing_differential(
+#ifdef _CUDA
+    CudaManager& cuda_manager,
+#endif
+    Options& options,
     GoldCodeGenerator& gc_generator,
     CodeModulator *localCodeModulator,
     wsgc_complex *faded_source_samples,
@@ -157,8 +171,8 @@ int main(int argc, char *argv[])
         }
         else if (options.modulation.getScheme() == Modulation::Modulation_DBPSK)
         {
-        	std::cout << "DBPSK is still unsupported" << std::endl;
-        	return 1;
+            codeModulator = new CodeModulator_DBPSK();
+            localCodeModulator = new CodeModulator_BPSK();
         }
         
         if (codeModulator) // if a code modulator is available then the actual signal processing can take place
@@ -222,6 +236,7 @@ int main(int argc, char *argv[])
             // Apply lowpass filter if any
             if (options._fir_coef_generator != 0)
             {
+            	std::cout << "Apply Lowpass FIR" << std::endl;
             	apply_fir(source_samples, nb_source_samples, options._fir_coef_generator->get_coefs());
             }
 
@@ -281,9 +296,9 @@ int main(int argc, char *argv[])
             {
                 message_processing(
 #ifdef _CUDA
-                    cuda_manager, 
+                    cuda_manager,
 #endif    
-                    options, 
+                    options,
                     gc_generator,
                     localCodeModulator,
                     faded_source_samples,
@@ -345,7 +360,6 @@ void message_processing(
 {
     timespec time1, time2;
     int time_option = CLOCK_REALTIME;
-    LocalCodesFFT_Host *local_codes_fft = 0;
     LocalCodes *local_codes = 0;
     MultiplePrnCorrelator *mprn_correlator = 0;
     PilotedMultiplePrnCorrelator *piloted_mprn_correlator = 0;
@@ -368,10 +382,26 @@ void message_processing(
     generate_message_prn_list(message_prn_numbers, gc_generator);
     generate_pilot_prn_list(pilot_prn_numbers, gc_generator, 1);
 
+    if (options.modulation.isDifferential())
+    {
+        // differentially demodulate by multiplying by a shifted copy of itself by roughly one chip
+        unsigned int nb_prn_chips = gc_generator.get_code_length();
+        unsigned int samples_per_chip = int ((wsgc_float) fft_N/nb_prn_chips);
+        wsgc_complex *demod = (wsgc_complex *) WSGC_FFTW_MALLOC(nb_faded_source_samples*sizeof(wsgc_fftw_complex)); 
+        
+        for (unsigned int i=samples_per_chip; i<nb_faded_source_samples; i++)
+        {
+            faded_source_samples[i-samples_per_chip] *= faded_source_samples[i];
+        }
+        
+        std::cout << "Unpiloted correlation with differential modulations" << std::endl;
+        unpiloted_message_correlator = new UnpilotedMessageCorrelator_Host(options.f_sampling, options.f_chip, options.simulate_sync, options.nb_prns_per_symbol, options.batch_size, message_prn_numbers, *localCodeModulator, gc_generator);
+        unpiloted_mprn_correlator = new UnpilotedMultiplePrnCorrelator(correlation_records, *unpiloted_message_correlator);
+    }
     // if using pilot PRN(s)
     // - Modulation should support code division
     // - There should be pilot PRN(s)
-    if (options.modulation.isCodeDivisionCapable() && (options.nb_pilot_prns > 0))
+    else if (options.modulation.isCodeDivisionCapable() && (options.nb_pilot_prns > 0))
     {
         // Modulation should be frequency dependant. It doesn't make much sense if there is no frequency tracking necessary.
         // This pilot correlation works exclusively in the two dimensions of (frequency shift, PRN time shift).
@@ -411,34 +441,16 @@ void message_processing(
     {
         // new unpiloted BPSK process 
         std::cout << "Unpiloted correlation with frequency dependant modulations" << std::endl;
-        prn_autocorrelator = new PrnAutocorrelator_Host(fft_N, options.nb_prns_per_symbol);
-        unpiloted_message_correlator = new UnpilotedMessageCorrelator_Host(options.f_sampling, options.f_chip, options.nb_prns_per_symbol, options.batch_size, message_prn_numbers, *localCodeModulator, gc_generator);
-        unpiloted_mprn_correlator = new UnpilotedMultiplePrnCorrelator(correlation_records, autocorrelation_records, *unpiloted_message_correlator, *prn_autocorrelator);
-        // legacy unpiloted BPSK process
-        /*
-        std::cout << "Creating legacy multiple PRN correlator (frequency dependant) - this is largely deprecated!" << std::endl;
-        generate_pilot_prn_list(message_prn_numbers, gc_generator, 2); // need to append all pilots for the MultiplePrnCorrelator to work
-        local_codes_fft = new LocalCodesFFT_Host(*localCodeModulator, gc_generator, options.f_sampling, options.f_chip, message_prn_numbers); // make local codes frequency domain
-        mprn_correlator = new MultiplePrnCorrelator_FreqDep(gc_generator, *local_codes_fft, options.f_sampling, options.f_chip, options.f_init_rx, options.nb_prns_per_symbol,
-                                                         options.prn_shift, options.tracking_phase_average_cycles, options.file_debugging);
-                                                         */
+        unpiloted_message_correlator = new UnpilotedMessageCorrelator_Host(options.f_sampling, options.f_chip, options.simulate_sync, options.nb_prns_per_symbol, options.batch_size, message_prn_numbers, *localCodeModulator, gc_generator);
+        unpiloted_mprn_correlator = new UnpilotedMultiplePrnCorrelator(correlation_records, *unpiloted_message_correlator);
     }
     // This concerns OOK modulation
     else
     {
         // new OOK process
         std::cout << "Unpiloted correlation with frequency independant modulations" << std::endl;
-        prn_autocorrelator = new PrnAutocorrelator_Host(fft_N, options.nb_prns_per_symbol);
-        unpiloted_message_correlator = new UnpilotedMessageCorrelator_Host(options.f_sampling, options.f_chip, options.nb_prns_per_symbol, options.batch_size, message_prn_numbers, *localCodeModulator, gc_generator);
-        unpiloted_mprn_correlator = new UnpilotedMultiplePrnCorrelator(correlation_records, autocorrelation_records, *unpiloted_message_correlator, *prn_autocorrelator);
-        /*
-        // legacy OOK process
-        std::cout << "Creating legacy multiple PRN correlator (frequency independant)" << std::endl;
-        generate_pilot_prn_list(message_prn_numbers, gc_generator, 2); // need to append all pilots for the MultiplePrnCorrelator to work
-        local_codes_fft = new LocalCodesFFT_Host(*localCodeModulator, gc_generator, options.f_sampling, options.f_chip, message_prn_numbers); // make local codes frequency domain
-        mprn_correlator = new MultiplePrnCorrelator_FreqIndep(gc_generator, *local_codes_fft, options.f_sampling, options.f_chip, options.nb_prns_per_symbol,
-                                                              options.prn_shift, options.file_debugging);
-                                                              */
+        unpiloted_message_correlator = new UnpilotedMessageCorrelator_Host(options.f_sampling, options.f_chip, options.simulate_sync, options.nb_prns_per_symbol, options.batch_size, message_prn_numbers, *localCodeModulator, gc_generator);
+        unpiloted_mprn_correlator = new UnpilotedMultiplePrnCorrelator(correlation_records, *unpiloted_message_correlator);
     }
 
     // Do the correlation
@@ -701,16 +713,118 @@ void message_processing(
         delete local_codes;
     }
     
-    if (local_codes_fft)
-    {
-        delete local_codes_fft;
-    }
-    
     if (pilot_correlation_analyzer)
     {
         delete pilot_correlation_analyzer;
     }
 
+}
+
+
+//=================================================================================================
+void message_processing_differential(
+#ifdef _CUDA
+    CudaManager& cuda_manager,
+#endif
+    Options& options,
+    GoldCodeGenerator& gc_generator,
+    CodeModulator *localCodeModulator,
+    wsgc_complex *faded_source_samples,
+    unsigned int nb_faded_source_samples
+)
+{
+    timespec time1, time2;
+    int time_option = CLOCK_REALTIME;
+    LocalCodesFFT *local_codes_fft = 0;
+    const std::map<unsigned int, unsigned int> *prn_shift_occurences = 0;
+    DecisionBox *decision_box = 0;
+    std::vector<CorrelationRecord> correlation_records;
+    std::vector<TrainingCorrelationRecord> training_correlation_records;
+    unsigned int fft_N = gc_generator.get_nb_code_samples(options.f_sampling, options.f_chip);
+
+    std::vector<unsigned int> message_prn_numbers;
+    generate_message_prn_list(message_prn_numbers, gc_generator);
+
+    DifferentialModulationMultiplePrnCorrelator *dm_correlator = 0;
+
+    // only host for now
+    local_codes_fft = new LocalCodesFFT_Host(*localCodeModulator, gc_generator, options.f_sampling, options.f_chip, message_prn_numbers); // make local codes time domain
+    dm_correlator = new DifferentialModulationMultiplePrnCorrelator_Host(
+    		options.f_sampling,
+    		options.f_chip,
+    		gc_generator.get_code_length(),
+    		options.nb_prns_per_symbol,
+    		message_prn_numbers,
+    		options.analysis_window_size,
+    		correlation_records,
+    		training_correlation_records,
+    		*((LocalCodesFFT_Host *) local_codes_fft));
+
+
+    // Do the correlation
+    std::cout << "Do the correlation..." << std::endl;
+
+    wsgc_complex *signal_samples;
+
+    clock_gettime(time_option, &time1);
+
+    // Support pipeline processing if necessary (with pilot assisted correlation using CUDA)
+    bool input_samples_available = false;           // input samples (length of one PRN) are available for processing
+
+    SampleSequencer sample_sequencer(faded_source_samples, nb_faded_source_samples, fft_N);
+    unsigned int prn_i = 0;
+
+    while ((input_samples_available = sample_sequencer.get_next_code_samples(&signal_samples))) // one PRN length at a time
+    {
+    	dm_correlator->set_samples(signal_samples);
+    	if (dm_correlator->is_window_ready())
+    	{
+    		dm_correlator->execute_message();
+    	}
+    }
+
+    clock_gettime(time_option, &time2);
+    std::cout << "Message correlation time: " << std::setw(12) << std::setprecision(9) << WsgcUtils::get_time_difference(time2,time1) << " s" << std::endl << std::endl;
+
+    // print resulting correlation records
+    std::ostringstream corr_os;
+    corr_os << "Correlation records:" << std::endl;
+
+	std::vector<CorrelationRecord>::const_iterator it = correlation_records.begin();
+	std::vector<CorrelationRecord>::const_iterator it_end = correlation_records.end();
+
+	CorrelationRecord::dump_banner(corr_os);
+
+	for (; it != it_end; ++it)
+	{
+		it->dump_line(fft_N, corr_os);
+	}
+
+	std::cout << corr_os.str() << std::endl;
+
+    // Do the decoding with the decision box
+    std::cout << "Do the decoding with the decision box..." << std::endl;
+
+    if (decision_box)
+    {
+    	std::cout << "Not implemented" << std::endl;
+    	delete decision_box;
+    }
+
+    if (dm_correlator)
+    {
+        delete dm_correlator;
+    }
+
+    if (prn_shift_occurences)
+    {
+        delete prn_shift_occurences;
+    }
+
+    if (local_codes_fft)
+    {
+        delete local_codes_fft;
+    }
 }
 
 

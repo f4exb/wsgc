@@ -89,7 +89,7 @@ Options::Options(std::string& _binary_name) :
     pilot2(0),
     df_steps(31),
     f_step_division(8),
-    batch_size(3),
+    batch_size(0),
     noise_prn(0),
     use_cuda(false),
     analysis_window_size(4),
@@ -335,15 +335,22 @@ bool Options::get_options(int argc, char *argv[])
                 return false;
             }
             
-            if (batch_size < nb_prns_per_symbol-1)
-            {
-            	batch_size = nb_prns_per_symbol-1;
-            }
-
             if (simulate_sync)
             {
             	prn_shift = 0;
             	std::cout << "Index of the PRN in symbol where the simulation starts is 0 if simulating synchronization" << std::endl;
+
+            	if (batch_size == 0)
+                {
+                	batch_size = 1;
+                }
+            }
+            else
+            {
+                if (batch_size < nb_prns_per_symbol-1)
+                {
+                	batch_size = nb_prns_per_symbol-1;
+                }
             }
 
             if (tracking_phase_average_cycles < 2)
@@ -722,6 +729,7 @@ void Options::print_options(std::ostringstream& os)
     os << "Samples/code = FFT size ...: " << std::setw(6) << std::right << nb_samples_per_code << std::endl;
     os << "Code shift ................: " << std::setw(6) << std::right << code_shift << std::endl;
     os << "Nb of generated symbols ...: " << std::setw(6) << std::right << prns.size() << std::endl;
+    os << "Batch size ................: " << std::setw(6) << std::right << batch_size << " PRNs (*)" << std::endl;
 
     if (simulate_training)
     {
@@ -772,7 +780,6 @@ void Options::print_options(std::ostringstream& os)
         os << "Nb frequency sub-steps ....: " << std::setw(6) << std::right << f_step_division << std::endl;
         os << "Frequency range ...........: " << std::setprecision(1) << "[" << f_step_low*freq_step_size << ":" << f_step_high*freq_step_size << "]" << std::endl;
         os << "Minor freq step size ......: " << std::setw(9) << std::setprecision(3) << std::right << (freq_step_size/f_step_division) << std::endl;
-        os << "Batch size ................: " << std::setw(6) << std::right << batch_size << " PRNs" << std::endl;
 
         if (simulate_training)
         {
@@ -797,6 +804,8 @@ void Options::print_options(std::ostringstream& os)
     }
 
     os << "Message time ..............: " << std::setw(9) << std::setprecision(2) << std::right << message_time << std::endl; 
+    os << std::endl;
+    os << "(*) multiplied by # PRNs per symbol in some cases" << std::endl;
     os << std::endl;
 
     if (_fir_coef_generator != 0)

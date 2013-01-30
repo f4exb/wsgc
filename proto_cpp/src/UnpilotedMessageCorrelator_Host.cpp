@@ -42,18 +42,20 @@
 UnpilotedMessageCorrelator_Host::UnpilotedMessageCorrelator_Host(
 		wsgc_float f_sampling,
 		wsgc_float f_chip,
+		bool simulate_symbol_synchronization,
 		unsigned int prn_per_symbol,
 		unsigned int nb_batch_prns,
 		std::vector<unsigned int>& message_symbols,
 		CodeModulator& code_modulator,
 		GoldCodeGenerator& gc_generator
 		) :
-	UnpilotedMessageCorrelator(f_sampling, f_chip, prn_per_symbol, nb_batch_prns),
+	UnpilotedMessageCorrelator(f_sampling, f_chip, simulate_symbol_synchronization, prn_per_symbol, nb_batch_prns),
 	_local_codes(code_modulator, gc_generator, f_sampling, f_chip, message_symbols),
 	_fft_N(gc_generator.get_nb_code_samples(f_sampling, f_chip)),
 	_nb_msg_prns(_local_codes.get_nb_codes()),
 	_prn_index(0),
-	_batch_sum_magnitudes(nb_batch_prns*_nb_msg_prns,0.0)
+	_batch_sum_magnitudes(_nb_batch_prns,0.0),
+	_buffer_multiplier(_simulate_symbol_synchronization ? 1 : 2)
 {
 	// FFT
     _fft_sample_in = (wsgc_complex *) WSGC_FFTW_MALLOC(_fft_N*sizeof(wsgc_complex));
@@ -63,8 +65,8 @@ UnpilotedMessageCorrelator_Host::UnpilotedMessageCorrelator_Host(
     		reinterpret_cast<wsgc_fftw_complex *>(_fft_sample_out),
     		FFTW_FORWARD, FFTW_ESTIMATE);
     // IFFT
-    _ifft_code_out = (wsgc_complex *) WSGC_FFTW_MALLOC(_fft_N*2*_nb_batch_prns*_nb_msg_prns*sizeof(wsgc_complex));
-    _ifft_out_mags = (wsgc_float *) WSGC_FFTW_MALLOC(_fft_N*2*_nb_batch_prns*_nb_msg_prns*sizeof(wsgc_float));
+    _ifft_code_out = (wsgc_complex *) WSGC_FFTW_MALLOC(_fft_N*_buffer_multiplier*_nb_batch_prns*_nb_msg_prns*sizeof(wsgc_complex));
+    _ifft_out_mags = (wsgc_float *) WSGC_FFTW_MALLOC(_fft_N*_buffer_multiplier*_nb_batch_prns*_nb_msg_prns*sizeof(wsgc_float));
     _ifft_code_in_tmp = (wsgc_complex *) WSGC_FFTW_MALLOC(_fft_N*sizeof(wsgc_complex));
     _ifft_code_out_tmp = (wsgc_complex *) WSGC_FFTW_MALLOC(_fft_N*sizeof(wsgc_complex));
     // Do the IFFT in temporary buffer
@@ -123,16 +125,23 @@ bool UnpilotedMessageCorrelator_Host::execute(std::vector<CorrelationRecord>& me
         // Move result to batch location
         for (unsigned int iffti=0; iffti<_fft_N; iffti++)
         {
-        	unsigned int batch_location = _prn_index % (2*_nb_batch_prns);
-        	_ifft_code_out[2*_nb_batch_prns*_fft_N*prni + 2*_nb_batch_prns*iffti + batch_location] = _ifft_code_out_tmp[iffti];
+        	unsigned int batch_location = _prn_index % (_buffer_multiplier*_nb_batch_prns);
+        	_ifft_code_out[_buffer_multiplier*_nb_batch_prns*_fft_N*prni + _buffer_multiplier*_nb_batch_prns*iffti + batch_location] = _ifft_code_out_tmp[iffti];
         	WsgcUtils::magnitude_estimation(&_ifft_code_out_tmp[iffti], &mag);
-        	_ifft_out_mags[2*_nb_batch_prns*_fft_N*prni + 2*_nb_batch_prns*iffti + batch_location] = mag;
+        	_ifft_out_mags[_buffer_multiplier*_nb_batch_prns*_fft_N*prni + _buffer_multiplier*_nb_batch_prns*iffti + batch_location] = mag;
         }
     }
 
     if ((_prn_index % _nb_batch_prns) == _nb_batch_prns-1) // last PRN in batch has been processed
     {
-    	do_averaging(message_correlation_records);
+    	if (_simulate_symbol_synchronization)
+    	{
+   			do_averaging_synced(message_correlation_records);
+    	}
+    	else
+    	{
+   			do_averaging(message_correlation_records);
+    	}
         averaging_done = true;
     }
 
@@ -221,3 +230,72 @@ void UnpilotedMessageCorrelator_Host::do_averaging(std::vector<CorrelationRecord
     }
 }
     
+void UnpilotedMessageCorrelator_Host::do_averaging_synced(std::vector<CorrelationRecord>& message_correlation_records)
+{
+	unsigned int symbol_start_i;
+	wsgc_complex z;
+	wsgc_float sum_mag;
+	_batch_max_magnitudes.assign(_nb_batch_prns, 0.0);
+	_batch_sum_magnitudes.assign(_nb_batch_prns*_nb_msg_prns, 0.0);
+	_batch_noise_max_magnitude.assign(_nb_batch_prns, 0.0);
+
+    for (unsigned int prni=0; prni < _nb_msg_prns; prni++) // all PRNs
+    {
+    	for (unsigned int iffti=0; iffti<_fft_N; iffti++) // all IFFT positions
+    	{
+    		for (unsigned int bi=0; bi<_nb_batch_prns; bi++) // all positions in batch
+    		{
+    			if (bi % _prn_per_symbol == 0) // start symbol sequence
+    			{
+    				symbol_start_i = bi;
+    				sum_mag = 0.0;
+    			}
+
+    			// sum average since symbol start
+    			sum_mag += _ifft_out_mags[_nb_batch_prns*_fft_N*prni + _nb_batch_prns*iffti + bi];
+
+				z = _ifft_code_out[_nb_batch_prns*_fft_N*prni + _nb_batch_prns*iffti + bi]; // complex result of averaging at (prni, iffti, bi)
+
+				if (sum_mag > _batch_max_magnitudes[bi])
+				{
+					_batch_max_magnitudes[bi] = sum_mag;
+					_batch_max_ifft_indexes[bi] = iffti;
+					_batch_max_prn_indexes[bi] = prni;
+					_batch_complex_values_max[bi] = z;
+				}
+
+				_batch_sum_magnitudes[bi*_nb_msg_prns+prni] += sum_mag;
+
+				if (prni == _nb_msg_prns-1) // noise PRN
+				{
+					if (sum_mag > _batch_noise_max_magnitude[bi])
+					{
+						_batch_noise_max_magnitude[bi] = sum_mag;
+					}
+				}
+    		}
+    	}
+    }
+
+    static const CorrelationRecord tmp_correlation_record(_prn_per_symbol);
+
+    for (unsigned int bi=0; bi<_nb_batch_prns; bi++)
+    {
+    	message_correlation_records.push_back(tmp_correlation_record);
+    	CorrelationRecord& correlation_record = message_correlation_records.back();
+    	correlation_record.global_prn_index = _prn_index - (_nb_batch_prns-1) + bi;
+    	correlation_record.prn_per_symbol_index = correlation_record.global_prn_index % _prn_per_symbol;
+    	correlation_record.prn_index_max = _batch_max_prn_indexes[bi];
+    	correlation_record.magnitude_max = _batch_max_magnitudes[bi];
+    	correlation_record.magnitude_avg = _batch_sum_magnitudes[bi*_nb_msg_prns+correlation_record.prn_index_max] / _fft_N;
+    	correlation_record.shift_index_max = _batch_max_ifft_indexes[bi];
+    	correlation_record.phase_at_max = atan2(_batch_complex_values_max[bi].imag(), _batch_complex_values_max[bi].real());
+    	correlation_record.noise_max = _batch_noise_max_magnitude[bi];
+    	correlation_record.noise_avg = _batch_sum_magnitudes[bi*_nb_msg_prns + _nb_msg_prns - 1] / _fft_N;
+    	correlation_record.f_rx = 0.0; // N/A
+    	correlation_record.frequency_locked = true; // N/A
+    	correlation_record.pilot_shift = 0; // N/A
+    	correlation_record.selected = true; // N/A
+    }
+}
+

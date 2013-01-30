@@ -62,15 +62,11 @@ public:
     /**
     * Correlator engine constructor
     * \param correlation_records Reference to the (message) correlation records
-    * \param autocorrelation_records Reference to the (PRN) autocorrelation records
     * \param message_correlator Reference to the message correlator
-    * \param prn_autocorrelator Reference to the PRN autocorrelator
     */
     UnpilotedMultiplePrnCorrelator(
     		std::vector<CorrelationRecord>& correlation_records,
-    		std::vector<AutocorrelationRecord>& autocorrelation_records,
-            UnpilotedMessageCorrelator& message_correlator,
-            PrnAutocorrelator& prn_autocorrelator);
+            UnpilotedMessageCorrelator& message_correlator);
 
     virtual ~UnpilotedMultiplePrnCorrelator();
     /**
@@ -101,19 +97,10 @@ public:
      */
     void dump_message_correlation_records(wsgc_float mag_factor, std::ostringstream& os) const;
     
-    /**
-     * Print out the PRN autocorrelation records
-     * \param mag_factor Magnitude displays are divided by this constant
-     * \param os The output string stream
-     */
-    void dump_prn_autocorrelation_records(wsgc_float mag_factor, std::ostringstream& os) const;
-
 
 protected:
     std::vector<CorrelationRecord>& _correlation_records; //!< Reference to the message correlation records
-    std::vector<AutocorrelationRecord>& _autocorrelation_records; //!< Reference to the PRN autocorrelation records
     UnpilotedMessageCorrelator& _message_correlator; //!< Reference to the message correlator
-    PrnAutocorrelator& _prn_autocorrelator; //!< Reference to the PRN autocorrelator
     unsigned int _global_prn_index; //!< Index of PRN in the whole transmission (PRN counter)
     std::map<unsigned int, unsigned int> _shift_occurences_dict; //!< Dictionnary of IFFT indexes with maximum magnitude
 };

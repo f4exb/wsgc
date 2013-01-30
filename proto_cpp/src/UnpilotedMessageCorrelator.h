@@ -55,27 +55,19 @@ public:
     * Correlator engine for message PRNs
     * \param f_sampling Sampling frequency
     * \param f_chip Chip rate (frequency)
+    * \param simulate_symbol_synchronization True if simulating external symbol synchronization
     * \param prn_per_symbol Number of PRNs per symbol or averaging block
-    * \param nb_batch_prns Number of PRNs per process batch
+    * \param nb_batch_prns Number of PRNs per process batch. If simulating external symbol synchronization it is multiplied by the number of PRNs per symbol
     */
 	UnpilotedMessageCorrelator(
 			wsgc_float f_sampling,
 			wsgc_float f_chip,
+			bool simulate_symbol_synchronization,
 			unsigned int prn_per_symbol,
 			unsigned int nb_batch_prns
-			) :
-		_f_sampling(f_sampling),
-		_f_chip(f_chip),
-		_prn_per_symbol(prn_per_symbol),
-		_nb_batch_prns(nb_batch_prns),
-	    _batch_max_magnitudes(nb_batch_prns,0.0),
-	    _batch_max_ifft_indexes(nb_batch_prns,0),
-	    _batch_max_prn_indexes(nb_batch_prns,0),
-	    _batch_complex_values_max(nb_batch_prns, (1.0, 0.0))
-	{}
+			);
 
-	virtual ~UnpilotedMessageCorrelator()
-	{}
+	virtual ~UnpilotedMessageCorrelator();
 
 	/**
 	 * Assign one PRN length of samples to be processed
@@ -102,6 +94,7 @@ public:
 protected:
     wsgc_float _f_sampling; //!< Sampling frequency
     wsgc_float _f_chip; //!< Chip rate
+    bool _simulate_symbol_synchronization; //!< True if simulating external symbol synchronization
     unsigned int _prn_per_symbol; //!< Number of PRNs per symbol that is also the number of PRNs per averaging block
     unsigned int _nb_batch_prns; //!< Number of PRNs per process batch
 

@@ -59,8 +59,9 @@ public:
     * Correlator engine for message PRNs
     * \param f_sampling Sampling frequency
     * \param f_chip Chip rate (frequency)
+    * \param simulate_symbol_synchronization True if message is externally synchronized therefore the start PRN in symbol sequence is known
     * \param prn_per_symbol Number of PRNs per symbol or averaging block
-    * \param nb_batch_prns Number of PRNs per process batch
+    * \param nb_batch_prns Number of PRNs per process batch. If synchro is active this is multiplied by two times the Number of PRNs per symbol
     * \param message_symbols List of message symbols to correlate
     * \param code_modulator Code modulator to be used for local signal generation
     * \param gc_generator Gold Code generator to be used for local signal generation
@@ -68,6 +69,7 @@ public:
 	UnpilotedMessageCorrelator_Host(
 			wsgc_float f_sampling,
 			wsgc_float f_chip,
+			bool simulate_symbol_synchronization,
 			unsigned int prn_per_symbol,
 			unsigned int nb_batch_prns,
 			std::vector<unsigned int>& message_symbols,
@@ -105,6 +107,7 @@ protected:
 	unsigned int _prn_index;          //!< Current absolute PRN index
 	std::vector<wsgc_float> _batch_sum_magnitudes;       //!< Sum of magnitudes at all iffti for the current batch and current prn
 	std::vector<wsgc_float> _batch_noise_max_magnitude;  //!< Max of noise magnitude for the current batch
+	unsigned int _buffer_multiplier;  //!< 1 for synced, 2 for non-synced (double buffer)
 
 
 	/**
@@ -112,6 +115,12 @@ protected:
 	 * \param message_correlation_records Reference to the message correlation records to which the results of the batch are appended
 	 */
 	void do_averaging(std::vector<CorrelationRecord>& message_correlation_records);
+
+	/**
+	 * Do the averaging when one batch has been processed - symbol synchronized version
+	 * \param message_correlation_records Reference to the message correlation records to which the results of the batch are appended
+	 */
+	void do_averaging_synced(std::vector<CorrelationRecord>& message_correlation_records);
 };
 
 #endif /* __UNPILOTED_MESSAGE_CORRELATOR_H__ */
