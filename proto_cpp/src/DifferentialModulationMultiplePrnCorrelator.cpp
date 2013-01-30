@@ -26,28 +26,50 @@
 */
 
 #include "DifferentialModulationMultiplePrnCorrelator.h"
+#include <iostream>
 #include <assert.h>
+
+class CorrelationRecord;
+class TrainingCorrelationRecord;
 
 DifferentialModulationMultiplePrnCorrelator::DifferentialModulationMultiplePrnCorrelator(
 		wsgc_float f_sampling,
 		wsgc_float f_chip,
 		unsigned int prn_length,
+        unsigned int prn_per_symbol,
 		const std::vector<unsigned int>& prn_list,
-		unsigned int prn_window_size) :
+		unsigned int symbol_window_size,
+		std::vector<CorrelationRecord>& correlation_records,
+		std::vector<TrainingCorrelationRecord>& training_correlation_records) :
 		_f_sampling(f_sampling),
 		_f_chip(f_chip),
 		_prn_length(prn_length),
 		_fft_N(int((f_sampling*prn_length)/f_chip)),
-		_fractional_chip_per_sample(prn_length/_fft_N),
-		_fractional_samples_per_chip(_fft_N/prn_length),
+        _prn_per_symbol(prn_per_symbol),
+        _global_prn_index(0),
+		_fractional_chip_per_sample(((wsgc_float) prn_length)/_fft_N),
+		_fractional_samples_per_chip(((wsgc_float) _fft_N)/prn_length),
 		_int_samples_per_chip(int(_fractional_samples_per_chip)),
 		_prn_list(prn_list),
 		_samples_length(0),
-		_prn_window_size(prn_window_size)
+		_prns_length(0),
+		_symbol_window_size(symbol_window_size),
+		_correlation_records(correlation_records),
+		_training_correlation_records(training_correlation_records)
 {
     assert(_fractional_samples_per_chip > 4.0); // Need at least 4 samples per chip
+    init_results();
 }
-  
-  
+
+
 DifferentialModulationMultiplePrnCorrelator::~DifferentialModulationMultiplePrnCorrelator()
 {}
+
+void DifferentialModulationMultiplePrnCorrelator::init_results()
+{
+    _max_sy_iffti.assign(_symbol_window_size, 0);
+    _max_sy_prni.assign(_symbol_window_size, 0);
+    _max_sy_mags.assign(_symbol_window_size, 0.0);
+    _max_sy_mags_prni.assign(_symbol_window_size*_prn_list.size(), 0.0);
+}
+

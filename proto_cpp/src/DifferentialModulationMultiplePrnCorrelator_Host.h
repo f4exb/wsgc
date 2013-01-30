@@ -31,6 +31,7 @@
 
 #include "DifferentialModulationMultiplePrnCorrelator.h"
 #include "LocalCodesFFT_Host.h"
+#include <vector>
 #include <cstring>
 
 /**
@@ -44,16 +45,22 @@ public:
     * \param f_sampling Sampling frequency
     * \param f_chip Chip rate (frequency)
     * \param prn_length Length of a PRN sequence in number of chips
+    * \param prn_per_symbol Number of PRNs per message symbol
     * \param prn_list Reference to the vector of PRN numbers with which to make correlation
-    * \param prn_window_size Number of PRNs used for processing. This is the maximum number of PRNs stored in memory at once
+    * \param symbol_window_size Number of symbols used for processing. Storage is reserved for symbol_window_size times prn_per_symbol PRN samples
+    * \param correlation_records Reference to the correlation records
+    * \param training_correlation_records Reference to the training correlation records
     * \param local_codes_fft_base Reference to the FFT copy of local codes for base modulation
     */
 	DifferentialModulationMultiplePrnCorrelator_Host(
 			wsgc_float f_sampling,
 			wsgc_float f_chip,
 			unsigned int prn_length,
+            unsigned int prn_per_symbol,
 			const std::vector<unsigned int>& prn_list,
-			unsigned int prn_window_size,
+			unsigned int symbol_window_size,
+			std::vector<CorrelationRecord>& correlation_records,
+			std::vector<TrainingCorrelationRecord>& training_correlation_records,
 			const LocalCodesFFT_Host& local_codes_fft_base
         );
         
@@ -86,12 +93,17 @@ public:
 protected:
     const LocalCodesFFT_Host& _local_codes_fft_base; //!< Reference to the FFT copy of local codes for base modulation
     wsgc_complex *_samples; //!< Copy of input samples for the length of the window
-    wsgc_complex *_demod; //!< Demodulated samples temporary area
+    wsgc_complex *_demod; //!< Demodulated samples
+    wsgc_complex *_demod_fft; //!< Demodulated samples FFT
     wsgc_complex *_ifft_in_tmp; //!< temporary zone for IFFT input
     wsgc_complex *_ifft_out_tmp; //!< temporary zone for IFFT output
     wsgc_complex *_corr_out; //!< Correlation results
+    wsgc_float *_corr_out_mag; //!< Correlation results magnitudes
+    wsgc_fftw_plan _fft_plan; //!< FFTW plan for forward FFT.
     wsgc_fftw_plan _ifft_plan; //!< FFTW plan for inverse FFT.
     
+    static const wsgc_complex _c_zero;
+
     /**
      * Differentially demodulate for the window length by doing a sample to sample multiplication shifted by a chip of samples
      */
@@ -107,6 +119,12 @@ protected:
      * \param prn_wi PRN index in window
      */
     void do_correlation(unsigned int prn_wi);
+
+    /**
+     * Do a sliding sum averaging of correlations over the PRNs window
+     * \param prn_wi PRN index in window
+     */
+    void do_sum_averaging();
 
     /**
      * At end of window processing move last chip to beginning of window
