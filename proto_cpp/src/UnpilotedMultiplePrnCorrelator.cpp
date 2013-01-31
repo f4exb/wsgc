@@ -47,7 +47,6 @@ UnpilotedMultiplePrnCorrelator::~UnpilotedMultiplePrnCorrelator()
 void UnpilotedMultiplePrnCorrelator::set_source_block(wsgc_complex *source_block)
 {
     _message_correlator.set_source_block(source_block);
-    //_prn_autocorrelator.set_source_block(source_block, _global_prn_index); // This has proven useless
     _global_prn_index++;
 }
     

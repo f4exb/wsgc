@@ -312,8 +312,7 @@ void DifferentialModulationMultiplePrnCorrelator_Host::differentially_demodulate
 {
     for (unsigned int i=0; i < _symbol_window_size*_prn_per_symbol*_fft_N; i++)
     {
-        _demod[i] = _samples[i] * _samples[i+_int_samples_per_chip];
-        //std::cout << i << ":" << _demod[i] << " -- " << _samples[i] << std::endl;
+        _demod[i] = _samples[i] * std::conj(_samples[i+_int_samples_per_chip]);
     }
 }
 

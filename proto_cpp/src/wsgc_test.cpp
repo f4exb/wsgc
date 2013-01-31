@@ -294,7 +294,22 @@ int main(int argc, char *argv[])
             }
             else
             {
-                message_processing(
+            	if (options.modulation.isDifferential())
+            	{
+            		message_processing_differential(
+#ifdef _CUDA
+                    cuda_manager,
+#endif
+                    options,
+                    gc_generator,
+                    localCodeModulator,
+                    faded_source_samples,
+                    nb_faded_source_samples
+                    );
+            	}
+            	else
+            	{
+            		message_processing(
 #ifdef _CUDA
                     cuda_manager,
 #endif    
@@ -304,6 +319,7 @@ int main(int argc, char *argv[])
                     faded_source_samples,
                     nb_faded_source_samples
                     );
+            	}
             }
             
             if (source_mixer)
@@ -391,7 +407,8 @@ void message_processing(
         
         for (unsigned int i=samples_per_chip; i<nb_faded_source_samples; i++)
         {
-            faded_source_samples[i-samples_per_chip] *= faded_source_samples[i];
+            faded_source_samples[i-samples_per_chip] *= std::conj(faded_source_samples[i]);
+            std::cout << i-samples_per_chip << ": " << faded_source_samples[i-samples_per_chip] << std::endl;
         }
         
         std::cout << "Unpiloted correlation with differential modulations" << std::endl;
