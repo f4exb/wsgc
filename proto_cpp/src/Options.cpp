@@ -729,7 +729,6 @@ void Options::print_options(std::ostringstream& os)
     os << "Samples/code = FFT size ...: " << std::setw(6) << std::right << nb_samples_per_code << std::endl;
     os << "Code shift ................: " << std::setw(6) << std::right << code_shift << std::endl;
     os << "Nb of generated symbols ...: " << std::setw(6) << std::right << prns.size() << std::endl;
-    os << "Batch size ................: " << std::setw(6) << std::right << batch_size << " PRNs (*)" << std::endl;
 
     if (simulate_training)
     {
@@ -781,17 +780,6 @@ void Options::print_options(std::ostringstream& os)
         os << "Frequency range ...........: " << std::setprecision(1) << "[" << f_step_low*freq_step_size << ":" << f_step_high*freq_step_size << "]" << std::endl;
         os << "Minor freq step size ......: " << std::setw(9) << std::setprecision(3) << std::right << (freq_step_size/f_step_division) << std::endl;
 
-        if (simulate_training)
-        {
-        	os << "Analysis window size ......: " << std::setw(6) << std::right << analysis_window_size*nb_prns_per_symbol << " PRNs" << std::endl;
-        }
-        else
-        {
-        	os << "Analysis window size ......: " << std::setw(6) << std::right << analysis_window_size << " Symbols" << std::endl;
-        }
-
-    	os << "Analysis window time ......: " << std::setw(9) << std::setprecision(2) << std::right << symbol_period << std::endl;
-
         if (pilot1 == pilot2)
         {
             os << "Pilot PRN .................: " << std::setw(6) << std::right << pilot1 << " (" << pilot1 - nb_message_symbols << ")" << std::endl;
@@ -803,9 +791,21 @@ void Options::print_options(std::ostringstream& os)
         }
     }
 
-    os << "Message time ..............: " << std::setw(9) << std::setprecision(2) << std::right << message_time << std::endl; 
+	os << "Message time ..............: " << std::setw(9) << std::setprecision(2) << std::right << message_time << std::endl;
     os << std::endl;
-    os << "(*) multiplied by # PRNs per symbol in some cases" << std::endl;
+    os << "Multiple usage parameters:" << std::endl;
+    os << "Batch size ................: " << std::setw(6) << std::right << batch_size << std::endl;
+
+    if (simulate_training)
+    {
+    	os << "Analysis window size ......: " << std::setw(6) << std::right << analysis_window_size*nb_prns_per_symbol << " PRNs" << std::endl;
+    }
+    else
+    {
+    	os << "Analysis window size ......: " << std::setw(6) << std::right << analysis_window_size << " Symbols" << std::endl;
+    }
+
+	os << "Analysis window time ......: " << std::setw(9) << std::setprecision(2) << std::right << symbol_period << std::endl;
     os << std::endl;
 
     if (_fir_coef_generator != 0)

@@ -82,3 +82,16 @@ bool Modulation::isDifferential()
         return false;
     }
 }
+
+
+bool Modulation::demodulateBeforeCorrelate()
+{
+    if ((_modulation_scheme == Modulation_DBPSK) || (_modulation_scheme == Modulation_OOK))
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}

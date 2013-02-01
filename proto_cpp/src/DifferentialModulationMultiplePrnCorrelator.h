@@ -77,23 +77,10 @@ public:
 	/**
 	 * Append source samples for one PRN length to the buffer
      * \param samples Pointer to source samples
+     * \return true if the buffer is complete and ready for analyze
 	 */
-	virtual void set_samples(wsgc_complex *samples) = 0;
+	virtual bool set_samples(wsgc_complex *samples) = 0;
 
-	/**
-	 * Set the initial chip samples for differential processing
-     * \param chip_samples Pointer to initial source samples
-	 */
-	virtual void set_initial_chip(wsgc_complex *chip_samples) = 0;
-
-	/**
-	 * Tells if the window is ready for processing
-	 */
-	bool is_window_ready()
-	{
-		return _prns_length == _symbol_window_size * _prn_per_symbol;
-	}
-    
 protected:
     wsgc_float _f_sampling; //!< Sampling frequency
     wsgc_float _f_chip; //!< Chip rate
@@ -101,9 +88,6 @@ protected:
     unsigned int _fft_N; //!< Length of FFT that is also the length of a PRN sequence in number of samples
     unsigned int _prn_per_symbol; //!< Number of PRNs per message symbol
     unsigned int _global_prn_index; //!< Index of PRN in all received samples
-    wsgc_float _fractional_chip_per_sample; //!< Length of one sample in chip unit (should be < 1/4)
-    wsgc_float _fractional_samples_per_chip; //!< Fractional number of samples per chip (should be > 4)
-    unsigned int _int_samples_per_chip; //!< Integral number of samples per chip (floor of above)
     const std::vector<unsigned int>& _prn_list; //!< Reference to the vector of PRN numbers with which to make correlation
     unsigned int _symbol_window_size; //!<  Window of symbols in use for processing.
     unsigned int _samples_length; //!< Number of stored source samples

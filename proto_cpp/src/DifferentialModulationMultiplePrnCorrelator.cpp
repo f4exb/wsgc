@@ -47,9 +47,6 @@ DifferentialModulationMultiplePrnCorrelator::DifferentialModulationMultiplePrnCo
 		_fft_N(int((f_sampling*prn_length)/f_chip)),
         _prn_per_symbol(prn_per_symbol),
         _global_prn_index(0),
-		_fractional_chip_per_sample(((wsgc_float) prn_length)/_fft_N),
-		_fractional_samples_per_chip(((wsgc_float) _fft_N)/prn_length),
-		_int_samples_per_chip(int(_fractional_samples_per_chip)),
 		_prn_list(prn_list),
 		_samples_length(0),
 		_prns_length(0),
@@ -57,7 +54,6 @@ DifferentialModulationMultiplePrnCorrelator::DifferentialModulationMultiplePrnCo
 		_correlation_records(correlation_records),
 		_training_correlation_records(training_correlation_records)
 {
-    assert(_fractional_samples_per_chip > 4.0); // Need at least 4 samples per chip
     init_results();
 }
 

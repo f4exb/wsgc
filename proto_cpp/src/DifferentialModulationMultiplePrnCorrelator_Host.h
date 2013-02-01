@@ -30,6 +30,7 @@
 #define __DIFFERENTIAL_MODULATION_MULTIPLE_PRN_CORRELATOR_HOST_H__
 
 #include "DifferentialModulationMultiplePrnCorrelator.h"
+#include "DemodulatorDifferential.h"
 #include "LocalCodesFFT_Host.h"
 #include <vector>
 #include <cstring>
@@ -81,20 +82,14 @@ public:
 	/**
 	 * Append source samples for one PRN length to the buffer
      * \param samples Pointer to source samples
+     * \return true if the buffer is complete and ready for analyse
 	 */
-	virtual void set_samples(wsgc_complex *samples);
-
-	/**
-	 * Set the initial chip samples for differential processing
-     * \param sample Pointer to initial source sample
-	 */
-	virtual void set_initial_chip(wsgc_complex *chip_samples);
+	virtual bool set_samples(wsgc_complex *samples);
 
 protected:
     const LocalCodesFFT_Host& _local_codes_fft_base; //!< Reference to the FFT copy of local codes for base modulation
     wsgc_complex *_samples; //!< Copy of input samples for the length of the window
-    wsgc_complex *_demod; //!< Demodulated samples
-    wsgc_complex *_demod_fft; //!< Demodulated samples FFT
+    wsgc_complex *_src_fft; //!< Samples FFT
     wsgc_complex *_ifft_in_tmp; //!< temporary zone for IFFT input
     wsgc_complex *_ifft_out_tmp; //!< temporary zone for IFFT output
     wsgc_complex *_corr_out; //!< Correlation results
@@ -104,11 +99,6 @@ protected:
     
     static const wsgc_complex _c_zero;
 
-    /**
-     * Differentially demodulate for the window length by doing a sample to sample multiplication shifted by a chip of samples
-     */
-    void differentially_demodulate_window();
-    
     /**
      * Do a whole correlation process over the PRNs window
      */
@@ -121,15 +111,23 @@ protected:
     void do_correlation(unsigned int prn_wi);
 
     /**
-     * Do a sliding sum averaging of correlations over the PRNs window
+     * Do a sum averaging of correlations over the PRNs window
      * \param prn_wi PRN index in window
      */
     void do_sum_averaging();
 
     /**
-     * At end of window processing move last chip to beginning of window
+     * Sum averaging of correlations over the PRNs window sub process with complex additions
+     * \param prn_wi PRN index in window
      */
-    void chip_carry();
+    void sum_averaging_loop_complex();
+
+    /**
+     * Sum averaging of correlations over the PRNs window sub process with magnitudes additions
+     * \param prn_wi PRN index in window
+     */
+    void sum_averaging_loop_magnitudes();
+
 };
 
 #endif /* __DIFFERENTIAL_MODULATION_MULTIPLE_PRN_CORRELATOR_HOST_H__ */

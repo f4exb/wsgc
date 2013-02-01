@@ -50,9 +50,8 @@ DifferentialModulationMultiplePrnCorrelator_Host::DifferentialModulationMultiple
         _local_codes_fft_base(local_codes_fft_base)
 {
 	// Input storage
-    _samples = (wsgc_complex *) WSGC_FFTW_MALLOC((_int_samples_per_chip+(symbol_window_size*prn_per_symbol*_fft_N))*sizeof(wsgc_fftw_complex));
-    _demod = (wsgc_complex *) WSGC_FFTW_MALLOC(symbol_window_size*prn_per_symbol*_fft_N*sizeof(wsgc_fftw_complex));
-    _demod_fft = (wsgc_complex *) WSGC_FFTW_MALLOC(symbol_window_size*prn_per_symbol*_fft_N*sizeof(wsgc_fftw_complex));
+    _samples = (wsgc_complex *) WSGC_FFTW_MALLOC(symbol_window_size*prn_per_symbol*_fft_N*sizeof(wsgc_fftw_complex));
+    _src_fft = (wsgc_complex *) WSGC_FFTW_MALLOC(symbol_window_size*prn_per_symbol*_fft_N*sizeof(wsgc_fftw_complex));
 
     // IFFT items
     _ifft_in_tmp = (wsgc_complex *) WSGC_FFTW_MALLOC(_fft_N*sizeof(wsgc_fftw_complex));
@@ -64,9 +63,9 @@ DifferentialModulationMultiplePrnCorrelator_Host::DifferentialModulationMultiple
     int N = _fft_N;
     int howmany = symbol_window_size*prn_per_symbol;
     _fft_plan = WSGC_FFTW_PLAN_MANY(1, &N, howmany,
-    		reinterpret_cast<wsgc_fftw_complex *>(_demod),
+    		reinterpret_cast<wsgc_fftw_complex *>(_samples),
     		0, 1, _fft_N,
-    		reinterpret_cast<wsgc_fftw_complex *>(_demod_fft),
+    		reinterpret_cast<wsgc_fftw_complex *>(_src_fft),
     		0, 1, _fft_N,
     		FFTW_FORWARD, FFTW_ESTIMATE);
 
@@ -75,14 +74,6 @@ DifferentialModulationMultiplePrnCorrelator_Host::DifferentialModulationMultiple
                                 reinterpret_cast<wsgc_fftw_complex *>(_ifft_in_tmp),
                                 reinterpret_cast<wsgc_fftw_complex *>(_ifft_out_tmp),
                                 FFTW_BACKWARD, FFTW_ESTIMATE);
-
-    // Fill initial chip with zeros
-    for (unsigned int i=0; i < _int_samples_per_chip; i++)
-    {
-    	_samples[i] = _c_zero;
-    }
-
-    _samples_length = _int_samples_per_chip;
 }
 
         
@@ -102,32 +93,22 @@ DifferentialModulationMultiplePrnCorrelator_Host::~DifferentialModulationMultipl
 	WSGC_FFTW_FREE(_ifft_in_tmp);
 
 	// Input storage
-    WSGC_FFTW_FREE(_demod_fft);
-    WSGC_FFTW_FREE(_demod);
+    WSGC_FFTW_FREE(_src_fft);
     WSGC_FFTW_FREE(_samples);
 }
 
 
 //=================================================================================================
-void DifferentialModulationMultiplePrnCorrelator_Host::set_initial_chip(wsgc_complex *chip_samples)
+bool DifferentialModulationMultiplePrnCorrelator_Host::set_samples(wsgc_complex *samples)
 {
-    memcpy(_samples, chip_samples, _int_samples_per_chip*sizeof(wsgc_complex));
-    
-    if (_samples_length == 0)
-    {
-        _samples_length = _int_samples_per_chip;
-    }
-}
+	assert(_samples_length+_fft_N <= _symbol_window_size*_prn_per_symbol*_fft_N);
 
-
-//=================================================================================================
-void DifferentialModulationMultiplePrnCorrelator_Host::set_samples(wsgc_complex *samples)
-{
-	assert(_samples_length+_fft_N <= _int_samples_per_chip+(_symbol_window_size*_prn_per_symbol*_fft_N));
     memcpy(&_samples[_samples_length], samples, _fft_N*sizeof(wsgc_complex));
     _samples_length += _fft_N;
-    _global_prn_index++;
     _prns_length++;
+    _global_prn_index++;
+
+    return _prns_length == _symbol_window_size*_prn_per_symbol;
 }
 
 
@@ -136,7 +117,8 @@ void DifferentialModulationMultiplePrnCorrelator_Host::execute_message()
 {
 	do_correlation();
 	do_sum_averaging();
-    chip_carry();
+	_prns_length = 0;
+	_samples_length = 0;
 }
 
 
@@ -145,14 +127,14 @@ void DifferentialModulationMultiplePrnCorrelator_Host::execute_training()
 {
 	do_correlation();
     // TODO: sliding averaging
-    chip_carry();
+	_prns_length = 0;
+	_samples_length = 0;
 }
 
 
 //=================================================================================================
 void DifferentialModulationMultiplePrnCorrelator_Host::do_correlation()
 {
-	differentially_demodulate_window();
 	WSGC_FFTW_EXECUTE(_fft_plan);
 	// for each PRN length in processing window half
 	for (unsigned int prn_wi = 0; prn_wi < _symbol_window_size*_prn_per_symbol; prn_wi++)
@@ -174,7 +156,7 @@ void DifferentialModulationMultiplePrnCorrelator_Host::do_correlation(unsigned i
 		// multiply source block by local code conjugate FFT
 		for (unsigned int ffti = 0; ffti < _fft_N; ffti++) // multiply with local code
 		{
-			_ifft_in_tmp[ffti] = _demod_fft[prn_wi*_fft_N + ffti] * _local_codes_fft_base.get_local_code(*prni_it)[ffti];
+			_ifft_in_tmp[ffti] = _src_fft[prn_wi*_fft_N + ffti] * _local_codes_fft_base.get_local_code(*prni_it)[ffti];
 		}
 
 		// do one IFFT
@@ -184,7 +166,6 @@ void DifferentialModulationMultiplePrnCorrelator_Host::do_correlation(unsigned i
 		for (unsigned int ffti = 0; ffti < _fft_N; ffti++)
 		{
 			_corr_out[_symbol_window_size*_prn_per_symbol*_fft_N*prni_i + _symbol_window_size*_prn_per_symbol*ffti + prn_wi] = _ifft_out_tmp[ffti];
-			//std::cout << prni_i << ":" << ffti << ":" << prn_wi << ":" << _symbol_window_size*_prn_per_symbol*_fft_N*prni_i + _symbol_window_size*_prn_per_symbol*ffti + prn_wi << std::endl;
 		}
 	}
 }
@@ -193,8 +174,6 @@ void DifferentialModulationMultiplePrnCorrelator_Host::do_correlation(unsigned i
 //=================================================================================================
 void DifferentialModulationMultiplePrnCorrelator_Host::do_sum_averaging()
 {
-	wsgc_float sumavg_mag, prni_max;
-
 	init_results();
 
 	for (unsigned int ci = 0; ci < _fft_N*_symbol_window_size*_prn_per_symbol*_prn_list.size(); ci++)
@@ -202,75 +181,7 @@ void DifferentialModulationMultiplePrnCorrelator_Host::do_sum_averaging()
 		WsgcUtils::magnitude_estimation(&_corr_out[ci], &_corr_out_mag[ci]);
 	}
 
-	/*
-	for (unsigned int prni_i = 0; prni_i < _prn_list.size(); prni_i++) // loop on correlated PRN numbers
-	{
-		prni_max = 0.0;
-
-		for (unsigned int iffti = 0; iffti < _fft_N; iffti++) // for each time bin
-		{
-			for (unsigned int si = 0; si < _symbol_window_size; si++) // for each symbol
-			{
-				unsigned int start_symbol_iffti_index = _symbol_window_size*_prn_per_symbol*_fft_N*prni_i + _symbol_window_size*_prn_per_symbol*iffti + _prn_per_symbol*si;
-
-				// calculate average complex sum on _prn_per_symbol samples
-				for (unsigned int ai = 1; ai < _prn_per_symbol; ai++ )
-				{
-					_corr_out[start_symbol_iffti_index] += _corr_out[start_symbol_iffti_index + ai];
-				}
-
-				// take magnitude of (prni_i, si, iffti) result
-				WsgcUtils::magnitude_estimation(&_corr_out[start_symbol_iffti_index], &sumavg_mag);
-
-				// find biggest (prni_i, iffti) for the si
-				if (sumavg_mag > _max_sy_mags[si])
-				{
-					_max_sy_mags[si] = sumavg_mag;
-					_max_sy_iffti[si] = iffti;
-					_max_sy_prni[si] = prni_i;
-				}
-
-				if (sumavg_mag > _max_sy_mags_prni[_symbol_window_size*prni_i+si])
-				{
-					_max_sy_mags_prni[_symbol_window_size*prni_i+si] = sumavg_mag;
-				}
-			}
-		}
-	}
-	*/
-
-	for (unsigned int prni_i = 0; prni_i < _prn_list.size(); prni_i++) // loop on correlated PRN numbers
-	{
-		prni_max = 0.0;
-
-		for (unsigned int iffti = 0; iffti < _fft_N; iffti++) // for each time bin
-		{
-			for (unsigned int si = 0; si < _symbol_window_size; si++) // for each symbol
-			{
-				unsigned int start_symbol_iffti_index = _symbol_window_size*_prn_per_symbol*_fft_N*prni_i + _symbol_window_size*_prn_per_symbol*iffti + _prn_per_symbol*si;
-				//std::cout << prni_i << ":" << iffti << ":" << si << ":" << start_symbol_iffti_index << std::endl;
-
-				// calculate average sum on _prn_per_symbol samples
-				for (unsigned int ai = 1; ai < _prn_per_symbol; ai++ )
-				{
-					_corr_out_mag[start_symbol_iffti_index] += _corr_out_mag[start_symbol_iffti_index + ai];
-				}
-
-				// find biggest (prni_i, iffti) for the si
-				if (_corr_out_mag[start_symbol_iffti_index] > _max_sy_mags[si])
-				{
-					_max_sy_mags[si] = _corr_out_mag[start_symbol_iffti_index];
-					_max_sy_iffti[si] = iffti;
-					_max_sy_prni[si] = prni_i;
-				}
-
-				if (_corr_out_mag[start_symbol_iffti_index] > _max_sy_mags_prni[_symbol_window_size*prni_i+si])
-				{
-					_max_sy_mags_prni[_symbol_window_size*prni_i+si] = _corr_out_mag[start_symbol_iffti_index];
-				}
-			}
-		}
-	}
+	sum_averaging_loop_magnitudes();
 
 	// move results to correlation records
 	for (unsigned int si = 0; si < _symbol_window_size; si++) // for each symbol
@@ -308,19 +219,82 @@ void DifferentialModulationMultiplePrnCorrelator_Host::do_sum_averaging()
 
 
 //=================================================================================================
-void DifferentialModulationMultiplePrnCorrelator_Host::differentially_demodulate_window()
+void DifferentialModulationMultiplePrnCorrelator_Host::sum_averaging_loop_complex()
 {
-    for (unsigned int i=0; i < _symbol_window_size*_prn_per_symbol*_fft_N; i++)
-    {
-        _demod[i] = _samples[i] * std::conj(_samples[i+_int_samples_per_chip]);
-    }
+	wsgc_float sumavg_mag, prni_max;
+
+	for (unsigned int prni_i = 0; prni_i < _prn_list.size(); prni_i++) // loop on correlated PRN numbers
+	{
+		prni_max = 0.0;
+
+		for (unsigned int iffti = 0; iffti < _fft_N; iffti++) // for each time bin
+		{
+			for (unsigned int si = 0; si < _symbol_window_size; si++) // for each symbol
+			{
+				unsigned int start_symbol_iffti_index = _symbol_window_size*_prn_per_symbol*_fft_N*prni_i + _symbol_window_size*_prn_per_symbol*iffti + _prn_per_symbol*si;
+
+				// calculate average complex sum on _prn_per_symbol samples
+				for (unsigned int ai = 1; ai < _prn_per_symbol; ai++ )
+				{
+					_corr_out[start_symbol_iffti_index] += _corr_out[start_symbol_iffti_index + ai];
+				}
+
+				// take magnitude of (prni_i, si, iffti) result
+				WsgcUtils::magnitude_estimation(&_corr_out[start_symbol_iffti_index], &sumavg_mag);
+
+				// find biggest (prni_i, iffti) for the si
+				if (sumavg_mag > _max_sy_mags[si])
+				{
+					_max_sy_mags[si] = sumavg_mag;
+					_max_sy_iffti[si] = iffti;
+					_max_sy_prni[si] = prni_i;
+				}
+
+				if (sumavg_mag > _max_sy_mags_prni[_symbol_window_size*prni_i+si])
+				{
+					_max_sy_mags_prni[_symbol_window_size*prni_i+si] = sumavg_mag;
+				}
+			}
+		}
+	}
 }
 
 
 //=================================================================================================
-void DifferentialModulationMultiplePrnCorrelator_Host::chip_carry()
+void DifferentialModulationMultiplePrnCorrelator_Host::sum_averaging_loop_magnitudes()
 {
-    memcpy(_samples, &_samples[_symbol_window_size*_fft_N], _int_samples_per_chip*sizeof(wsgc_complex));
-    _samples_length = _int_samples_per_chip;
-    _prns_length = 0;
+	wsgc_float sumavg_mag, prni_max;
+
+	for (unsigned int prni_i = 0; prni_i < _prn_list.size(); prni_i++) // loop on correlated PRN numbers
+	{
+		prni_max = 0.0;
+
+		for (unsigned int iffti = 0; iffti < _fft_N; iffti++) // for each time bin
+		{
+			for (unsigned int si = 0; si < _symbol_window_size; si++) // for each symbol
+			{
+				unsigned int start_symbol_iffti_index = _symbol_window_size*_prn_per_symbol*_fft_N*prni_i + _symbol_window_size*_prn_per_symbol*iffti + _prn_per_symbol*si;
+
+				// calculate average sum on _prn_per_symbol samples
+				for (unsigned int ai = 1; ai < _prn_per_symbol; ai++ )
+				{
+					_corr_out_mag[start_symbol_iffti_index] += _corr_out_mag[start_symbol_iffti_index + ai];
+				}
+
+				// find biggest (prni_i, iffti) for the si
+				if (_corr_out_mag[start_symbol_iffti_index] > _max_sy_mags[si])
+				{
+					_max_sy_mags[si] = _corr_out_mag[start_symbol_iffti_index];
+					_max_sy_iffti[si] = iffti;
+					_max_sy_prni[si] = prni_i;
+				}
+
+				if (_corr_out_mag[start_symbol_iffti_index] > _max_sy_mags_prni[_symbol_window_size*prni_i+si])
+				{
+					_max_sy_mags_prni[_symbol_window_size*prni_i+si] = _corr_out_mag[start_symbol_iffti_index];
+				}
+			}
+		}
+	}
 }
+

@@ -39,6 +39,8 @@ wsgc_test_SOURCES = CodeModulator_BPSK.cpp \
     UnpilotedMessageCorrelator_Host.cpp \
     UnpilotedMultiplePrnCorrelator.cpp \
     Modulation.cpp \
+    DemodulatorSquaring.cpp \
+    DemodulatorDifferential.cpp \
     MultiplePrnCorrelator.cpp \
     MultiplePrnCorrelator_FreqDep.cpp \
     MultiplePrnCorrelator_FreqIndep.cpp \
@@ -126,6 +128,8 @@ wsgc_test_SOURCES = CodeModulator_BPSK.cpp \
     UnpilotedMessageCorrelator_Host.cpp \
     UnpilotedMultiplePrnCorrelator.cpp \
     Modulation.cpp \
+    DemodulatorSquaring.cpp \
+    DemodulatorDifferential.cpp \
     MultiplePrnCorrelator.cpp \
     MultiplePrnCorrelator_FreqDep.cpp \
     MultiplePrnCorrelator_FreqIndep.cpp \

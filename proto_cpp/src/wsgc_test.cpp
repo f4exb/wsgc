@@ -78,6 +78,8 @@
 #include "FIR_RCoef.h"
 #include "DifferentialModulationMultiplePrnCorrelator.h"
 #include "DifferentialModulationMultiplePrnCorrelator_Host.h"
+#include "DemodulatorDifferential.h"
+#include "DemodulatorSquaring.h"
 
 #ifdef _CUDA
 #include "CudaManager.h"
@@ -185,6 +187,7 @@ int main(int argc, char *argv[])
             SimulatedSource *message_source = 0;
             SimulatedSource *pilot_source = 0;
             SourceMixer *source_mixer = 0;
+            Demodulator *demodulator = 0;
             std::vector<unsigned int> pilot_prns;
             
             if (options.simulate_training)
@@ -266,18 +269,29 @@ int main(int argc, char *argv[])
                 fading->apply_awgn(faded_source_samples, nb_faded_source_samples, options.code_shift, options.snr);
             }
                       
-            if (options.modulation.getScheme() == Modulation::Modulation_OOK)
-            { // trim imaginary part
-            	std::cout << "Simulate AM power detection" << std::endl;
-                for (unsigned int i = 0; i<nb_faded_source_samples; i++)
-                {
-                    //std::cout << i << ": " << faded_source_samples[i].real() << " : " << faded_source_samples[i].imag() << " : " << std::norm(faded_source_samples[i]) << std::endl;
-                    faded_source_samples[i].real() = std::norm(faded_source_samples[i]);
-                    faded_source_samples[i].imag() = 0.0;
-                }
+            // demodulate OOK
+            // TODO: generic demodulation should take place here
+            if (options.modulation.demodulateBeforeCorrelate())
+            {
+				if (options.modulation.getScheme() == Modulation::Modulation_OOK)
+				{
+					demodulator = new DemodulatorSquaring();
+					std::cout << "Simulate AM power detection" << std::endl;
+					DemodulatorSquaring demodulator;
+					demodulator.demodulate_in_place(faded_source_samples, nb_faded_source_samples);
+				}
+				else if (options.modulation.isDifferential())
+				{
+					unsigned int int_samples_per_chip = ((wsgc_float) fft_N) /  gc_generator.get_code_length();
+					static const wsgc_complex c_zero(0.0, 0.0);
+
+					demodulator = new DemodulatorDifferential(int_samples_per_chip);
+				    ((DemodulatorDifferential *) demodulator)->set_value_at_origin(c_zero);
+				}
+
+			    demodulator->demodulate_in_place(faded_source_samples, nb_faded_source_samples);
             }
 
-            // TODO: differentiate between message and training sequence simulations
             // Implement correlator(s)
             if (options.simulate_training)
             {
@@ -322,6 +336,11 @@ int main(int argc, char *argv[])
             	}
             }
             
+            if (demodulator)
+            {
+                delete demodulator;
+            }
+
             if (source_mixer)
             {
                 delete source_mixer;
@@ -405,11 +424,16 @@ void message_processing(
         unsigned int samples_per_chip = int ((wsgc_float) fft_N/nb_prn_chips);
         wsgc_complex *demod = (wsgc_complex *) WSGC_FFTW_MALLOC(nb_faded_source_samples*sizeof(wsgc_fftw_complex)); 
         
+        DemodulatorDifferential demodulator(samples_per_chip);
+        demodulator.demodulate_in_place(faded_source_samples, nb_faded_source_samples);
+
+        /*
         for (unsigned int i=samples_per_chip; i<nb_faded_source_samples; i++)
         {
             faded_source_samples[i-samples_per_chip] *= std::conj(faded_source_samples[i]);
             std::cout << i-samples_per_chip << ": " << faded_source_samples[i-samples_per_chip] << std::endl;
         }
+        */
         
         std::cout << "Unpiloted correlation with differential modulations" << std::endl;
         unpiloted_message_correlator = new UnpilotedMessageCorrelator_Host(options.f_sampling, options.f_chip, options.simulate_sync, options.nb_prns_per_symbol, options.batch_size, message_prn_numbers, *localCodeModulator, gc_generator);
@@ -777,7 +801,6 @@ void message_processing_differential(
     		training_correlation_records,
     		*((LocalCodesFFT_Host *) local_codes_fft));
 
-
     // Do the correlation
     std::cout << "Do the correlation..." << std::endl;
 
@@ -793,8 +816,7 @@ void message_processing_differential(
 
     while ((input_samples_available = sample_sequencer.get_next_code_samples(&signal_samples))) // one PRN length at a time
     {
-    	dm_correlator->set_samples(signal_samples);
-    	if (dm_correlator->is_window_ready())
+    	if (dm_correlator->set_samples(signal_samples))
     	{
     		dm_correlator->execute_message();
     	}
