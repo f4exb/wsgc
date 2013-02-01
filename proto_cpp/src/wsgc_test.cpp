@@ -169,7 +169,8 @@ int main(int argc, char *argv[])
         else if (options.modulation.getScheme() == Modulation::Modulation_OOK)
         {
             codeModulator = new CodeModulator_OOK();
-            localCodeModulator = new CodeModulator_OOK_detection();
+            //localCodeModulator = new CodeModulator_OOK_detection();
+            localCodeModulator = new CodeModulator_OOK();
         }
         else if (options.modulation.getScheme() == Modulation::Modulation_DBPSK)
         {
@@ -236,6 +237,13 @@ int main(int argc, char *argv[])
             	nb_source_samples = message_source->get_nb_samples();
             }
 
+            /*
+		    for (unsigned int i = 0; i < nb_source_samples; i++)
+		    {
+		    	std::cout << i << ": " << source_samples[i] << std::endl;
+		    }
+		    */
+
             // Apply lowpass filter if any
             if (options._fir_coef_generator != 0)
             {
@@ -270,15 +278,13 @@ int main(int argc, char *argv[])
             }
                       
             // demodulate OOK
-            // TODO: generic demodulation should take place here
+            // TODO: WOULD YOU DEBUG THIS CRAP AT LAST !!!!
             if (options.modulation.demodulateBeforeCorrelate())
             {
-				if (options.modulation.getScheme() == Modulation::Modulation_OOK)
+            	if (options.modulation.getScheme() == Modulation::Modulation_OOK)
 				{
 					demodulator = new DemodulatorSquaring();
 					std::cout << "Simulate AM power detection" << std::endl;
-					DemodulatorSquaring demodulator;
-					demodulator.demodulate_in_place(faded_source_samples, nb_faded_source_samples);
 				}
 				else if (options.modulation.isDifferential())
 				{
@@ -290,6 +296,8 @@ int main(int argc, char *argv[])
 				}
 
 			    demodulator->demodulate_in_place(faded_source_samples, nb_faded_source_samples);
+
+
             }
 
             // Implement correlator(s)
@@ -308,7 +316,7 @@ int main(int argc, char *argv[])
             }
             else
             {
-            	if (options.modulation.isDifferential())
+            	if (options.modulation.isDifferential() || (options.modulation.getScheme() == Modulation::Modulation_OOK))
             	{
             		message_processing_differential(
 #ifdef _CUDA

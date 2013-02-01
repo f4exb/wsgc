@@ -23,6 +23,7 @@
      
 */
 #include "CodeModulator_OOK.h"
+#include <iostream>
 #include <assert.h>
 
 
@@ -88,6 +89,7 @@ void CodeModulator_OOK::modulate(const wsgc_fftw_complex *in, wsgc_fftw_complex 
 
     for (int i=0; i<number_of_samples; i++)
     {
+        index = int(fractional_index);
         out[i][0] = in[i][0] * code_bits[index];
         out[i][1] = in[i][1] * code_bits[index];
 
