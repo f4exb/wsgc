@@ -35,15 +35,9 @@ wsgc_test_SOURCES = CodeModulator_BPSK.cpp \
     PilotedMessageCorrelator.cpp \
     PilotedMessageCorrelator_Host.cpp \
     PilotedMessageCorrelator_Cuda.cu \
-    UnpilotedMessageCorrelator.cpp \
-    UnpilotedMessageCorrelator_Host.cpp \
-    UnpilotedMultiplePrnCorrelator.cpp \
     Modulation.cpp \
     DemodulatorSquaring.cpp \
     DemodulatorDifferential.cpp \
-    MultiplePrnCorrelator.cpp \
-    MultiplePrnCorrelator_FreqDep.cpp \
-    MultiplePrnCorrelator_FreqIndep.cpp \
     PilotedTrainingMessageCorrelator.cpp \
     PilotedTrainingMessageCorrelator_Host.cpp \
     PilotedTrainingMessageCorrelator_Cuda.cu \
@@ -124,15 +118,9 @@ wsgc_test_SOURCES = CodeModulator_BPSK.cpp \
     LocalCodesFFT_Host.cpp \
     PilotedMessageCorrelator.cpp \
     PilotedMessageCorrelator_Host.cpp \
-    UnpilotedMessageCorrelator.cpp \
-    UnpilotedMessageCorrelator_Host.cpp \
-    UnpilotedMultiplePrnCorrelator.cpp \
     Modulation.cpp \
     DemodulatorSquaring.cpp \
     DemodulatorDifferential.cpp \
-    MultiplePrnCorrelator.cpp \
-    MultiplePrnCorrelator_FreqDep.cpp \
-    MultiplePrnCorrelator_FreqIndep.cpp \
     PilotedTrainingMessageCorrelator.cpp \
     PilotedTrainingMessageCorrelator_Host.cpp \
     PilotedTrainingMultiplePrnCorrelator.cpp \

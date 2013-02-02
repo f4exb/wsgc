@@ -26,6 +26,7 @@
 */
 
 #include "DifferentialModulationMultiplePrnCorrelator.h"
+#include "CorrelationRecord.h"
 #include <iostream>
 #include <assert.h>
 
@@ -67,5 +68,18 @@ void DifferentialModulationMultiplePrnCorrelator::init_results()
     _max_sy_prni.assign(_symbol_window_size, 0);
     _max_sy_mags.assign(_symbol_window_size, 0.0);
     _max_sy_mags_prni.assign(_symbol_window_size*_prn_list.size(), 0.0);
+}
+
+
+void DifferentialModulationMultiplePrnCorrelator::dump_correlation_records(std::ostringstream& os, wsgc_float mag_factor)
+{
+	CorrelationRecord::dump_banner(os);
+	std::vector<CorrelationRecord>::const_iterator it = _correlation_records.begin();
+	const std::vector<CorrelationRecord>::const_iterator it_end = _correlation_records.end();
+
+	for (; it != it_end; ++it)
+	{
+		it->dump_line(mag_factor, os);
+	}
 }
 

@@ -81,6 +81,13 @@ public:
 	 */
 	virtual bool set_samples(wsgc_complex *samples) = 0;
 
+	/**
+	 * Dump correlation records data to output stream
+	 * \param os Output string stream
+	 * \param mag_factor Magnitude correction factor
+	 */
+	void dump_correlation_records(std::ostringstream& os, wsgc_float mag_factor = 1.0);
+
 protected:
     wsgc_float _f_sampling; //!< Sampling frequency
     wsgc_float _f_chip; //!< Chip rate
