@@ -14,6 +14,7 @@ wsgc_test_SOURCES = CodeModulator_BPSK.cpp \
     CodeModulator_OOK.cpp \
     CodeModulator_OOK_detection.cpp \
     ContinuousPhaseCarrier.cpp \
+    TimeCorrelationAnalyzer.cpp \
     CorrelationRecord.cpp \
     AutocorrelationRecord.cpp \
     DecisionRecord.cpp \
@@ -99,6 +100,7 @@ wsgc_test_SOURCES = CodeModulator_BPSK.cpp \
     CodeModulator_OOK.cpp \
     CodeModulator_OOK_detection.cpp \
     ContinuousPhaseCarrier.cpp \
+    TimeCorrelationAnalyzer.cpp \
     CorrelationRecord.cpp \
     AutocorrelationRecord.cpp \
     DecisionRecord.cpp \

@@ -32,7 +32,7 @@
 #include "PilotCorrelationRecord.h"
 #include "CorrelationRecord.h"
 #include "TrainingCorrelationRecord.h"
-#include "AutocorrelationRecord.h"
+#include "TimeCorrelationAnalyzer.h"
 #include <time.h>
 #include <vector>
 #include <map>
@@ -102,10 +102,9 @@ class PilotCorrelationAnalyzer
 
         /**
          * Append a new pilot correlation record
-         * \param alternate_pilot Reference to a boolean set to true if pilot 2 has been selected, else false
          * \return Reference to the pilot correlation record
          */
-        PilotCorrelationRecord& new_pilot_correlation_record(bool alternate = false);
+        PilotCorrelationRecord& new_pilot_correlation_record();
 
         /**
          * Append a new message correlation record
@@ -128,19 +127,11 @@ class PilotCorrelationAnalyzer
                 
         /**
          * Get a reference to the pilot correlation records vector
-         * \param alternate True for pilot2, false for pilot1
          * \return Reference to the pilot correlation records vector
          */
-        const std::vector<PilotCorrelationRecord>& get_pilot_correlation_records(bool alternate = false) const
+        const std::vector<PilotCorrelationRecord>& get_pilot_correlation_records() const
 		{
-        	if (alternate)
-        	{
-        		return _pilot2_correlation_records;
-        	}
-        	else
-        	{
-        		return _pilot1_correlation_records;
-        	}
+       		return _pilot_correlation_records;
 		}
         
         /**
@@ -165,19 +156,17 @@ class PilotCorrelationAnalyzer
          * Validate pilot correlation records for pilot 1 and pilot 2 that many places from the end. 
          * This can trigger the analysis process with these records when the analysis window is complete.
          * \param reverse_index Reverse index in the pilot correlation records vector
-         * \param alternate_pilot Reference to a boolean set to true if pilot 2 has been selected, else false
          * \return True if a cycle is completed and therefore the analysis and message processing using this pilot can take place
          */
         bool validate_pilot_correlation_records_back(unsigned int reverse_index);
 
         /**
          * Analyze the results of one analysis window length
-         * \param alternate_pilot Reference to a boolean set to true if pilot 2 has been selected, else false
          * \param best_time_shift_start Reference to an integer set to the best matching time shift peak start discovered
          * \param best_time_shift_length Reference to an integer set to the best matching time shift peak length discovered
          * \return True if the best matching time shift was discovered else false
          */
-        bool analyze(bool& alternate_pilot, unsigned int& best_time_shift_start, unsigned int& best_time_shift_length);
+        bool analyze(unsigned int& best_time_shift_start, unsigned int& best_time_shift_length);
         
         /**
          * Post process noise data in message correlation records of the current analysis window
@@ -193,10 +182,9 @@ class PilotCorrelationAnalyzer
         /**
          * Get a reference to the pilot correlation record that many places before the last element (0 for last element)
          * \param reverse_index Reverse index in the pilot correlation records vector
-         * \param alternate_pilot Reference to a boolean set to true if pilot 2 has been selected, else false
          * \return Reference to the pilot correlation record
          */
-        PilotCorrelationRecord& get_pilot_correlation_record_back(unsigned int reverse_index, bool alternate = false);
+        PilotCorrelationRecord& get_pilot_correlation_record_back(unsigned int reverse_index);
 
         /**
          * Get index of pilot correlation records at start of analysis
@@ -254,19 +242,12 @@ class PilotCorrelationAnalyzer
 
         /**
          * Get a reference to the time shifts dictionnary
-         * \param alternate True for pilot2, false for pilot1
          * \return Reference to the time shifts dictionnary
          */
-        const std::map<unsigned int, unsigned int>& get_pilot_time_shift_occurences(bool alternate) const
+        const std::map<unsigned int, unsigned int>& get_pilot_time_shift_occurences() const
         {
-            if (alternate)
-            {
-                return _pilot2_time_shift_occurences;
-            }
-            else
-            {
-                return _pilot1_time_shift_occurences;
-            }
+        	return _time_analyzer.get_pilot_time_shift_occurences();
+            //return _pilot1_time_shift_occurences;
         }
         
         /**
@@ -275,15 +256,15 @@ class PilotCorrelationAnalyzer
          */
         const std::vector<std::pair<unsigned int, unsigned int> >& get_histo_basic_time_shift_occurences() const
         {
-            return _histo_basic_time_shift_occurences;
+        	return _time_analyzer.get_histo_basic_time_shift_occurences();
+            //return _histo_basic_time_shift_occurences;
         }
 
         /**
          * Dumps the pilot correlation record vector to a string stream
          * \param os The output string stream
-         * \param alternate True for pilot2, false for pilot1
          */
-        void dump_pilot_correlation_records(std::ostringstream& os, bool alternate = false) const;
+        void dump_pilot_correlation_records(std::ostringstream& os) const;
         
         /**
          * Dumps the message correlation record vector to a string stream
@@ -354,20 +335,9 @@ class PilotCorrelationAnalyzer
         static const timings_t tmp_time;
 
 	protected:
-    
-        class PrnTimeShiftRecord
-        {
-        public:
-            PrnTimeShiftRecord();
-            void dump(std::ostringstream& os, unsigned int time_shifts_size = 0) const;
-            static bool order_peak_mag_sum(const PrnTimeShiftRecord& left, const PrnTimeShiftRecord& right);
 
-            unsigned int peak_start;
-            unsigned int peak_length;
-            unsigned int peak_mag_sum;
-            unsigned int peak_shift_at_max;
-            unsigned int peak_max;
-        };
+        // Time shift analyzer with pilot correlation records data
+        TimeCorrelationAnalyzer<PilotCorrelationRecord> _time_analyzer;
 
         // analysis window
         unsigned int _analysis_window_size; //!< Size of analysis window in number symbols
@@ -376,25 +346,13 @@ class PilotCorrelationAnalyzer
         // PRN stuff
         unsigned int _prn_per_symbol; //!< Number of PRNs per symbol
         unsigned int _fft_N; //!< Size of the FFT, this is also the number of samples in one PRN
-        std::vector<std::vector<PrnTimeShiftRecord> > _histo_time_shift_occurences_vector; //!< Vector of histogram of time shift occurences for selected pilot (ordered by occurence number)
-        std::vector<std::pair<unsigned int, unsigned int> > _histo_basic_time_shift_occurences; //!< Histogram of time shift occurences for selected pilot (ordered by occurence number)
         
-        // pilot stuff
-        bool _two_pilots; //!< True if the system supports message synchronization with two pilots
-        wsgc_float _sum_max_pilot1; //!< Sum of the magnitude maxima of pilot1 over an analysis window
-        wsgc_float _sum_max_pilot2; //!< Sum of the magnitude maxima of pilot2 over an analysis window
-        std::map<unsigned int, unsigned int> _pilot1_time_shift_occurences; //!< Dictionnary (by time shift) of pilot1 PRN time shifts occurences
-        std::map<unsigned int, unsigned int> _pilot2_time_shift_occurences; //!< Dictionnary (by time shift) of pilot2 PRN time shifts occurences
-        std::vector<unsigned int> _pilot_numbers; //!< Vector of pilot numbers detected
-
         // correlation records
-        std::vector<PilotCorrelationRecord> _pilot1_correlation_records; //!< Pilot correlation records corresponding to the stored samples for pilot 1
-        std::vector<PilotCorrelationRecord> _pilot2_correlation_records; //!< Pilot correlation records corresponding to the stored samples for pilot 2
+        std::vector<PilotCorrelationRecord> _pilot_correlation_records; //!< Pilot correlation records corresponding to the stored samples for pilot 1
         std::vector<CorrelationRecord> _message_correlation_records; //!< Message correlation records filled by the message correlator
         std::vector<TrainingCorrelationRecord> _training_correlation_records; //!< Synchronization training correlation records filled by the message correlator
         unsigned int _start_pilot_correlation_records_index; //!< Index at start of pilot(s) correlation records analysis window
         unsigned int _start_message_correlation_records_index; //!< Index at start of message correlation records analysis window
-        unsigned int _validate_count; //!< Counter of number of pilot correlation records validated
 
         // process tuning
         unsigned int _time_index_tolerance; //!< Tolerance +/- to validate the best time index
@@ -413,9 +371,6 @@ class PilotCorrelationAnalyzer
         unsigned int _global_prn_index_bot; //!< Current global bottom PRN index (absolute index value of _buffer_prn_index_bot PRN)
         unsigned int _buffer_prn_count; //!< Current count of PRNs in buffer
 
-        // static
-        static const wsgc_float _best_time_margin_threshold;  //<! selected correlation time delta difference with next / number of correlations ratio threshold
-
         /**
          * Append a new pilot correlation record
          * \param Reference to the pilot correlation records vector
@@ -426,13 +381,9 @@ class PilotCorrelationAnalyzer
         /**
          * Validate a pilot correlation record.
          * \param pilot_correlation_record Reference to the pilot correlation record
-         * \param shift_occurences_dict Dictionnary of pilot PRN time shifts occurences
-         * \param sum_max_pilot Sum of magnitude maxima of pilot PRN correlation
          */
         void validate_pilot_correlation_record(
-        		PilotCorrelationRecord& pilot_correlation_record,
-        	    std::map<unsigned int, unsigned int>& shift_occurences_dict,
-        	    wsgc_float& sum_max_pilot);
+        		PilotCorrelationRecord& pilot_correlation_record);
         
         /**
          * Get a reference to the pilot correlation record that many places before the last element (0 for last element)
@@ -443,26 +394,6 @@ class PilotCorrelationAnalyzer
         PilotCorrelationRecord& get_pilot_correlation_record_back(std::vector<PilotCorrelationRecord>& pilot_correlation_records, unsigned int reverse_index);
 
         
-        /**
-        * Builds the time shift histogram by occurence number
-        * \param shift_occurences_dict Reference to the time shifts occurences dictionnary
-        */
-        void make_time_shift_histogram(std::map<unsigned int, unsigned int>& shift_occurences_dict);
-
-        /**
-        * Analyzes time shift occurence to select best time shift if possible and flags the pilot correlation records accordingly
-        * \param shift_occurences_dict Reference to the time shifts occurences dictionnary
-        * \param pilot_correlation_records Reference to the pilot correlation records vector
-        * \param best_time_shift_start Reference to an integer set to the best matching time shift peak start discovered
-        * \param best_time_shift_length Reference to an integer set to the best matching time shift peak length discovered
-        * \return True if the best time shift could be determined else false        
-        */
-        bool analyze_time_shifts(
-            std::map<unsigned int, unsigned int>& shift_occurences_dict,
-            std::vector<PilotCorrelationRecord>& pilot_correlation_records, 
-            unsigned int& best_time_shift_start,
-            unsigned int& best_time_shift_length);        
-
         /**
          * Return pointer to the start of synchronized samples given arbitrarily synchronized PRN start and
          * sample shift index of synchronization point

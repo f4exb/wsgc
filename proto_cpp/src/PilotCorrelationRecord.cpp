@@ -82,3 +82,21 @@ void PilotCorrelationRecord::reset()
     delta_f = 0.0;            // Corresponding frequency displacement of the correlation maximum relative to zero IF
     selected = true;          // PRN sample has been selected as valid for message correlation by the pilot correlation analyser
 }
+
+
+unsigned int PilotCorrelationRecord::get_time_shift() const
+{
+    return t_index_max;
+}
+
+
+wsgc_float PilotCorrelationRecord::get_correlation_peak() const 
+{
+    return magnitude_max;
+}
+
+
+void PilotCorrelationRecord::set_selected(bool _selected)
+{
+    selected = _selected;
+}

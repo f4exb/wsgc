@@ -77,11 +77,10 @@ void PilotedTrainingMultiplePrnCorrelator::make_correlation(unsigned int pilot_p
             // analyze pilot correlation records with the analyzer and process a symbols batch when ready
             if (_pilot_correlation_analyzer.validate_pilot_correlation_records_back(pi))
             {
-                bool message_sync_pilot;
                 unsigned int preferred_time_shift_start;
                 unsigned int preferred_time_shift_length;
                 
-                if (!_pilot_correlation_analyzer.analyze(message_sync_pilot, preferred_time_shift_start, preferred_time_shift_length))
+                if (!_pilot_correlation_analyzer.analyze(preferred_time_shift_start, preferred_time_shift_length))
                 {
                     std::cout << "Preferred PRN time shift could not be identified - Analysis window is invalidated" << std::endl;
                 }

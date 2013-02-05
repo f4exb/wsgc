@@ -34,7 +34,6 @@
 
 const int PilotCorrelationAnalyzer::_time_option = CLOCK_REALTIME;
 const PilotCorrelationAnalyzer::timings_t PilotCorrelationAnalyzer::tmp_time = {{0,0},{0,0}};
-const wsgc_float PilotCorrelationAnalyzer::_best_time_margin_threshold = 0.13; // selected correlation time delta difference with next / number of correlations ratio threshold
 
 //=================================================================================================
 PilotCorrelationAnalyzer::PilotCorrelationAnalyzer(
@@ -44,10 +43,10 @@ PilotCorrelationAnalyzer::PilotCorrelationAnalyzer(
         bool two_pilots,
         unsigned int time_index_tolerance
         ) :
+    _time_analyzer(fft_N, time_index_tolerance),
     _analysis_window_size(analysis_window_size),
     _prn_per_symbol(prn_per_symbol),
     _fft_N(fft_N),
-    _two_pilots(two_pilots),
     _time_index_tolerance(time_index_tolerance), //TODO: use time index tolerance
     _sample_buffer_len(_analysis_window_size*_prn_per_symbol*2),
     _global_prn_index_bot(0),
@@ -55,10 +54,7 @@ PilotCorrelationAnalyzer::PilotCorrelationAnalyzer(
     _buffer_prn_index_top(0),
     _buffer_prn_count(0),
     _start_pilot_correlation_records_index(0),
-    _sum_max_pilot1(0),
-    _sum_max_pilot2(0),
     _start_message_correlation_records_index(0),
-    _validate_count(0),
     _analysis_index(0),
     _pilot_mag_display_factor(1.0),
     _message_mag_display_factor(1.0),
@@ -200,16 +196,9 @@ const wsgc_complex *PilotCorrelationAnalyzer::get_last_samples() const
 
 
 //=================================================================================================
-PilotCorrelationRecord& PilotCorrelationAnalyzer::new_pilot_correlation_record(bool alternate)
+PilotCorrelationRecord& PilotCorrelationAnalyzer::new_pilot_correlation_record()
 {
-    if (alternate)
-    {
-        return new_pilot_correlation_record(_pilot2_correlation_records);
-    }
-    else
-    {
-        return new_pilot_correlation_record(_pilot1_correlation_records);
-    }
+    return new_pilot_correlation_record(_pilot_correlation_records);
 }
 
 
@@ -254,16 +243,9 @@ PilotCorrelationRecord& PilotCorrelationAnalyzer::new_pilot_correlation_record(s
 
 
 //=================================================================================================
-PilotCorrelationRecord& PilotCorrelationAnalyzer::get_pilot_correlation_record_back(unsigned int reverse_index, bool alternate)
+PilotCorrelationRecord& PilotCorrelationAnalyzer::get_pilot_correlation_record_back(unsigned int reverse_index)
 {
-    if (alternate)
-    {
-        return get_pilot_correlation_record_back(_pilot2_correlation_records, reverse_index);
-    }
-    else
-    {
-        return get_pilot_correlation_record_back(_pilot1_correlation_records, reverse_index);
-    }
+    return get_pilot_correlation_record_back(_pilot_correlation_records, reverse_index);
 }
 
 
@@ -277,206 +259,23 @@ PilotCorrelationRecord& PilotCorrelationAnalyzer::get_pilot_correlation_record_b
 //=================================================================================================
 bool PilotCorrelationAnalyzer::validate_pilot_correlation_records_back(unsigned int reverse_index)
 {
-    assert((!_two_pilots) || (_pilot1_correlation_records.size() == _pilot2_correlation_records.size())); // ensure both pilot records are at the same point if both are present
-
-    validate_pilot_correlation_record(get_pilot_correlation_record_back(_pilot1_correlation_records, reverse_index), _pilot1_time_shift_occurences, _sum_max_pilot1);
-
-    if (_two_pilots)
-    {
-        validate_pilot_correlation_record(get_pilot_correlation_record_back(_pilot2_correlation_records, reverse_index), _pilot2_time_shift_occurences, _sum_max_pilot2);
-    }
-    
-    _validate_count++;
-
-    // return the trigger analysis condition
-    // need one PRN past the analysis window size in the buffer to allow overflow in case of synchronized source samples access
-    return _validate_count == _analysis_window_size * _prn_per_symbol; 
+    validate_pilot_correlation_record(get_pilot_correlation_record_back(_pilot_correlation_records, reverse_index));
+    return _time_analyzer.get_validate_count() == _analysis_window_size * _prn_per_symbol;
 }
 
 
 //=================================================================================================
 void PilotCorrelationAnalyzer::validate_pilot_correlation_record(
-    PilotCorrelationRecord& pilot_correlation_record, 
-    std::map<unsigned int, unsigned int>& shift_occurences_dict,
-    wsgc_float& sum_max_pilot)
+    PilotCorrelationRecord& pilot_correlation_record)
 {
-    // store current shift maximum in shifts dictionnary
-    unsigned int shift_index_max = pilot_correlation_record.t_index_max;
-    std::map<unsigned int, unsigned int>::iterator shift_occurences_it;
-    shift_occurences_it = shift_occurences_dict.find(shift_index_max);
-    
-    if (shift_occurences_it == shift_occurences_dict.end())
-    {
-        shift_occurences_dict[shift_index_max] = 1;
-    }
-    else
-    {
-        shift_occurences_dict[shift_index_max] += 1;
-    }
-
-    // accumulate the sum of maximum magnitudes
-    sum_max_pilot += pilot_correlation_record.magnitude_max;
+	_time_analyzer.validate_time_correlation_record(pilot_correlation_record);
 }
 
 
 //=================================================================================================
-// TODO: get rid of alternate pilot thing
-bool PilotCorrelationAnalyzer::analyze(bool& alternate_pilot, unsigned int& best_time_shift_start, unsigned int& best_time_shift_length)
+bool PilotCorrelationAnalyzer::analyze(unsigned int& best_time_shift_start, unsigned int& best_time_shift_length)
 {
-    assert((!_two_pilots) || (_pilot1_correlation_records.size() == _pilot2_correlation_records.size())); // ensure both pilot records are at the same point if both are present
-
-    if ((!_two_pilots) || (_sum_max_pilot1 > _sum_max_pilot2)) // pilot1 selected
-    {
-        alternate_pilot = false;
-        _pilot_numbers.push_back(1);
-        return analyze_time_shifts(_pilot1_time_shift_occurences, _pilot1_correlation_records, best_time_shift_start, best_time_shift_length);
-    }
-    else
-    {
-        alternate_pilot = true;
-        _pilot_numbers.push_back(2);
-        return analyze_time_shifts(_pilot2_time_shift_occurences, _pilot2_correlation_records, best_time_shift_start, best_time_shift_length);
-    }
-}
-
-
-//=================================================================================================
-void PilotCorrelationAnalyzer::make_time_shift_histogram(std::map<unsigned int, unsigned int>& shift_occurences_dict)
-{
-	static const std::vector<PrnTimeShiftRecord> tmp_histo_time_shift_occurences;
-    _histo_time_shift_occurences_vector.push_back(tmp_histo_time_shift_occurences);
-
-    std::map<unsigned int, unsigned int>::const_iterator shift_occurences_it = shift_occurences_dict.begin();
-    const std::map<unsigned int, unsigned int>::const_iterator shift_occurences_end = shift_occurences_dict.end();
-    std::map<unsigned int, unsigned int>::const_iterator last_shift_occurence_it = shift_occurences_dict.begin();
-    static const PrnTimeShiftRecord tmp_time_shift_record;
-    static const std::vector<PrnTimeShiftRecord>::iterator _histo_end = _histo_time_shift_occurences_vector.back().end();
-    bool zero_shift = false;
-    unsigned int zero_shift_index, last_shift_index;
-    bool last_shift = false;
-
-    for (; shift_occurences_it != shift_occurences_end; ++shift_occurences_it)
-    {
-        if (shift_occurences_it->first == ((last_shift_occurence_it->first) + 1) % _fft_N)
-        {
-            _histo_time_shift_occurences_vector.back().back().peak_mag_sum += shift_occurences_it->second;
-            _histo_time_shift_occurences_vector.back().back().peak_length++;
-            
-            if (shift_occurences_it->second > _histo_time_shift_occurences_vector.back().back().peak_max)
-            {
-            	_histo_time_shift_occurences_vector.back().back().peak_max = shift_occurences_it->second;
-            	_histo_time_shift_occurences_vector.back().back().peak_shift_at_max = shift_occurences_it->first;
-            }
-        }
-        else
-        {
-        	_histo_time_shift_occurences_vector.back().push_back(tmp_time_shift_record);
-        	_histo_time_shift_occurences_vector.back().back().peak_start = shift_occurences_it->first;
-        	_histo_time_shift_occurences_vector.back().back().peak_mag_sum = shift_occurences_it->second;
-        	_histo_time_shift_occurences_vector.back().back().peak_length = 1;
-        	_histo_time_shift_occurences_vector.back().back().peak_shift_at_max = shift_occurences_it->first;
-        	_histo_time_shift_occurences_vector.back().back().peak_max = shift_occurences_it->second;
-        }
-        
-        if (shift_occurences_it->first == 0) // potentially combines with item at end of sequence
-        {
-            zero_shift = true;
-            zero_shift_index = _histo_time_shift_occurences_vector.back().size() - 1;
-        }
-
-        if (shift_occurences_it->first == _fft_N - 1) // potentially combines with item at start of sequence
-        {
-            last_shift = true;
-            last_shift_index = _histo_time_shift_occurences_vector.back().size() - 1;
-        }
-            
-        last_shift_occurence_it = shift_occurences_it;
-    }
-    
-    // coalesce intervals at extremities of the time shift window
-    if (zero_shift && last_shift)
-    {
-    	_histo_time_shift_occurences_vector.back()[last_shift_index].peak_mag_sum += _histo_time_shift_occurences_vector.back()[zero_shift_index].peak_mag_sum;
-    	_histo_time_shift_occurences_vector.back()[last_shift_index].peak_length += _histo_time_shift_occurences_vector.back()[zero_shift_index].peak_length;
-
-    	if (_histo_time_shift_occurences_vector.back()[zero_shift_index].peak_max > _histo_time_shift_occurences_vector.back()[last_shift_index].peak_max)
-    	{
-    		_histo_time_shift_occurences_vector.back()[last_shift_index].peak_max = _histo_time_shift_occurences_vector.back()[zero_shift_index].peak_max;
-    		_histo_time_shift_occurences_vector.back()[last_shift_index].peak_shift_at_max = _histo_time_shift_occurences_vector.back()[zero_shift_index].peak_shift_at_max;
-    	}
-
-    	_histo_time_shift_occurences_vector.back().erase(_histo_time_shift_occurences_vector.back().begin() + zero_shift_index);
-    }
-    
-    std::sort(_histo_time_shift_occurences_vector.back().begin(), _histo_time_shift_occurences_vector.back().end(), PrnTimeShiftRecord::order_peak_mag_sum);
-}
-
-
-//=================================================================================================
-bool PilotCorrelationAnalyzer::analyze_time_shifts(
-    std::map<unsigned int, unsigned int>& shift_occurences_dict,
-    std::vector<PilotCorrelationRecord>& pilot_correlation_records, 
-    unsigned int& best_time_shift_start,
-    unsigned int& best_time_shift_length)
-{
-    make_time_shift_histogram(shift_occurences_dict);
-    
-    PrnTimeShiftRecord& best_time_shift_peak = _histo_time_shift_occurences_vector.back().front();
-    best_time_shift_start = best_time_shift_peak.peak_start;
-    best_time_shift_length = best_time_shift_peak.peak_length;
-    unsigned int best_time_shift_margin;
-
-    if (_histo_time_shift_occurences_vector.back().size() > 1)
-    {
-    	best_time_shift_margin = best_time_shift_peak.peak_mag_sum - (_histo_time_shift_occurences_vector.back().begin()+1)->peak_mag_sum;
-    }
-    else
-    {
-    	best_time_shift_margin = best_time_shift_peak.peak_mag_sum;
-    }
-
-    bool time_shift_margin_ko = ((wsgc_float) best_time_shift_margin/_validate_count) < _best_time_margin_threshold;
-
-    std::vector<PilotCorrelationRecord>::iterator correlation_record_it = pilot_correlation_records.begin() + _start_pilot_correlation_records_index;
-    const std::vector<PilotCorrelationRecord>::iterator correlation_record_end = pilot_correlation_records.end();
-      
-    for (; correlation_record_it != correlation_record_end; ++correlation_record_it)
-    {
-    	if (time_shift_margin_ko)
-    	{
-    		correlation_record_it->selected = false;
-    	}
-    	else
-    	{
-            // checks whether the PRN time shift lies in the best PRN time shift peak interval
-            if (best_time_shift_peak.peak_start + best_time_shift_peak.peak_length < _fft_N) // no time shift window boundary in the middle
-            {
-                if ((correlation_record_it->t_index_max < best_time_shift_peak.peak_start) 
-                 || (correlation_record_it->t_index_max >= best_time_shift_peak.peak_start + best_time_shift_peak.peak_length))
-                {
-                    correlation_record_it->selected = false;
-                }
-                else
-                {
-                    correlation_record_it->selected = true;
-                }
-            }
-            else
-            {
-                if ((correlation_record_it->t_index_max < best_time_shift_peak.peak_start) 
-                 && (correlation_record_it->t_index_max >= (best_time_shift_peak.peak_start + best_time_shift_peak.peak_length) % _fft_N))
-                {
-                    correlation_record_it->selected = false;
-                }
-                else
-                {
-                    correlation_record_it->selected = true;
-                }
-            }
-    	}
-    }
-    
-    return !time_shift_margin_ko;
+	return _time_analyzer.analyze_time_shifts(_pilot_correlation_records, _start_pilot_correlation_records_index, best_time_shift_start, best_time_shift_length);
 }
 
 
@@ -505,34 +304,21 @@ void PilotCorrelationAnalyzer::post_process_noise()
 //=================================================================================================
 void PilotCorrelationAnalyzer::reset_analysis()
 {
-    assert((!_two_pilots) || (_pilot1_correlation_records.size() == _pilot2_correlation_records.size())); // ensure both pilot records are at the same point if both are present
-
-    _start_pilot_correlation_records_index = (_pilot1_correlation_records.size() / (_analysis_window_size*_prn_per_symbol)) * _analysis_window_size * _prn_per_symbol; // record beginning of new analysis window in the pilot correlation records
+    _time_analyzer.reset_analysis();
+    _start_pilot_correlation_records_index = (_pilot_correlation_records.size() / (_analysis_window_size*_prn_per_symbol)) * _analysis_window_size * _prn_per_symbol; // record beginning of new analysis window in the pilot correlation records
     _start_message_correlation_records_index = _message_correlation_records.size(); // record beginning of new analysis window in the message correlation records
-    _pilot1_time_shift_occurences.clear();
-    _pilot2_time_shift_occurences.clear();
-    _histo_basic_time_shift_occurences.clear();
-    _validate_count = 0;
     _analysis_index++;
 }
 
 
 //=================================================================================================
-void PilotCorrelationAnalyzer::dump_pilot_correlation_records(std::ostringstream& os, bool alternate) const
+void PilotCorrelationAnalyzer::dump_pilot_correlation_records(std::ostringstream& os) const
 {
 	std::vector<PilotCorrelationRecord>::const_iterator it;
 	std::vector<PilotCorrelationRecord>::const_iterator it_end;
 
-	if (alternate && _two_pilots)
-	{
-		it = _pilot2_correlation_records.begin();
-		it_end = _pilot2_correlation_records.end();
-	}
-	else
-	{
-		it = _pilot1_correlation_records.begin();
-		it_end = _pilot1_correlation_records.end();
-	}
+	it = _pilot_correlation_records.begin();
+	it_end = _pilot_correlation_records.end();
 
 	PilotCorrelationRecord::dump_oneline_banner(os);
 
@@ -576,30 +362,7 @@ void PilotCorrelationAnalyzer::dump_training_correlation_records(std::ostringstr
 //=================================================================================================
 void PilotCorrelationAnalyzer::dump_histo_time_shift_occurences(std::ostringstream& os) const
 {
-	std::vector<std::vector<PrnTimeShiftRecord> >::const_iterator h_v_it = _histo_time_shift_occurences_vector.begin();
-	const std::vector<std::vector<PrnTimeShiftRecord> >::const_iterator h_v_end = _histo_time_shift_occurences_vector.end();
-
-	for (unsigned int i=0; h_v_it != h_v_end; ++h_v_it, i++)
-	{
-	    std::vector<PrnTimeShiftRecord>::const_iterator histo_it = h_v_it->begin();
-	    const std::vector<PrnTimeShiftRecord>::const_iterator histo_end = h_v_it->end();
-
-	    os << "#" << i << ": Pilot " << _pilot_numbers[i] << ": [";
-
-	    for (; histo_it != histo_end; ++histo_it)
-	    {
-	        if (histo_it != h_v_it->begin())
-	        {
-	            os << ", ";
-	        }
-
-	        os << "(";
-	        histo_it->dump(os, _fft_N);
-	        os << ")";
-	    }
-
-	    os << "]" << std::endl;
-	}
+	_time_analyzer.dump_histo_time_shift_occurences(os);
 }
 
 
@@ -686,29 +449,4 @@ void PilotCorrelationAnalyzer::dump_timings(std::ostringstream& os)
 	{
 		os << std::setw(3) <<  i << " : " << std::left << std::setw(12) << std::setprecision(9) << WsgcUtils::get_time_difference(mit->_end, mit->_beg) << " s" << std::endl;
 	}
-}
-
-
-//=================================================================================================
-PilotCorrelationAnalyzer::PrnTimeShiftRecord::PrnTimeShiftRecord() :
-    peak_start(0),
-    peak_length(0),
-    peak_mag_sum(0),
-    peak_shift_at_max(0),
-    peak_max(0)
-{}
-
-
-//=================================================================================================
-void PilotCorrelationAnalyzer::PrnTimeShiftRecord::dump(std::ostringstream& os, unsigned int time_shifts_size) const
-{
-    WsgcUtils::print_interval(os, peak_start, peak_length, time_shifts_size);
-    os << " :" << peak_shift_at_max << "(" << peak_max << ") : " << peak_mag_sum;
-}
-
-
-//=================================================================================================
-bool PilotCorrelationAnalyzer::PrnTimeShiftRecord::order_peak_mag_sum(const PrnTimeShiftRecord& left, const PrnTimeShiftRecord& right)
-{
-    return left.peak_mag_sum > right.peak_mag_sum;
 }

@@ -27,6 +27,7 @@
 #define __PILOT_CORRELATION_RECORD_H__
 
 #include "WsgcTypes.h"
+#include "TimeCorrelationRecord.h"
 #include <sstream>
 
 /**
@@ -34,11 +35,11 @@
  *
  * It is basically just a structure with a display method
  */
-class PilotCorrelationRecord
+class PilotCorrelationRecord : public TimeCorrelationRecord
 {
     public:
         PilotCorrelationRecord();
-        ~PilotCorrelationRecord();
+        virtual ~PilotCorrelationRecord();
         
         /**
          * Dumps the data to a string stream in frame form
@@ -63,7 +64,11 @@ class PilotCorrelationRecord
          * Resets values to initial values
          */
         void reset();
-        
+
+        virtual unsigned int get_time_shift() const;
+        virtual wsgc_float get_correlation_peak() const;
+        virtual void set_selected(bool selected);
+                
         unsigned int prn_index; //!< Global index of correlated PRN
         unsigned int block_count; //!< Number of averaging blocks processed
         unsigned int pilot_index; //!< PRN number of the pilot
