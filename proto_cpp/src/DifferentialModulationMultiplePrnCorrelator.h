@@ -29,6 +29,7 @@
 #define __DIFFERENTIAL_MODULATION_MULTIPLE_PRN_CORRELATOR_H__
 
 #include "WsgcTypes.h"
+#include "TimeCorrelationAnalyzer.h"
 #include <vector>
 
 class TrainingCorrelationRecord;
@@ -48,6 +49,7 @@ public:
     * \param prn_per_symbol Number of PRNs per symbol
     * \param prn_list Reference to the vector of PRN numbers with which to make correlation
     * \param symbol_window_size Number of symbols used for processing. Storage is reserved for symbol_window_size times prn_per_symbol PRN samples
+    * \param time_analysis_window_size Number of symbols used for time analysis.
     * \param correlation_records Reference to the correlation records
     * \param training_correlation_records Reference to the training correlation records
     */
@@ -58,6 +60,7 @@ public:
             unsigned int prn_per_symbol,
 			const std::vector<unsigned int>& prn_list,
 			unsigned int symbol_window_size,
+			unsigned int time_analysis_window_size,
 			std::vector<CorrelationRecord>& correlation_records,
 			std::vector<TrainingCorrelationRecord>& training_correlation_records
 			);
@@ -88,6 +91,11 @@ public:
 	 */
 	void dump_correlation_records(std::ostringstream& os, wsgc_float mag_factor = 1.0);
 
+	/**
+	 * Dump message time shift analyzer results
+	 */
+	void dump_time_analyzer_results(std::ostringstream& os);
+
 protected:
     wsgc_float _f_sampling; //!< Sampling frequency
     wsgc_float _f_chip; //!< Chip rate
@@ -97,6 +105,7 @@ protected:
     unsigned int _global_prn_index; //!< Index of PRN in all received samples
     const std::vector<unsigned int>& _prn_list; //!< Reference to the vector of PRN numbers with which to make correlation
     unsigned int _symbol_window_size; //!<  Window of symbols in use for processing.
+    unsigned int _time_analysis_window_size; //!<  Number of symbols used for time analysis.
     unsigned int _samples_length; //!< Number of stored source samples
     unsigned int _prns_length; //!< Number of stored PRNs
     std::vector<wsgc_float> _max_sy_mags; //!< Maximum magnitudes for each symbol
@@ -105,7 +114,7 @@ protected:
     std::vector<unsigned int> _max_sy_prni; //!< Maximum ifft indexes at maximum magnitudes for each symbol
 	std::vector<CorrelationRecord>& _correlation_records; //!< Reference to the correlation records
 	std::vector<TrainingCorrelationRecord>& _training_correlation_records; //!< Reference to the training correlation records
-
+	TimeCorrelationAnalyzer<CorrelationRecord> _message_time_analyzer;
 
     void init_results();
 };

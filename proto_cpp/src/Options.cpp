@@ -93,7 +93,6 @@ Options::Options(std::string& _binary_name) :
     noise_prn(0),
     use_cuda(false),
     analysis_window_size(4),
-    simulate_sync(false),
     simulate_training(false),
 	_fir_coef_generator(0)
 {
@@ -133,7 +132,6 @@ bool Options::get_options(int argc, char *argv[])
             {"file-debugging", no_argument, &_indicator_int, 1},
             {"help", no_argument, &_indicator_int, 1},
             {"cuda", no_argument, &_indicator_int, 1},
-            {"simulate-sync", no_argument, &_indicator_int, 1},
             {"simulate-trn", no_argument, &_indicator_int, 1},
             // these options do not set a flag
             {"f-sampling", required_argument, 0, 's'},
@@ -194,10 +192,6 @@ bool Options::get_options(int argc, char *argv[])
                 {
                     std::cout << "Using CUDA implementation" << std::endl;
                     use_cuda = true;
-                }
-                else if (strcmp("simulate-sync", long_options[option_index].name) == 0)
-                {
-                    simulate_sync = true;
                 }
                 else if (strcmp("simulate-trn", long_options[option_index].name) == 0)
                 {
@@ -335,24 +329,6 @@ bool Options::get_options(int argc, char *argv[])
                 return false;
             }
             
-            if (simulate_sync)
-            {
-            	prn_shift = 0;
-            	std::cout << "Index of the PRN in symbol where the simulation starts is 0 if simulating synchronization" << std::endl;
-
-            	if (batch_size == 0)
-                {
-                	batch_size = 1;
-                }
-            }
-            else
-            {
-                if (batch_size < nb_prns_per_symbol-1)
-                {
-                	batch_size = nb_prns_per_symbol-1;
-                }
-            }
-
             if (tracking_phase_average_cycles < 2)
             {
                 std::cout << "Frequency tracking phase average must be done at least on two valid phase measurements (-T option)" << std::endl;
@@ -791,10 +767,14 @@ void Options::print_options(std::ostringstream& os)
         }
     }
 
-	os << "Message time ..............: " << std::setw(9) << std::setprecision(2) << std::right << message_time << std::endl;
-    os << std::endl;
-    os << "Multiple usage parameters:" << std::endl;
-    os << "Batch size ................: " << std::setw(6) << std::right << batch_size << std::endl;
+    if (modulation.isCodeDivisionCapable() && (nb_pilot_prns > 0))
+    {
+        os << "Batch size ................: " << std::setw(6) << std::right << batch_size << " PRNs" << std::endl;
+    }
+    else
+    {
+        os << "Batch size ................: " << std::setw(6) << std::right << batch_size << " Symbols" << std::endl;
+    }
 
     if (simulate_training)
     {
@@ -806,8 +786,9 @@ void Options::print_options(std::ostringstream& os)
     }
 
 	os << "Analysis window time ......: " << std::setw(9) << std::setprecision(2) << std::right << symbol_period << std::endl;
+	os << "Message time ..............: " << std::setw(9) << std::setprecision(2) << std::right << message_time << std::endl;
     os << std::endl;
-
+    
     if (_fir_coef_generator != 0)
     {
     	os << "Lowpass FIR filter model:" << std::endl;
@@ -824,7 +805,6 @@ void Options::print_options(std::ostringstream& os)
     else
     {
         os << " - " << "Simulate message correlation" << std::endl;
-        os << " - " << (simulate_sync ? "Simulate external (to message correlation) symbol synchronization" : "Use cyclic maximum detection for symbol synchronization") << std::endl;
     }
     os << std::endl;
 

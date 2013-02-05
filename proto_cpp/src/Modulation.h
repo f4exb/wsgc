@@ -23,6 +23,9 @@
 
      Represents a modulation its properties, specific methods and attributes
 */
+#ifndef __MODULATION_H__
+#define __MODULATION_H__
+
 #include <sstream>
 
 class Modulation
@@ -58,3 +61,5 @@ public:
 private:
     ModulationScheme_t _modulation_scheme;
 };
+
+#endif // __MODULATION_H__

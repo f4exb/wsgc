@@ -33,6 +33,7 @@
 class CorrelationRecord;
 class TrainingCorrelationRecord;
 
+//=================================================================================================
 DifferentialModulationMultiplePrnCorrelator::DifferentialModulationMultiplePrnCorrelator(
 		wsgc_float f_sampling,
 		wsgc_float f_chip,
@@ -40,28 +41,35 @@ DifferentialModulationMultiplePrnCorrelator::DifferentialModulationMultiplePrnCo
         unsigned int prn_per_symbol,
 		const std::vector<unsigned int>& prn_list,
 		unsigned int symbol_window_size,
+		unsigned int time_analysis_window_size,
 		std::vector<CorrelationRecord>& correlation_records,
 		std::vector<TrainingCorrelationRecord>& training_correlation_records) :
 		_f_sampling(f_sampling),
 		_f_chip(f_chip),
 		_prn_length(prn_length),
 		_fft_N(int((f_sampling*prn_length)/f_chip)),
+		_message_time_analyzer(_fft_N),
         _prn_per_symbol(prn_per_symbol),
         _global_prn_index(0),
 		_prn_list(prn_list),
 		_samples_length(0),
 		_prns_length(0),
 		_symbol_window_size(symbol_window_size),
+        _time_analysis_window_size(time_analysis_window_size),
 		_correlation_records(correlation_records),
 		_training_correlation_records(training_correlation_records)
 {
+    assert((_time_analysis_window_size > 0) && (_time_analysis_window_size % _symbol_window_size == 0)); 
     init_results();
 }
 
 
+//=================================================================================================
 DifferentialModulationMultiplePrnCorrelator::~DifferentialModulationMultiplePrnCorrelator()
 {}
 
+
+//=================================================================================================
 void DifferentialModulationMultiplePrnCorrelator::init_results()
 {
     _max_sy_iffti.assign(_symbol_window_size, 0);
@@ -71,6 +79,7 @@ void DifferentialModulationMultiplePrnCorrelator::init_results()
 }
 
 
+//=================================================================================================
 void DifferentialModulationMultiplePrnCorrelator::dump_correlation_records(std::ostringstream& os, wsgc_float mag_factor)
 {
 	CorrelationRecord::dump_banner(os);
@@ -83,3 +92,9 @@ void DifferentialModulationMultiplePrnCorrelator::dump_correlation_records(std::
 	}
 }
 
+
+//=================================================================================================
+void DifferentialModulationMultiplePrnCorrelator::dump_time_analyzer_results(std::ostringstream& os)
+{
+	_message_time_analyzer.dump_histo_time_shift_occurences(os);
+}

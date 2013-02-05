@@ -129,7 +129,7 @@ void DecisionRecord::dump_line(std::ostringstream& os, wsgc_float magnitude_fact
 
 void DecisionRecord::dump_banner(std::ostringstream& os)
 {
-    os << "PNi  Ni Pi PN# S# Mag.Max Max/Avg Nse.Avg S/N.. Ti.. Frx... Decision" << std::endl;
+    os << " Si PNi Pi PN# S# Mag.Max Max/Avg Nse.Avg S/N.. Ti.. Frx... Decision" << std::endl;
 }
 
 

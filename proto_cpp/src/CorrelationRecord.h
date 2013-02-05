@@ -27,18 +27,24 @@
 #define __CORRELATION_RECORD_H__
 
 #include "WsgcTypes.h"
+#include "TimeCorrelationRecord.h"
 #include <sstream>
 
-class CorrelationRecord
+class CorrelationRecord : public  TimeCorrelationRecord 
 {
     public:
-        CorrelationRecord(unsigned int _prn_per_symbol);
-        ~CorrelationRecord();
+        CorrelationRecord();
+        virtual ~CorrelationRecord();
         
         void reset();
         void dump(unsigned int magnitude_factor, std::ostringstream& os) const;
         void dump_line(wsgc_float magnitude_factor, std::ostringstream& os) const;
         static void dump_banner(std::ostringstream& os);
+        
+        // TimeCorrelationRecord interface:
+        virtual unsigned int get_time_shift() const;
+        virtual wsgc_float get_correlation_peak() const;
+        virtual void set_selected(bool selected);
         
         // Ni, prn_index_max, value_max, bin_index_max, phase_max, fd, frequency_locked
         unsigned int global_prn_index;     //!< PRN index in the global sequence of received PRNs

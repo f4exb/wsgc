@@ -89,7 +89,6 @@ class Options
         bool use_cuda;
         unsigned int analysis_window_size;
         std::string samples_output_file;
-        bool simulate_sync;
         bool simulate_training;
         FIRCoefGenerator *_fir_coef_generator;
         

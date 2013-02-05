@@ -205,10 +205,11 @@ PilotCorrelationRecord& PilotCorrelationAnalyzer::new_pilot_correlation_record()
 //=================================================================================================
 CorrelationRecord& PilotCorrelationAnalyzer::new_message_correlation_record(unsigned int global_prn_index)
 {
-    static const CorrelationRecord tmp_message_correlation_record(_prn_per_symbol);
+    static const CorrelationRecord tmp_message_correlation_record;
 
     _message_correlation_records.push_back(tmp_message_correlation_record);
     _message_correlation_records.back().global_prn_index = global_prn_index;
+    _message_correlation_records.back().prn_per_symbol = _prn_per_symbol;
 
     return _message_correlation_records.back();
 }

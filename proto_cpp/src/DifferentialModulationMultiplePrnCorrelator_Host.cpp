@@ -43,11 +43,14 @@ DifferentialModulationMultiplePrnCorrelator_Host::DifferentialModulationMultiple
         unsigned int prn_per_symbol,
         const std::vector<unsigned int>& prn_list,
         unsigned int symbol_window_size,
+		unsigned int time_analysis_window_size,
 		std::vector<CorrelationRecord>& correlation_records,
 		std::vector<TrainingCorrelationRecord>& training_correlation_records,
         const LocalCodesFFT_Host& local_codes_fft_base) :
-        DifferentialModulationMultiplePrnCorrelator::DifferentialModulationMultiplePrnCorrelator(f_sampling, f_chip, prn_length, prn_per_symbol, prn_list, symbol_window_size, correlation_records, training_correlation_records),
-        _local_codes_fft_base(local_codes_fft_base)
+        DifferentialModulationMultiplePrnCorrelator::DifferentialModulationMultiplePrnCorrelator(f_sampling, f_chip, prn_length, prn_per_symbol, prn_list, symbol_window_size, time_analysis_window_size, correlation_records, training_correlation_records),
+        _local_codes_fft_base(local_codes_fft_base),
+        _msg_time_analysis_corr_start_index(0),
+        _msg_time_analysis_symbols_count(0)
 {
 	// Input storage
     _samples = (wsgc_complex *) WSGC_FFTW_MALLOC(symbol_window_size*prn_per_symbol*_fft_N*sizeof(wsgc_fftw_complex));
@@ -186,14 +189,14 @@ void DifferentialModulationMultiplePrnCorrelator_Host::do_sum_averaging()
 	// move results to correlation records
 	for (unsigned int si = 0; si < _symbol_window_size; si++) // for each symbol
 	{
-		static const CorrelationRecord tmp_correlation_record(0);
+		static const CorrelationRecord tmp_correlation_record;
 		_correlation_records.push_back(tmp_correlation_record);
 		CorrelationRecord& correlation_record = _correlation_records.back();
 
 		correlation_record.global_prn_index = _global_prn_index - _symbol_window_size*_prn_per_symbol + (si+1)*_prn_per_symbol - 1; // point to last PRN of each symbol
 		correlation_record.magnitude_max = _max_sy_mags[si];
 		correlation_record.prn_index_max = _max_sy_prni[si];
-		correlation_record.pilot_shift = _max_sy_iffti[si]; // there is no pilot but take the shift index place
+		correlation_record.shift_index_max = _max_sy_iffti[si]; // there is no pilot but take the shift index place
 		correlation_record.prn_per_symbol = _prn_per_symbol;
 		correlation_record.prn_per_symbol_index = _prn_per_symbol-1;
 
@@ -214,6 +217,22 @@ void DifferentialModulationMultiplePrnCorrelator_Host::do_sum_averaging()
 
 		correlation_record.magnitude_avg = (prn_max_sum - correlation_record.magnitude_max) / (_prn_list.size()-2);
 		correlation_record.noise_max = noise_max;
+
+		_message_time_analyzer.validate_time_correlation_record(correlation_record);
+		_msg_time_analysis_symbols_count++;
+
+		if (_msg_time_analysis_symbols_count == _time_analysis_window_size)
+		{
+            unsigned int preferred_time_shift_start;
+            unsigned int preferred_time_shift_length;
+
+            // select valid correlation records regarding possible peak time shift
+			_message_time_analyzer.analyze_time_shifts(_correlation_records, _msg_time_analysis_corr_start_index, preferred_time_shift_start, preferred_time_shift_length);
+
+			_msg_time_analysis_corr_start_index = _correlation_records.size();
+			_msg_time_analysis_symbols_count = 0;
+			_message_time_analyzer.reset_analysis();
+		}
 	}
 }
 

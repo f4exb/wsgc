@@ -162,7 +162,6 @@ template <typename T_CorrelationRecord>
 TimeCorrelationAnalyzer<T_CorrelationRecord>::TimeCorrelationAnalyzer(unsigned int fft_N, unsigned int time_index_tolerance) :
 	TimeCorrelationAnalyzer_Common::TimeCorrelationAnalyzer_Common(fft_N, time_index_tolerance)
 {
-	std::cout << "TimeCorrelationAnalyzer::TimeCorrelationAnalyzer" << std::endl;
 }
 
 

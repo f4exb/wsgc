@@ -42,8 +42,7 @@ PilotedMessageCorrelator::PilotedMessageCorrelator(
 	_f_sampling(f_sampling),
 	_f_chip(f_chip),
 	_prn_per_symbol(prn_per_symbol),
-    _delta_f(0.0),
-    _simulate_symbol_synchronization(false)
+    _delta_f(0.0)
 {
 }
 

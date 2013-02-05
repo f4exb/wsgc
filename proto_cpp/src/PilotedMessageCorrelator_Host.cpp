@@ -139,8 +139,8 @@ void PilotedMessageCorrelator_Host::execute(PilotCorrelationAnalyzer& pilot_corr
     	max_prn_index = _nb_msg_prns-1;
     	max_correlation = c_one;
 
-    	// Zero sum averaging memory on averaging start if external synchronization is active
-    	if (_simulate_symbol_synchronization && (ai==0))
+    	// Zero sum averaging memory on averaging start
+    	if (ai==0)
     	{
     		for (unsigned int prni=0; prni < _nb_msg_prns; prni++)
     		{

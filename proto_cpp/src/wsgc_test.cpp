@@ -65,9 +65,10 @@
 #include "PilotedMultiplePrnCorrelator.h"
 #include "PilotedTrainingMessageCorrelator_Host.h"
 #include "DecisionBox.h"
-#include "DecisionBox_Piloted.h"
+//#include "DecisionBox_Piloted.h"
 #include "DecisionBox_Piloted_And_Synced.h"
-#include "DecisionBox_Unpiloted.h"
+#include "DecisionBox_Unpiloted_And_Synced.h"
+//#include "DecisionBox_Unpiloted.h"
 #include "SampleSequencer.h"
 #include "SourceMixer.h"
 #include "FIR_RCoef.h"
@@ -255,7 +256,6 @@ int main(int argc, char *argv[])
             }
                       
             // demodulate OOK
-            // TODO: WOULD YOU DEBUG THIS CRAP AT LAST !!!!
             if (options.modulation.demodulateBeforeCorrelate())
             {
             	if (options.modulation.getScheme() == Modulation::Modulation_OOK)
@@ -377,7 +377,6 @@ void message_processing(
     std::vector<CorrelationRecord> correlation_records;
     std::vector<AutocorrelationRecord> autocorrelation_records;
     std::vector<TrainingCorrelationRecord> training_correlation_records; // unused. Needed for compatibility.
-    static const CorrelationRecord tmp_correlation_record(options.nb_prns_per_symbol);
     //UnpilotedMessageCorrelator *unpiloted_message_correlator = 0;
     //UnpilotedMultiplePrnCorrelator *unpiloted_mprn_correlator = 0;
     DifferentialModulationMultiplePrnCorrelator *dm_correlator = 0;
@@ -419,7 +418,6 @@ void message_processing(
             pilot_correlator = new PilotCorrelator_Host(gc_generator, *localCodeModulator, options.f_sampling, options.f_chip, pilot_prn_numbers, options.nb_prns_per_symbol, options.df_steps, options.batch_size, options.f_step_division);
             message_correlator = new PilotedMessageCorrelator_Host(*((LocalCodes_Host *) local_codes), options.f_sampling, options.f_chip, options.nb_prns_per_symbol);
 #endif
-            message_correlator->set_simulate_symbol_synchronization(options.simulate_sync);
             prn_autocorrelator = new PrnAutocorrelator_Host(fft_N, options.nb_prns_per_symbol);
             piloted_mprn_correlator = new PilotedMultiplePrnCorrelator(*pilot_correlation_analyzer, correlation_records, *pilot_correlator, *message_correlator, *prn_autocorrelator);
         }
@@ -436,7 +434,8 @@ void message_processing(
         		gc_generator.get_code_length(),
         		options.nb_prns_per_symbol,
         		message_prn_numbers,
-        		options.analysis_window_size,
+                options.batch_size, // will be taken as number of symbols
+        		options.analysis_window_size, 
         		correlation_records,
         		training_correlation_records,
         		*((LocalCodesFFT_Host *) local_codes_fft));
@@ -474,7 +473,6 @@ void message_processing(
         }
         else if (dm_correlator != 0)
         {
-            // TODO: OOK process goes here
         	if (dm_correlator->set_samples(signal_samples))
         	{
         		dm_correlator->execute_message();
@@ -523,20 +521,11 @@ void message_processing(
         pilot_correlation_analyzer->dump_pilot_correlation_records(corr_os);
         corr_os << std::endl << "--- correlation records:" << std::endl;
         pilot_correlation_analyzer->dump_message_correlation_records(corr_os);
-
         std::cout << corr_os.str() << std::endl;
         
-        if (options.simulate_sync)
+        if (options.modulation.isCodeDivisionCapable() && (options.nb_pilot_prns > 0))
         {
-        	if (options.modulation.isCodeDivisionCapable() && (options.nb_pilot_prns > 0))
-        	{
-        		decision_box = new DecisionBox_Piloted_And_Synced(options.nb_prns_per_symbol, fft_N, *pilot_correlation_analyzer);
-        	}
-        	// TODO: unpiloted decision box
-        }
-        else
-        {
-            decision_box = new DecisionBox_Piloted(options.nb_prns_per_symbol, fft_N, *pilot_correlation_analyzer);
+            decision_box = new DecisionBox_Piloted_And_Synced(options.nb_prns_per_symbol, fft_N, *pilot_correlation_analyzer);
         }
     }
     else if (dm_correlator != 0)
@@ -545,14 +534,14 @@ void message_processing(
         corr_os << "Unpiloted correlation" << std::endl << std::endl;
         corr_os << "Message correlation analysis results:" << std::endl;
         dm_correlator->dump_correlation_records(corr_os, fft_N);
+    	corr_os << "Time shift analysis results:" << std::endl;
+    	dm_correlator->dump_time_analyzer_results(corr_os);
         corr_os << std::endl;
         std::cout << corr_os.str() << std::endl;
         
-        /*
-        prn_shift_occurences = &unpiloted_mprn_correlator->get_shift_occurences();
-        decision_box = new DecisionBox_Unpiloted(options.nb_prns_per_symbol, fft_N, correlation_records, *prn_shift_occurences, options.modulation);
-        decision_box->set_mag_display_adj_factor(options.nb_prns_per_symbol * fft_N);
-        */
+        decision_box = new DecisionBox_Unpiloted_And_Synced(options.nb_prns_per_symbol, fft_N, correlation_records);
+        decision_box->set_mag_display_adj_factor(fft_N);
+        ((DecisionBox_Unpiloted_And_Synced *) decision_box)->set_thresholds(options.modulation);
     }
 
     if (decision_box)

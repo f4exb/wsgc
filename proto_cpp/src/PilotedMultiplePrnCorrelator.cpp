@@ -67,7 +67,6 @@ void PilotedMultiplePrnCorrelator::set_source_block(wsgc_fftw_complex *fftw_sour
 
 void PilotedMultiplePrnCorrelator::make_correlation(unsigned int pilot_prn_code_index)
 {
-	static const CorrelationRecord tmp_correlation_record(_pilot_correlation_analyzer.get_prn_per_symbol());
     unsigned int prn_index = _pilot_correlation_analyzer.get_prn_index();
 
     // autocorrelation - removed not useful for piloted operation

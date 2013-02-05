@@ -106,8 +106,8 @@ void PilotedMessageCorrelator_Cuda::execute(PilotCorrelationAnalyzer& pilot_corr
 
     	std::complex<float> *prn_src = pilot_correlation_analyzer.get_samples(pilot_correlation_records[pi].prn_index);
 
-        // if external sync then zero out _d_corr_out array at each start of symbol
-        if ((_simulate_symbol_synchronization) && (pai % _prn_per_symbol == 0))
+        // zero out _d_corr_out array at each start of symbol
+        if (pai % _prn_per_symbol == 0)
         {
             thrust::fill(_d_corr_out.begin(), _d_corr_out.end(), _c_zero);
         }

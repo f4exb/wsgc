@@ -19,9 +19,8 @@ wsgc_test_SOURCES = CodeModulator_BPSK.cpp \
     AutocorrelationRecord.cpp \
     DecisionRecord.cpp \
     DecisionBox.cpp \
-    DecisionBox_Piloted.cpp \
     DecisionBox_Piloted_And_Synced.cpp \
-    DecisionBox_Unpiloted.cpp \
+    DecisionBox_Unpiloted_And_Synced.cpp \
     FadingModelClarke.cpp \
     FadingModel.cpp \
     FadingModelNone.cpp \
@@ -105,9 +104,8 @@ wsgc_test_SOURCES = CodeModulator_BPSK.cpp \
     AutocorrelationRecord.cpp \
     DecisionRecord.cpp \
     DecisionBox.cpp \
-    DecisionBox_Piloted.cpp \
     DecisionBox_Piloted_And_Synced.cpp \
-    DecisionBox_Unpiloted.cpp \
+    DecisionBox_Unpiloted_And_Synced.cpp \
     FadingModelClarke.cpp \
     FadingModel.cpp \
     FadingModelNone.cpp \

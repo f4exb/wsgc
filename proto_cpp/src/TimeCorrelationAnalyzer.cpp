@@ -37,7 +37,6 @@ TimeCorrelationAnalyzer_Common::TimeCorrelationAnalyzer_Common(unsigned int fft_
     _time_correlations_count(0),
     _sum_corr_max(0.0)
 {
-	std::cout << "TimeCorrelationAnalyzer_Common::TimeCorrelationAnalyzer_Common" << std::endl;
 }
 
 

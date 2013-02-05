@@ -49,6 +49,7 @@ public:
     * \param prn_per_symbol Number of PRNs per message symbol
     * \param prn_list Reference to the vector of PRN numbers with which to make correlation
     * \param symbol_window_size Number of symbols used for processing. Storage is reserved for symbol_window_size times prn_per_symbol PRN samples
+    * \param time_analysis_window_size Number of symbols used for time analysis.
     * \param correlation_records Reference to the correlation records
     * \param training_correlation_records Reference to the training correlation records
     * \param local_codes_fft_base Reference to the FFT copy of local codes for base modulation
@@ -60,6 +61,7 @@ public:
             unsigned int prn_per_symbol,
 			const std::vector<unsigned int>& prn_list,
 			unsigned int symbol_window_size,
+			unsigned int time_analysis_window_size,
 			std::vector<CorrelationRecord>& correlation_records,
 			std::vector<TrainingCorrelationRecord>& training_correlation_records,
 			const LocalCodesFFT_Host& local_codes_fft_base
@@ -96,6 +98,8 @@ protected:
     wsgc_float *_corr_out_mag; //!< Correlation results magnitudes
     wsgc_fftw_plan _fft_plan; //!< FFTW plan for forward FFT.
     wsgc_fftw_plan _ifft_plan; //!< FFTW plan for inverse FFT.
+    unsigned int _msg_time_analysis_symbols_count; //!< Count of symbols entered in the time analysis
+    unsigned int _msg_time_analysis_corr_start_index; //!< Index in correlation records corresponding to the start of current analysis
     
     static const wsgc_complex _c_zero;
 
