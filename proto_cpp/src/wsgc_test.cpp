@@ -65,15 +65,13 @@
 #include "PilotedMultiplePrnCorrelator.h"
 #include "PilotedTrainingMessageCorrelator_Host.h"
 #include "DecisionBox.h"
-//#include "DecisionBox_Piloted.h"
 #include "DecisionBox_Piloted_And_Synced.h"
 #include "DecisionBox_Unpiloted_And_Synced.h"
-//#include "DecisionBox_Unpiloted.h"
 #include "SampleSequencer.h"
 #include "SourceMixer.h"
 #include "FIR_RCoef.h"
-#include "DifferentialModulationMultiplePrnCorrelator.h"
-#include "DifferentialModulationMultiplePrnCorrelator_Host.h"
+#include "UnpilotedMultiplePrnCorrelator.h"
+#include "UnpilotedMultiplePrnCorrelator_Host.h"
 #include "DemodulatorDifferential.h"
 #include "DemodulatorSquaring.h"
 
@@ -379,7 +377,7 @@ void message_processing(
     std::vector<TrainingCorrelationRecord> training_correlation_records; // unused. Needed for compatibility.
     //UnpilotedMessageCorrelator *unpiloted_message_correlator = 0;
     //UnpilotedMultiplePrnCorrelator *unpiloted_mprn_correlator = 0;
-    DifferentialModulationMultiplePrnCorrelator *dm_correlator = 0;
+    UnpilotedMultiplePrnCorrelator *dm_correlator = 0;
     unsigned int fft_N = gc_generator.get_nb_code_samples(options.f_sampling, options.f_chip);
     
     std::vector<unsigned int> message_prn_numbers;
@@ -428,7 +426,7 @@ void message_processing(
 
         // only host for now
         local_codes_fft = new LocalCodesFFT_Host(*localCodeModulator, gc_generator, options.f_sampling, options.f_chip, message_prn_numbers); // make local codes time domain
-        dm_correlator = new DifferentialModulationMultiplePrnCorrelator_Host(
+        dm_correlator = new UnpilotedMultiplePrnCorrelator_Host(
         		options.f_sampling,
         		options.f_chip,
         		gc_generator.get_code_length(),

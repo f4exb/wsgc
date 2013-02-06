@@ -21,24 +21,24 @@
 
      DifferentialModulationMultiplePrnCorrelator
 
-     This flavour of correlator deals with PRNs encoded with differential modulation
+     This flavour of correlator deals with PRNs without use of a pilot sequence
      This is the Host version
 
 */
 
-#ifndef __DIFFERENTIAL_MODULATION_MULTIPLE_PRN_CORRELATOR_HOST_H__
-#define __DIFFERENTIAL_MODULATION_MULTIPLE_PRN_CORRELATOR_HOST_H__
+#ifndef __UNPILOTED_MULTIPLE_PRN_CORRELATOR_HOST_H__
+#define __UNPILOTED_MULTIPLE_PRN_CORRELATOR_HOST_H__
 
-#include "DifferentialModulationMultiplePrnCorrelator.h"
+#include "UnpilotedMultiplePrnCorrelator.h"
 #include "DemodulatorDifferential.h"
 #include "LocalCodesFFT_Host.h"
 #include <vector>
 #include <cstring>
 
 /**
- * \brief Correlator engine to do correlation of PRN(s) encoded with differential modulation. Host version
+ * \brief Correlator engine to do correlation of PRN(s) without use of a pilot sequence. Host version
  */
-class DifferentialModulationMultiplePrnCorrelator_Host : public DifferentialModulationMultiplePrnCorrelator
+class UnpilotedMultiplePrnCorrelator_Host : public UnpilotedMultiplePrnCorrelator
 {
 public:
     /**
@@ -54,7 +54,7 @@ public:
     * \param training_correlation_records Reference to the training correlation records
     * \param local_codes_fft_base Reference to the FFT copy of local codes for base modulation
     */
-	DifferentialModulationMultiplePrnCorrelator_Host(
+	UnpilotedMultiplePrnCorrelator_Host(
 			wsgc_float f_sampling,
 			wsgc_float f_chip,
 			unsigned int prn_length,
@@ -67,7 +67,7 @@ public:
 			const LocalCodesFFT_Host& local_codes_fft_base
         );
         
-	virtual ~DifferentialModulationMultiplePrnCorrelator_Host();
+	virtual ~UnpilotedMultiplePrnCorrelator_Host();
 
 	/**
 	 * Do the message correlation over the PRN window
@@ -134,4 +134,4 @@ protected:
 
 };
 
-#endif /* __DIFFERENTIAL_MODULATION_MULTIPLE_PRN_CORRELATOR_HOST_H__ */
+#endif /* __UNPILOTED_MULTIPLE_PRN_CORRELATOR_HOST_H__ */

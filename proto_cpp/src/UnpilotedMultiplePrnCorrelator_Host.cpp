@@ -21,11 +21,11 @@
 
      DifferentialModulationMultiplePrnCorrelator
 
-     This flavour of correlator deals with PRNs encoded with differential modulation
+     This flavour of correlator deals with PRNs without use of a pilot sequence
      This is the Host version
 
 */
-#include "DifferentialModulationMultiplePrnCorrelator_Host.h"
+#include "UnpilotedMultiplePrnCorrelator_Host.h"
 #include "WsgcUtils.h"
 #include "CorrelationRecord.h"
 #include "TrainingCorrelationRecord.h"
@@ -33,10 +33,10 @@
 #include <assert.h>
 
 
-const wsgc_complex DifferentialModulationMultiplePrnCorrelator_Host::_c_zero = (0.0, 0.0);
+const wsgc_complex UnpilotedMultiplePrnCorrelator_Host::_c_zero = (0.0, 0.0);
 
 //=================================================================================================
-DifferentialModulationMultiplePrnCorrelator_Host::DifferentialModulationMultiplePrnCorrelator_Host(
+UnpilotedMultiplePrnCorrelator_Host::UnpilotedMultiplePrnCorrelator_Host(
         wsgc_float f_sampling, 
         wsgc_float f_chip, 
 		unsigned int prn_length,
@@ -47,7 +47,7 @@ DifferentialModulationMultiplePrnCorrelator_Host::DifferentialModulationMultiple
 		std::vector<CorrelationRecord>& correlation_records,
 		std::vector<TrainingCorrelationRecord>& training_correlation_records,
         const LocalCodesFFT_Host& local_codes_fft_base) :
-        DifferentialModulationMultiplePrnCorrelator::DifferentialModulationMultiplePrnCorrelator(f_sampling, f_chip, prn_length, prn_per_symbol, prn_list, symbol_window_size, time_analysis_window_size, correlation_records, training_correlation_records),
+        UnpilotedMultiplePrnCorrelator::UnpilotedMultiplePrnCorrelator(f_sampling, f_chip, prn_length, prn_per_symbol, prn_list, symbol_window_size, time_analysis_window_size, correlation_records, training_correlation_records),
         _local_codes_fft_base(local_codes_fft_base),
         _msg_time_analysis_corr_start_index(0),
         _msg_time_analysis_symbols_count(0)
@@ -81,7 +81,7 @@ DifferentialModulationMultiplePrnCorrelator_Host::DifferentialModulationMultiple
 
         
 //=================================================================================================
-DifferentialModulationMultiplePrnCorrelator_Host::~DifferentialModulationMultiplePrnCorrelator_Host()
+UnpilotedMultiplePrnCorrelator_Host::~UnpilotedMultiplePrnCorrelator_Host()
 {
 	// IFFT plan
 	WSGC_FFTW_DESTROY_PLAN(_ifft_plan);
@@ -102,7 +102,7 @@ DifferentialModulationMultiplePrnCorrelator_Host::~DifferentialModulationMultipl
 
 
 //=================================================================================================
-bool DifferentialModulationMultiplePrnCorrelator_Host::set_samples(wsgc_complex *samples)
+bool UnpilotedMultiplePrnCorrelator_Host::set_samples(wsgc_complex *samples)
 {
 	assert(_samples_length+_fft_N <= _symbol_window_size*_prn_per_symbol*_fft_N);
 
@@ -116,7 +116,7 @@ bool DifferentialModulationMultiplePrnCorrelator_Host::set_samples(wsgc_complex 
 
 
 //=================================================================================================
-void DifferentialModulationMultiplePrnCorrelator_Host::execute_message()
+void UnpilotedMultiplePrnCorrelator_Host::execute_message()
 {
 	do_correlation();
 	do_sum_averaging();
@@ -126,7 +126,7 @@ void DifferentialModulationMultiplePrnCorrelator_Host::execute_message()
 
 
 //=================================================================================================
-void DifferentialModulationMultiplePrnCorrelator_Host::execute_training()
+void UnpilotedMultiplePrnCorrelator_Host::execute_training()
 {
 	do_correlation();
     // TODO: sliding averaging
@@ -136,7 +136,7 @@ void DifferentialModulationMultiplePrnCorrelator_Host::execute_training()
 
 
 //=================================================================================================
-void DifferentialModulationMultiplePrnCorrelator_Host::do_correlation()
+void UnpilotedMultiplePrnCorrelator_Host::do_correlation()
 {
 	WSGC_FFTW_EXECUTE(_fft_plan);
 	// for each PRN length in processing window half
@@ -148,7 +148,7 @@ void DifferentialModulationMultiplePrnCorrelator_Host::do_correlation()
 
 
 //=================================================================================================
-void DifferentialModulationMultiplePrnCorrelator_Host::do_correlation(unsigned int prn_wi)
+void UnpilotedMultiplePrnCorrelator_Host::do_correlation(unsigned int prn_wi)
 {
 	std::vector<unsigned int>::const_iterator prni_it = _prn_list.begin();
 	const std::vector<unsigned int>::const_iterator prni_end = _prn_list.end();
@@ -175,7 +175,7 @@ void DifferentialModulationMultiplePrnCorrelator_Host::do_correlation(unsigned i
 
 
 //=================================================================================================
-void DifferentialModulationMultiplePrnCorrelator_Host::do_sum_averaging()
+void UnpilotedMultiplePrnCorrelator_Host::do_sum_averaging()
 {
 	init_results();
 
@@ -238,7 +238,7 @@ void DifferentialModulationMultiplePrnCorrelator_Host::do_sum_averaging()
 
 
 //=================================================================================================
-void DifferentialModulationMultiplePrnCorrelator_Host::sum_averaging_loop_complex()
+void UnpilotedMultiplePrnCorrelator_Host::sum_averaging_loop_complex()
 {
 	wsgc_float sumavg_mag, prni_max;
 
@@ -280,7 +280,7 @@ void DifferentialModulationMultiplePrnCorrelator_Host::sum_averaging_loop_comple
 
 
 //=================================================================================================
-void DifferentialModulationMultiplePrnCorrelator_Host::sum_averaging_loop_magnitudes()
+void UnpilotedMultiplePrnCorrelator_Host::sum_averaging_loop_magnitudes()
 {
 	wsgc_float sumavg_mag, prni_max;
 

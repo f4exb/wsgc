@@ -21,11 +21,11 @@
 
      DifferentialModulationMultiplePrnCorrelator
 
-     This flavour of correlator deals with PRNs encoded with differential modulation
+     This flavour of correlator deals with PRNs without use of a pilot sequence
 
 */
 
-#include "DifferentialModulationMultiplePrnCorrelator.h"
+#include "UnpilotedMultiplePrnCorrelator.h"
 #include "CorrelationRecord.h"
 #include <iostream>
 #include <assert.h>
@@ -34,7 +34,7 @@ class CorrelationRecord;
 class TrainingCorrelationRecord;
 
 //=================================================================================================
-DifferentialModulationMultiplePrnCorrelator::DifferentialModulationMultiplePrnCorrelator(
+UnpilotedMultiplePrnCorrelator::UnpilotedMultiplePrnCorrelator(
 		wsgc_float f_sampling,
 		wsgc_float f_chip,
 		unsigned int prn_length,
@@ -65,12 +65,12 @@ DifferentialModulationMultiplePrnCorrelator::DifferentialModulationMultiplePrnCo
 
 
 //=================================================================================================
-DifferentialModulationMultiplePrnCorrelator::~DifferentialModulationMultiplePrnCorrelator()
+UnpilotedMultiplePrnCorrelator::~UnpilotedMultiplePrnCorrelator()
 {}
 
 
 //=================================================================================================
-void DifferentialModulationMultiplePrnCorrelator::init_results()
+void UnpilotedMultiplePrnCorrelator::init_results()
 {
     _max_sy_iffti.assign(_symbol_window_size, 0);
     _max_sy_prni.assign(_symbol_window_size, 0);
@@ -80,7 +80,7 @@ void DifferentialModulationMultiplePrnCorrelator::init_results()
 
 
 //=================================================================================================
-void DifferentialModulationMultiplePrnCorrelator::dump_correlation_records(std::ostringstream& os, wsgc_float mag_factor)
+void UnpilotedMultiplePrnCorrelator::dump_correlation_records(std::ostringstream& os, wsgc_float mag_factor)
 {
 	CorrelationRecord::dump_banner(os);
 	std::vector<CorrelationRecord>::const_iterator it = _correlation_records.begin();
@@ -94,7 +94,7 @@ void DifferentialModulationMultiplePrnCorrelator::dump_correlation_records(std::
 
 
 //=================================================================================================
-void DifferentialModulationMultiplePrnCorrelator::dump_time_analyzer_results(std::ostringstream& os)
+void UnpilotedMultiplePrnCorrelator::dump_time_analyzer_results(std::ostringstream& os)
 {
 	_message_time_analyzer.dump_histo_time_shift_occurences(os);
 }

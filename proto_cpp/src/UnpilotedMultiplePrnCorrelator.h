@@ -21,12 +21,12 @@
 
      DifferentialModulationMultiplePrnCorrelator
 
-     This flavour of correlator deals with PRNs encoded with differential modulation
+     This flavour of correlator deals with PRNs without use of a pilot sequence
 
 */
 
-#ifndef __DIFFERENTIAL_MODULATION_MULTIPLE_PRN_CORRELATOR_H__
-#define __DIFFERENTIAL_MODULATION_MULTIPLE_PRN_CORRELATOR_H__
+#ifndef __UNPILOTED_MULTIPLE_PRN_CORRELATOR_H__
+#define __UNPILOTED_MULTIPLE_PRN_CORRELATOR_H__
 
 #include "WsgcTypes.h"
 #include "TimeCorrelationAnalyzer.h"
@@ -36,9 +36,9 @@ class TrainingCorrelationRecord;
 class CorrelationRecord;
 
 /**
- * \brief Correlator engine to do correlation of PRN(s) encoded with differential modulation
+ * \brief Correlator engine to do correlation of PRN(s) without use of a pilot sequence
  */
-class DifferentialModulationMultiplePrnCorrelator
+class UnpilotedMultiplePrnCorrelator
 {
 public:
     /**
@@ -53,7 +53,7 @@ public:
     * \param correlation_records Reference to the correlation records
     * \param training_correlation_records Reference to the training correlation records
     */
-	DifferentialModulationMultiplePrnCorrelator(
+	UnpilotedMultiplePrnCorrelator(
 			wsgc_float f_sampling,
 			wsgc_float f_chip,
 			unsigned int prn_length,
@@ -65,7 +65,7 @@ public:
 			std::vector<TrainingCorrelationRecord>& training_correlation_records
 			);
         
-	virtual ~DifferentialModulationMultiplePrnCorrelator();
+	virtual ~UnpilotedMultiplePrnCorrelator();
 
 	/**
 	 * Do the message correlation over the symbols window.
@@ -119,4 +119,4 @@ protected:
     void init_results();
 };
 
-#endif /* __DIFFERENTIAL_MODULATION_MULTIPLE_PRN_CORRELATOR_H__ */
+#endif /* __UNPILOTED_MULTIPLE_PRN_CORRELATOR_H__ */
