@@ -271,8 +271,6 @@ int main(int argc, char *argv[])
 				}
 
 			    demodulator->demodulate_in_place(faded_source_samples, nb_faded_source_samples);
-
-
             }
 
             // Implement correlator(s)

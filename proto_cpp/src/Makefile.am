@@ -176,7 +176,9 @@ wsgc_generator_SOURCES = wsgc_generator.cpp \
     SourceMixer.cpp \
     FIR_RCoef.cpp \
     FIRCoefGenerator.cpp \
-    FIRCoefGenerator_RCos.cpp
+    FIRCoefGenerator_RCos.cpp \
+    DemodulatorDifferential.cpp \
+    DemodulatorSquaring.cpp
 
 wsgc_generator_LDADD = -lrt $(FFTW3F_LIBS)
 

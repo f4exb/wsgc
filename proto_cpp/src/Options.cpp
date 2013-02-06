@@ -94,6 +94,7 @@ Options::Options(std::string& _binary_name) :
     use_cuda(false),
     analysis_window_size(4),
     simulate_training(false),
+    simulate_demod(false),
 	_fir_coef_generator(0)
 {
     srand(time(0));
@@ -133,6 +134,7 @@ bool Options::get_options(int argc, char *argv[])
             {"help", no_argument, &_indicator_int, 1},
             {"cuda", no_argument, &_indicator_int, 1},
             {"simulate-trn", no_argument, &_indicator_int, 1},
+            {"simulate-demod", no_argument, &_indicator_int, 1},
             // these options do not set a flag
             {"f-sampling", required_argument, 0, 's'},
             {"f-chip", required_argument, 0, 'c'},
@@ -196,6 +198,10 @@ bool Options::get_options(int argc, char *argv[])
                 else if (strcmp("simulate-trn", long_options[option_index].name) == 0)
                 {
                     simulate_training = true;
+                }
+                else if (strcmp("simulate-demod", long_options[option_index].name) == 0)
+                {
+                    simulate_demod = true;
                 }
                 _indicator_int = 0;
                 break;
@@ -570,8 +576,8 @@ void Options::get_help(std::ostringstream& os)
         {"", "--noise-test", "Trigger noise test", "flag", "false", ""},    
         {"", "--file-debugging", "Trigger debugging on files", "flag", "false", ""},    
         {"", "--cuda", "Trigger CUDA implementation", "flag", "false", "wsgc_test"},
-        {"", "--simulate-sync", "Trigger external symbol synchronization simulation", "flag", "false", "wsgc_test"},
         {"", "--simulate-trn", "Trigger synchronization training sequence simulation", "flag", "false", "any"},
+        {"", "--simulate-demod", "Trigger external symbol synchronization simulation", "flag", "false", "wsgc_generator"},
         {"-s", "--f-sampling", "Sampling frequency", "float", "4096.0", "any"},    
         {"-c", "--f-chip", "Chip frequency", "float", "1023.0", "any"},    
         {"-C", "--code-shift", "PRN code shift in number of samples", "int", "1020", "any"},    
@@ -787,6 +793,13 @@ void Options::print_options(std::ostringstream& os)
 
 	os << "Analysis window time ......: " << std::setw(9) << std::setprecision(2) << std::right << symbol_period << std::endl;
 	os << "Message time ..............: " << std::setw(9) << std::setprecision(2) << std::right << message_time << std::endl;
+
+	if (binary_name == "wsgc_generator")
+	{
+		os << "Samples output file .......: " << samples_output_file << std::endl;
+		os << "Demodulation ..............: " << (simulate_demod ? "Yes" : "No") << std::endl;
+	}
+
     os << std::endl;
     
     if (_fir_coef_generator != 0)

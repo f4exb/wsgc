@@ -19,6 +19,9 @@
 #include "SampleSequencer.h"
 #include "SourceMixer.h"
 #include "FIR_RCoef.h"
+#include "Demodulator.h"
+#include "DemodulatorDifferential.h"
+#include "DemodulatorSquaring.h"
 
 void apply_fir(wsgc_complex *inout, unsigned int& nb_samples, const std::vector<wsgc_float>& fir_coef);
 
@@ -40,6 +43,7 @@ int main(int argc, char *argv[])
         SimulatedSource *message_source = 0;
         SourceMixer *source_mixer = 0;
         std::vector<unsigned int> pilot_prns;
+        unsigned int fft_N = gc_generator.get_nb_code_samples(options.f_sampling, options.f_chip);
 
         // Allocate appropriate objects depending on modulation options
 
@@ -130,6 +134,7 @@ int main(int argc, char *argv[])
             }
 
             // apply power detection for OOK
+            /*
             if (options.modulation.getScheme() == Modulation::Modulation_OOK)
             { // trim imaginary part
             	std::cout << "Simulate AM power detection" << std::endl;
@@ -139,35 +144,42 @@ int main(int argc, char *argv[])
                     faded_source_samples[i].imag() = 0.0;
                 }
             }
+            */
 
             std::cout << "Normalize" << std::endl;
             fading->normalize(faded_source_samples, nb_faded_source_samples);
+
+            // demodulate OOK
+            if (options.simulate_demod)
+            {
+            	Demodulator *demodulator;
+
+            	if (options.modulation.getScheme() == Modulation::Modulation_OOK)
+				{
+					demodulator = new DemodulatorSquaring();
+					std::cout << "Simulate AM power detection" << std::endl;
+				}
+				else if (options.modulation.isDifferential())
+				{
+					unsigned int int_samples_per_chip = ((wsgc_float) fft_N) /  gc_generator.get_code_length();
+					static const wsgc_complex c_zero(0.0, 0.0);
+
+					demodulator = new DemodulatorDifferential(int_samples_per_chip);
+				    ((DemodulatorDifferential *) demodulator)->set_value_at_origin(c_zero);
+				}
+
+			    demodulator->demodulate_in_place(faded_source_samples, nb_faded_source_samples);
+
+			    delete demodulator;
+            }
+
 
             // Generate samples
             std::ofstream ofs;
             ofs.open(options.samples_output_file.c_str(), std::ios::out | std::ios::binary);
 
-            //ContinuousPhaseCarrier test_lo(options.f_sampling, options.nb_samples_per_code);
-
             for (unsigned int si = 0; si < nb_faded_source_samples; si++)
             {
-            	/*
-            	if (si % options.nb_samples_per_code ==0)
-            	{
-            		if (si != 0)
-            		{
-            			const wsgc_complex *samples = test_lo.get_samples();
-
-            			for (unsigned int i=0; i<options.nb_samples_per_code; i++)
-            			{
-            				ofs.write((const char *) &samples[i].real(), sizeof(samples[i].real()));
-            				ofs.write((const char *) &samples[i].imag(), sizeof(samples[i].imag()));
-            			}
-            		}
-
-            		test_lo.make_next_samples(options.f_tx);
-            	}
-            	*/
             	ofs.write((const char *) &faded_source_samples[si].real(), sizeof(faded_source_samples[si].real()));
             	ofs.write((const char *) &faded_source_samples[si].imag(), sizeof(faded_source_samples[si].imag()));
             }

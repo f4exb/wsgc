@@ -90,6 +90,7 @@ class Options
         unsigned int analysis_window_size;
         std::string samples_output_file;
         bool simulate_training;
+        bool simulate_demod;
         FIRCoefGenerator *_fir_coef_generator;
         
     private:        
