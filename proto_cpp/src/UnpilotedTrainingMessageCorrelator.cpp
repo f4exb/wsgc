@@ -25,74 +25,59 @@
 
 */
 
-#include "UnpilotedMultiplePrnCorrelator.h"
-#include "CorrelationRecord.h"
+#include "UnpilotedTrainingMessageCorrelator.h"
+#include "TrainingCorrelationRecord.h"
 #include <iostream>
 #include <assert.h>
 
-class CorrelationRecord;
-class TrainingCorrelationRecord;
 
 //=================================================================================================
-UnpilotedMultiplePrnCorrelator::UnpilotedMultiplePrnCorrelator(
+UnpilotedTrainingMessageCorrelator::UnpilotedTrainingMessageCorrelator(
 		wsgc_float f_sampling,
 		wsgc_float f_chip,
 		unsigned int prn_length,
-        unsigned int prn_per_symbol,
+        unsigned int sequence_length,
+        unsigned int averaging_length,
 		const std::vector<unsigned int>& prn_list,
-		unsigned int symbol_window_size,
-		unsigned int time_analysis_window_size,
-		std::vector<CorrelationRecord>& correlation_records) :
+		std::vector<TrainingCorrelationRecord>& training_correlation_records) :
 		_f_sampling(f_sampling),
 		_f_chip(f_chip),
 		_prn_length(prn_length),
 		_fft_N(int((f_sampling*prn_length)/f_chip)),
-		_message_time_analyzer(_fft_N),
-        _prn_per_symbol(prn_per_symbol),
+		_training_time_analyzer(_fft_N),
+        _sequence_length(sequence_length),
+        _averaging_length(averaging_length),
         _global_prn_index(0),
 		_prn_list(prn_list),
 		_samples_length(0),
-		_prns_length(0),
-		_symbol_window_size(symbol_window_size),
-        _time_analysis_window_size(time_analysis_window_size),
-		_correlation_records(correlation_records)
+		_prn_in_avg_count(0),
+		_prn_in_seq_count(0),
+		_training_correlation_records(training_correlation_records)
 {
-    assert((_time_analysis_window_size > 0) && (_time_analysis_window_size % _symbol_window_size == 0)); 
-    init_results();
 }
 
 
 //=================================================================================================
-UnpilotedMultiplePrnCorrelator::~UnpilotedMultiplePrnCorrelator()
+UnpilotedTrainingMessageCorrelator::~UnpilotedTrainingMessageCorrelator()
 {}
 
 
 //=================================================================================================
-void UnpilotedMultiplePrnCorrelator::init_results()
+void UnpilotedTrainingMessageCorrelator::dump_correlation_records(std::ostringstream& os, wsgc_float mag_factor)
 {
-    _max_sy_iffti.assign(_symbol_window_size, 0);
-    _max_sy_prni.assign(_symbol_window_size, 0);
-    _max_sy_mags.assign(_symbol_window_size, 0.0);
-    _max_sy_mags_prni.assign(_symbol_window_size*_prn_list.size(), 0.0);
-}
-
-
-//=================================================================================================
-void UnpilotedMultiplePrnCorrelator::dump_correlation_records(std::ostringstream& os, wsgc_float mag_factor)
-{
-	CorrelationRecord::dump_banner(os);
-	std::vector<CorrelationRecord>::const_iterator it = _correlation_records.begin();
-	const std::vector<CorrelationRecord>::const_iterator it_end = _correlation_records.end();
+	TrainingCorrelationRecord::dump_banner(os);
+	std::vector<TrainingCorrelationRecord>::const_iterator it = _training_correlation_records.begin();
+	const std::vector<TrainingCorrelationRecord>::const_iterator it_end = _training_correlation_records.end();
 
 	for (; it != it_end; ++it)
 	{
-		it->dump_line(mag_factor, os);
+		it->dump_line(os, mag_factor);
 	}
 }
 
 
 //=================================================================================================
-void UnpilotedMultiplePrnCorrelator::dump_time_analyzer_results(std::ostringstream& os)
+void UnpilotedTrainingMessageCorrelator::dump_time_analyzer_results(std::ostringstream& os)
 {
-	_message_time_analyzer.dump_histo_time_shift_occurences(os);
+	_training_time_analyzer.dump_histo_time_shift_occurences(os);
 }

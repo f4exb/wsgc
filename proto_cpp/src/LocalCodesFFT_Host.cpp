@@ -29,6 +29,7 @@
 #include "LocalCodesFFT_Host.h"
 #include "GoldCodeGenerator.h"
 #include "CodeModulator.h"
+#include "WsgcException.h"
 #include <string.h>
 #include <assert.h>
 #include <iostream>
@@ -66,8 +67,9 @@ void LocalCodesFFT_Host::fill_codes_matrix()
     
     std::vector<unsigned int>::iterator prni_it = _symbols.begin();
     const std::vector<unsigned int>::iterator prni_end = _symbols.end();
+    unsigned int symbol_index = 0;
     
-    for (; prni_it != prni_end; ++prni_it)
+    for (; prni_it != prni_end; ++prni_it, symbol_index++)
     {
         assert(*prni_it < _gc_generator.get_nb_codes());
     
@@ -85,6 +87,7 @@ void LocalCodesFFT_Host::fill_codes_matrix()
         }
         
         _codes_matrix.push_back(code_array);
+        index_symbol(symbol_index, *prni_it);
     }
 
 	WSGC_FFTW_DESTROY_PLAN(_fft_code_plan);
@@ -92,8 +95,16 @@ void LocalCodesFFT_Host::fill_codes_matrix()
 	WSGC_FFTW_FREE(reinterpret_cast<wsgc_fftw_complex *>(_fft_code_out));
 }
         
-const wsgc_complex *LocalCodesFFT_Host::get_local_code(unsigned int prni) const
+const wsgc_complex *LocalCodesFFT_Host::get_local_code(unsigned int symbol) const
 {
-    assert(prni < _symbols.size());
-    return _codes_matrix[prni];
+	std::map<unsigned int,unsigned int>::const_iterator it = _symbols_index_dictionnary.find(symbol);
+
+	if (it == _symbols_index_dictionnary.end())
+	{
+		throw WsgcException("Symbol not found in dictionnary");
+	}
+	else
+	{
+		return _codes_matrix[it->second];
+	}
 }

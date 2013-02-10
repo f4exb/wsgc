@@ -58,6 +58,8 @@ wsgc_test_SOURCES = CodeModulator_BPSK.cpp \
     PrnAutocorrelator_Host.cpp \
     UnpilotedMultiplePrnCorrelator.cpp \
     UnpilotedMultiplePrnCorrelator_Host.cpp \
+    UnpilotedTrainingMessageCorrelator.cpp \
+    UnpilotedTrainingMessageCorrelator_Host.cpp \
     SourceFFT.cpp \
     SourceFFT_Host.cpp \
     SourceMixer.cpp \
@@ -140,6 +142,8 @@ wsgc_test_SOURCES = CodeModulator_BPSK.cpp \
     PrnAutocorrelator_Host.cpp \
     UnpilotedMultiplePrnCorrelator.cpp \
     UnpilotedMultiplePrnCorrelator_Host.cpp \
+    UnpilotedTrainingMessageCorrelator.cpp \
+    UnpilotedTrainingMessageCorrelator_Host.cpp \
     SourceFFT.cpp \
     SourceFFT_Host.cpp \
     SourceMixer.cpp \

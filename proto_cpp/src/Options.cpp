@@ -78,6 +78,7 @@ Options::Options(std::string& _binary_name) :
     gc_nb_stages(10),
     nb_message_symbols(64),
     nb_service_symbols(3),
+    nb_training_symbols(0),
     nb_samples_per_code(0),
     file_debugging(false),
     _indicator_int(0),
@@ -150,6 +151,7 @@ bool Options::get_options(int argc, char *argv[])
             {"nb-stages", required_argument, 0, 'm'},
             {"nb-message-symbols", required_argument, 0, 'M'},
             {"nb-service-symbols", required_argument, 0, 'S'},
+            {"nb-training-symbols", required_argument, 0, 'Y'},
             {"g1-poly", required_argument, 0, 'g'},
             {"g2-poly", required_argument, 0, 'G'},
             {"fading-model", required_argument, 0, 'f'},
@@ -167,7 +169,7 @@ bool Options::get_options(int argc, char *argv[])
         
         int option_index = 0;
         
-        c = getopt_long (argc, argv, "s:c:n:t:C:p:N:I:r:R:T:m:M:S:g:G:f:d:a:P:A:F:B:z:U:o:L:", long_options, &option_index);
+        c = getopt_long (argc, argv, "s:c:n:t:C:p:N:I:r:R:T:m:M:S:g:G:f:d:a:P:A:F:B:z:U:o:L:Y:", long_options, &option_index);
         
         if (c == -1) // end of options
         {
@@ -247,6 +249,9 @@ bool Options::get_options(int argc, char *argv[])
                 break;
             case 'S':
                 status = extract_option<int, unsigned int>(nb_service_symbols, 'S');
+                break;
+            case 'Y':
+                status = extract_option<int, unsigned int>(nb_training_symbols, 'Y');
                 break;
             case 'g':
                 status = extract_vector<unsigned int>(g1_poly_powers, std::string(optarg));
@@ -402,37 +407,68 @@ bool Options::get_options(int argc, char *argv[])
 
             if (simulate_training) // Build training sequence and extra training simulation checks
             {
-            	if (nb_pilot_prns < 2)
+            	if (modulation.isCodeDivisionCapable() && (nb_pilot_prns > 0))
             	{
-            		std::cout << "The number of pilot PRNs should be 2 for synchronization training sequence simulation" << std::endl;
-            		return false;
-            	}
+            		nb_training_symbols = 0; // Force zero
 
-            	if (prns.size() > 0)
-            	{
-            		prns.clear();
-            	}
+					if (nb_pilot_prns < 2)
+					{
+						std::cout << "The number of pilot PRNs should be 2 for synchronization training sequence simulation" << std::endl;
+						return false;
+					}
 
-            	if (prn_shift+nb_random_prns > nb_message_symbols)
-            	{
-            		std::cout << "Cannot create training sequence: exceeding number of message symbols" << std::endl;
-            		return false;
+					if (prns.size() > 0)
+					{
+						prns.clear();
+					}
+
+					if (prn_shift+nb_random_prns > nb_message_symbols)
+					{
+						std::cout << "Cannot create training sequence: exceeding number of message symbols" << std::endl;
+						return false;
+					}
+					else if (nb_random_prns < 4)
+					{
+						std::cout << "Need at least 4 PRNs in the training sequence" << std::endl;
+						return false;
+					}
+					else
+					{
+						for (unsigned int prni = prn_shift; prni < prn_shift+nb_random_prns; prni++)
+						{
+							prns.push_back(prni);
+						}
+					}
             	}
-            	else if (nb_random_prns < 4)
+            	else if (modulation.demodulateBeforeCorrelate())
             	{
-            		std::cout << "Need at least 4 PRNs in the training sequence" << std::endl;
-            		return false;
-            	}
-            	else
-            	{
-            		for (unsigned int prni = prn_shift; prni < prn_shift+nb_random_prns; prni++)
-            		{
-            			prns.push_back(prni);
-            		}
+					if (prn_shift+nb_random_prns > nb_training_symbols)
+					{
+						std::cout << "Cannot create training sequence: exceeding number of training symbols" << std::endl;
+						return false;
+					}
+					else if (nb_random_prns < 4)
+					{
+						std::cout << "Need at least 4 PRNs in the training sequence" << std::endl;
+						return false;
+					}
+					else
+					{
+						if (prns.size() > 0)
+						{
+							prns.clear();
+						}
+						for (unsigned int prni = prn_shift+nb_message_symbols+nb_service_symbols; prni < prn_shift+nb_message_symbols+nb_service_symbols+nb_random_prns; prni++)
+						{
+							prns.push_back(prni);
+						}
+					}
             	}
             }
             else // Build PRN list for message simulation
             {
+            	nb_training_symbols = 0; // Force zero
+
 				if (prn_shift > nb_prns_per_symbol - 1)
 				{
 					std::cout << "Index of the PRN in symbol where the simulation starts must be between 0 and " << nb_prns_per_symbol << " (-I option)" << std::endl;
@@ -592,6 +628,7 @@ void Options::get_help(std::ostringstream& os)
         {"-G", "--g2-poly", "Generator 2 comma separated list of polynomial powers except N and 0", "string", "\"8,3,2\"", "any"},
         {"-M", "--nb-message-symbols", "Number of message symbols", "int", "64", "any"},
         {"-S", "--nb-service-symbols", "Number of service symbols", "int", "3", "any"},
+        {"-Y", "--nb-training-symbols", "Number of training symbols, used with --simulate-trn and unpiloted schemes", "int", "0", "any"},
         {"-P", "--pilot-prns", "Number of pilot PRNs (see documentation)", "int", "1", "any"},
         {"-A", "--pilot-gain-db", "Gain of the pilot PRN(s) vs Message PRNs", "float", "0.0", "any"},
         {"-F", "--df-steps", "Number of frequency steps to explore (step sized by FFT size and sampling frequency)", "int", "31", "wsgc_test"},
@@ -748,6 +785,7 @@ void Options::print_options(std::ostringstream& os)
     //os << "Nb phase averaging cycles .: " << std::setw(6) << std::right << tracking_phase_average_cycles << std::endl;
     os << "Nb message symbols ........: " << std::setw(6) << std::right << nb_message_symbols << std::endl;
     os << "Nb service symbols ........: " << std::setw(6) << std::right << nb_service_symbols << std::endl;
+    os << "Nb training symbols .......: " << std::setw(6) << std::right << nb_training_symbols << std::endl;
     os << "Noise PRN .................: " << std::setw(6) << std::right << noise_prn << " (" << noise_prn - nb_message_symbols << ")" << std::endl;
 
     if (modulation.isCodeDivisionCapable() && nb_pilot_prns > 0)
@@ -784,7 +822,14 @@ void Options::print_options(std::ostringstream& os)
 
     if (simulate_training)
     {
-    	os << "Analysis window size ......: " << std::setw(6) << std::right << analysis_window_size*nb_prns_per_symbol << " PRNs" << std::endl;
+    	if (modulation.isCodeDivisionCapable() && (nb_pilot_prns > 0))
+    	{
+    		os << "Analysis window size ......: " << std::setw(6) << std::right << analysis_window_size*nb_prns_per_symbol << " PRNs" << std::endl;
+    	}
+    	else
+    	{
+    		os << "Analysis window size ......: " << std::setw(6) << std::right << analysis_window_size << " PRNs" << std::endl;
+    	}
     }
     else
     {

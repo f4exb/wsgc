@@ -72,6 +72,7 @@ class Options
         unsigned int gc_nb_stages;
         unsigned int nb_message_symbols;
         unsigned int nb_service_symbols;
+        unsigned int nb_training_symbols;
         std::vector<unsigned int> g1_poly_powers;
         std::vector<unsigned int> g2_poly_powers; 
         unsigned int nb_samples_per_code;   

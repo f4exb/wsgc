@@ -38,7 +38,7 @@ int main(int argc, char *argv[])
         options.print_options(os);
         std::cout << os.str() << std::endl;
 
-        GoldCodeGenerator gc_generator(options.gc_nb_stages, options.nb_message_symbols, options.nb_service_symbols, options.g1_poly_powers, options.g2_poly_powers);
+        GoldCodeGenerator gc_generator(options.gc_nb_stages, options.nb_message_symbols, options.nb_service_symbols, options.nb_training_symbols, options.g1_poly_powers, options.g2_poly_powers);
         CodeModulator *codeModulator = 0;
         SimulatedSource *message_source = 0;
         SourceMixer *source_mixer = 0;

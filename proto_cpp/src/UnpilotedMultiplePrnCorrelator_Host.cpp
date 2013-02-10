@@ -28,7 +28,6 @@
 #include "UnpilotedMultiplePrnCorrelator_Host.h"
 #include "WsgcUtils.h"
 #include "CorrelationRecord.h"
-#include "TrainingCorrelationRecord.h"
 #include <iostream>
 #include <assert.h>
 
@@ -45,9 +44,8 @@ UnpilotedMultiplePrnCorrelator_Host::UnpilotedMultiplePrnCorrelator_Host(
         unsigned int symbol_window_size,
 		unsigned int time_analysis_window_size,
 		std::vector<CorrelationRecord>& correlation_records,
-		std::vector<TrainingCorrelationRecord>& training_correlation_records,
         const LocalCodesFFT_Host& local_codes_fft_base) :
-        UnpilotedMultiplePrnCorrelator::UnpilotedMultiplePrnCorrelator(f_sampling, f_chip, prn_length, prn_per_symbol, prn_list, symbol_window_size, time_analysis_window_size, correlation_records, training_correlation_records),
+        UnpilotedMultiplePrnCorrelator::UnpilotedMultiplePrnCorrelator(f_sampling, f_chip, prn_length, prn_per_symbol, prn_list, symbol_window_size, time_analysis_window_size, correlation_records),
         _local_codes_fft_base(local_codes_fft_base),
         _msg_time_analysis_corr_start_index(0),
         _msg_time_analysis_symbols_count(0)
@@ -116,20 +114,10 @@ bool UnpilotedMultiplePrnCorrelator_Host::set_samples(wsgc_complex *samples)
 
 
 //=================================================================================================
-void UnpilotedMultiplePrnCorrelator_Host::execute_message()
+void UnpilotedMultiplePrnCorrelator_Host::execute()
 {
 	do_correlation();
 	do_sum_averaging();
-	_prns_length = 0;
-	_samples_length = 0;
-}
-
-
-//=================================================================================================
-void UnpilotedMultiplePrnCorrelator_Host::execute_training()
-{
-	do_correlation();
-    // TODO: sliding averaging
 	_prns_length = 0;
 	_samples_length = 0;
 }

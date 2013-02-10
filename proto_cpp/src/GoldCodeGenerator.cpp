@@ -31,13 +31,22 @@
 
 #define GC_PRN_SHIFT 3
 
-GoldCodeGenerator::GoldCodeGenerator(unsigned int nb_stages, unsigned int nb_message_symbols, unsigned int nb_service_symbols, std::vector<unsigned int>& g1_poly, std::vector<unsigned int>& g2_poly) :
+GoldCodeGenerator::GoldCodeGenerator(
+		unsigned int nb_stages,
+		unsigned int nb_message_symbols,
+		unsigned int nb_service_symbols,
+		unsigned int nb_training_symbols,
+		std::vector<unsigned int>& g1_poly,
+		std::vector<unsigned int>& g2_poly) :
     _nb_stages(nb_stages),
     _nb_message_symbols(nb_message_symbols),
     _nb_service_symbols(nb_service_symbols),
+    _nb_training_symbols(nb_training_symbols),
     _g1_poly(g1_poly),
     _g2_poly(g2_poly)
 {
+	assert (nb_message_symbols+nb_service_symbols+nb_training_symbols < (1<<nb_stages));
+
     lfsr_generator(_g1_regs, _g1_poly);
     lfsr_generator(_g2_regs, _g2_poly);
 }

@@ -29,6 +29,7 @@
 #include "LocalCodesFFT.h"
 #include "GoldCodeGenerator.h"
 #include "CodeModulator.h"
+#include "WsgcException.h"
 #include <string.h>
 #include <assert.h>
 
@@ -49,4 +50,17 @@ LocalCodesFFT::LocalCodesFFT(
 
 LocalCodesFFT::~LocalCodesFFT()
 {
+}
+
+
+void LocalCodesFFT::index_symbol(unsigned int index, unsigned int symbol)
+{
+	if (_symbols_index_dictionnary.find(symbol) == _symbols_index_dictionnary.end())
+	{
+		_symbols_index_dictionnary[symbol] = index;
+	}
+	else
+	{
+		throw WsgcException("Two symbols have the same value");
+	}
 }

@@ -72,6 +72,8 @@
 #include "FIR_RCoef.h"
 #include "UnpilotedMultiplePrnCorrelator.h"
 #include "UnpilotedMultiplePrnCorrelator_Host.h"
+#include "UnpilotedTrainingMessageCorrelator.h"
+#include "UnpilotedTrainingMessageCorrelator_Host.h"
 #include "DemodulatorDifferential.h"
 #include "DemodulatorSquaring.h"
 
@@ -102,6 +104,7 @@ void training_processing(
 );
 
 void generate_training_prn_list(std::vector<unsigned int>& prn_list, GoldCodeGenerator& gc_generator);
+void generate_training_prn_list_unpiloted(std::vector<unsigned int>& prn_list, GoldCodeGenerator& gc_generator);
 void generate_message_prn_list(std::vector<unsigned int>& prn_list, GoldCodeGenerator& gc_generator);
 void generate_pilot_prn_list(std::vector<unsigned int>& prn_list, GoldCodeGenerator& gc_generator, unsigned int pilot_prni);
 void apply_fir(wsgc_complex *inout, unsigned int& nb_samples, const std::vector<wsgc_float>& fir_coef);
@@ -118,7 +121,7 @@ int main(int argc, char *argv[])
         options.print_options(os);
         std::cout << os.str() << std::endl;
 
-        GoldCodeGenerator gc_generator(options.gc_nb_stages, options.nb_message_symbols, options.nb_service_symbols, options.g1_poly_powers, options.g2_poly_powers);
+        GoldCodeGenerator gc_generator(options.gc_nb_stages, options.nb_message_symbols, options.nb_service_symbols, options.nb_training_symbols, options.g1_poly_powers, options.g2_poly_powers);
         // get and print CUDA mapping
 #ifdef _CUDA
         CudaManager cuda_manager(
@@ -372,7 +375,6 @@ void message_processing(
     DecisionBox *decision_box = 0;
     std::vector<CorrelationRecord> correlation_records;
     std::vector<AutocorrelationRecord> autocorrelation_records;
-    std::vector<TrainingCorrelationRecord> training_correlation_records; // unused. Needed for compatibility.
     //UnpilotedMessageCorrelator *unpiloted_message_correlator = 0;
     //UnpilotedMultiplePrnCorrelator *unpiloted_mprn_correlator = 0;
     UnpilotedMultiplePrnCorrelator *dm_correlator = 0;
@@ -433,7 +435,6 @@ void message_processing(
                 options.batch_size, // will be taken as number of symbols
         		options.analysis_window_size, 
         		correlation_records,
-        		training_correlation_records,
         		*((LocalCodesFFT_Host *) local_codes_fft));
     }
 
@@ -471,7 +472,7 @@ void message_processing(
         {
         	if (dm_correlator->set_samples(signal_samples))
         	{
-        		dm_correlator->execute_message();
+        		dm_correlator->execute();
         	}
         }
         // else just do nothing as there are no other options
@@ -665,17 +666,19 @@ void training_processing(
     PilotedTrainingMessageCorrelator *tr_message_correlator = 0;
     unsigned int fft_N = gc_generator.get_nb_code_samples(options.f_sampling, options.f_chip);
     
-    std::vector<unsigned int> training_prn_numbers;
-    std::vector<unsigned int> pilot_prn_numbers;
     
-    generate_training_prn_list(training_prn_numbers, gc_generator);
-    generate_pilot_prn_list(pilot_prn_numbers, gc_generator, 2); // Pilot PRN #2 is used
     
     // - Modulation should support code division
     // - Modulation processing should be frequency dependant
     // - There should be at least 2 pilot PRN(s) - using second
     if (options.modulation.isCodeDivisionCapable() && options.modulation.isFrequencyDependant() && (options.nb_pilot_prns > 1))
     {
+        std::vector<unsigned int> pilot_prn_numbers;
+        generate_pilot_prn_list(pilot_prn_numbers, gc_generator, 2); // Pilot PRN #2 is used
+
+        std::vector<unsigned int> training_prn_numbers;
+        generate_training_prn_list(training_prn_numbers, gc_generator);
+
         std::cout << "Creating managing objects..." << std::endl;
         pilot_correlation_analyzer = new PilotCorrelationAnalyzer(options.analysis_window_size, options.nb_prns_per_symbol, options.nb_samples_per_code);    
 #ifdef _CUDA
@@ -703,9 +706,10 @@ void training_processing(
         // Do the correlation
         std::cout << "Do the correlation..." << std::endl;
         wsgc_complex *signal_samples;
-        clock_gettime(time_option, &time1);
         SampleSequencer sample_sequencer(faded_source_samples, nb_faded_source_samples, fft_N);
         unsigned int prn_i = 0;
+
+        clock_gettime(time_option, &time1);
         
         while (sample_sequencer.get_next_code_samples(&signal_samples)) // pseudo real time loop, one PRN length at a time
         {
@@ -735,6 +739,62 @@ void training_processing(
         
         // TODO: conclude on the message epoch
     }    
+    else if (options.modulation.demodulateBeforeCorrelate())
+    {
+    	LocalCodesFFT *local_codes_fft = 0;
+    	UnpilotedTrainingMessageCorrelator *unpiloted_training_message_correlator = 0;
+
+        std::vector<unsigned int> training_prn_numbers;
+        generate_training_prn_list_unpiloted(training_prn_numbers, gc_generator);
+
+    	unsigned int prn_length = gc_generator.get_code_length();
+    	std::vector<TrainingCorrelationRecord> training_correlation_records;
+
+    	local_codes_fft = new LocalCodesFFT_Host(
+    			*localCodeModulator,
+    			gc_generator,
+    			options.f_sampling,
+    			options.f_chip,
+    			training_prn_numbers);
+
+    	unpiloted_training_message_correlator =	new UnpilotedTrainingMessageCorrelator_Host(
+				options.f_sampling,
+				options.f_chip,
+				prn_length,
+				options.prns.size(),
+				options.analysis_window_size,
+				training_prn_numbers,
+				training_correlation_records,
+				*((LocalCodesFFT_Host *)local_codes_fft));
+
+    	SampleSequencer sample_sequencer(faded_source_samples, nb_faded_source_samples, fft_N);
+    	wsgc_complex *signal_samples;
+
+        clock_gettime(time_option, &time1);
+
+        while (sample_sequencer.get_next_code_samples(&signal_samples)) // pseudo real time loop, one PRN length at a time
+        {
+            if (unpiloted_training_message_correlator != 0) // Correlation without pilot PRN(s) - pipelined processing
+            {
+            	unpiloted_training_message_correlator->set_samples(signal_samples);
+            	unpiloted_training_message_correlator->execute();
+            }
+        }
+
+        clock_gettime(time_option, &time2);
+        std::cout << "Training sequence correlation time: " << std::setw(12) << std::setprecision(9) << WsgcUtils::get_time_difference(time2,time1) << " s" << std::endl << std::endl;
+
+        std::ostringstream corr_os;
+        corr_os << "--- training correlation records:" << std::endl;
+        TrainingCorrelationRecord::dump_banner(corr_os);
+
+        for (std::vector<TrainingCorrelationRecord>::const_iterator it = training_correlation_records.begin(); it != training_correlation_records.end(); ++it)
+        {
+        	it->dump_line(corr_os);
+        }
+
+        std::cout << corr_os.str() << std::endl;
+    }
     else
     {
         std::cout << "Synchronization training is not implemented under these conditions" << std::endl;
@@ -776,6 +836,16 @@ void generate_training_prn_list(std::vector<unsigned int>& prn_list, GoldCodeGen
 	}
 }
 
+//=================================================================================================
+void generate_training_prn_list_unpiloted(std::vector<unsigned int>& prn_list, GoldCodeGenerator& gc_generator)
+{
+	unsigned int start_code = gc_generator.get_nb_message_codes() + gc_generator.get_nb_service_codes();
+
+	for (unsigned int prni=start_code; prni < start_code + gc_generator.get_nb_training_codes(); prni++)
+	{
+		prn_list.push_back(prni);
+	}
+}
 
 //=================================================================================================
 void generate_message_prn_list(std::vector<unsigned int>& prn_list, GoldCodeGenerator& gc_generator)

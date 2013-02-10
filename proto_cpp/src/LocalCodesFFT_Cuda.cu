@@ -93,6 +93,8 @@ void LocalCodesFFT_Cuda::fill_codes_matrix()
             reinterpret_cast<const cuComplex *>(_h_fft_code_in+_nb_code_samples), 
             _d_fft_code_in.begin() + (i*_nb_codes)
         );
+
+        index_symbol(i, *prni_it);
     }
     
     // Do the FFT

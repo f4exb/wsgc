@@ -19,50 +19,47 @@
 
      Static not real time prototype in C++
 
-     DifferentialModulationMultiplePrnCorrelator
+     UnpilotedTrainingMessageCorrelator
 
-     This flavour of correlator deals with PRNs without use of a pilot sequence
+     This flavour of correlator deals with training sequence PRNs without use of a pilot sequence
 
 */
 
-#ifndef __UNPILOTED_MULTIPLE_PRN_CORRELATOR_H__
-#define __UNPILOTED_MULTIPLE_PRN_CORRELATOR_H__
+#ifndef __UNPILOTED_TRAINING_MESSAGE_CORRELATOR_H__
+#define __UNPILOTED_TRAINING_MESSAGE_CORRELATOR_H__
 
 #include "WsgcTypes.h"
 #include "TimeCorrelationAnalyzer.h"
 #include <vector>
 
-class CorrelationRecord;
-
+class TrainingCorrelationRecord;
 /**
- * \brief Correlator engine to do correlation of PRN(s) without use of a pilot sequence
+ * \brief Correlator engine to do correlation of PRN(s) in the training PRNs sequence without use of a pilot sequence
  */
-class UnpilotedMultiplePrnCorrelator
+class UnpilotedTrainingMessageCorrelator
 {
 public:
     /**
-    * Correlator engine for message PRNs
+    * Correlator engine for training sequence PRNs
     * \param f_sampling Sampling frequency
     * \param f_chip Chip rate (frequency)
     * \param prn_length Length of a PRN sequence in number of chips
-    * \param prn_per_symbol Number of PRNs per symbol
+    * \param sequence_length Number of PRNs int the training sequence
+    * \param averaging_length Number of PRNs used for sliding averaging
     * \param prn_list Reference to the vector of PRN numbers with which to make correlation
-    * \param symbol_window_size Number of symbols used for processing. Storage is reserved for symbol_window_size times prn_per_symbol PRN samples
-    * \param time_analysis_window_size Number of symbols used for time analysis.
-    * \param correlation_records Reference to the correlation records
+    * \param training_correlation_records Reference to the training correlation records
     */
-	UnpilotedMultiplePrnCorrelator(
+	UnpilotedTrainingMessageCorrelator(
 			wsgc_float f_sampling,
 			wsgc_float f_chip,
 			unsigned int prn_length,
-            unsigned int prn_per_symbol,
+            unsigned int sequence_length,
+            unsigned int averaging_length,
 			const std::vector<unsigned int>& prn_list,
-			unsigned int symbol_window_size,
-			unsigned int time_analysis_window_size,
-			std::vector<CorrelationRecord>& correlation_records
+			std::vector<TrainingCorrelationRecord>& training_correlation_records
 			);
         
-	virtual ~UnpilotedMultiplePrnCorrelator();
+	virtual ~UnpilotedTrainingMessageCorrelator();
 
 	/**
 	 * Do the message correlation over the symbols window.
@@ -72,9 +69,8 @@ public:
 	/**
 	 * Append source samples for one PRN length to the buffer
      * \param samples Pointer to source samples
-     * \return true if the buffer is complete and ready for analyze
 	 */
-	virtual bool set_samples(wsgc_complex *samples) = 0;
+	virtual void set_samples(wsgc_complex *samples) = 0;
 
 	/**
 	 * Dump correlation records data to output stream
@@ -93,21 +89,15 @@ protected:
     wsgc_float _f_chip; //!< Chip rate
     unsigned int _prn_length; //!< Length of a PRN sequence
     unsigned int _fft_N; //!< Length of FFT that is also the length of a PRN sequence in number of samples
-    unsigned int _prn_per_symbol; //!< Number of PRNs per message symbol
+    unsigned int _sequence_length; //!< Number of PRNs int the training sequence
+    unsigned int _averaging_length; //!< Number of PRNs used for sliding averaging
     unsigned int _global_prn_index; //!< Index of PRN in all received samples
     const std::vector<unsigned int>& _prn_list; //!< Reference to the vector of PRN numbers with which to make correlation
-    unsigned int _symbol_window_size; //!<  Window of symbols in use for processing.
-    unsigned int _time_analysis_window_size; //!<  Number of symbols used for time analysis.
     unsigned int _samples_length; //!< Number of stored source samples
-    unsigned int _prns_length; //!< Number of stored PRNs
-    std::vector<wsgc_float> _max_sy_mags; //!< Maximum magnitudes for each symbol
-    std::vector<wsgc_float> _max_sy_mags_prni; //!< Maximum magnitudes sums (at each PRN) for each symbol
-    std::vector<unsigned int> _max_sy_iffti; //!< Maximum ifft indexes at maximum magnitudes for each symbol
-    std::vector<unsigned int> _max_sy_prni; //!< Maximum ifft indexes at maximum magnitudes for each symbol
-	std::vector<CorrelationRecord>& _correlation_records; //!< Reference to the correlation records
-	TimeCorrelationAnalyzer<CorrelationRecord> _message_time_analyzer;
-
-    void init_results();
+    unsigned int _prn_in_avg_count; //!< Number of PRNs taking part in averaging
+    unsigned int _prn_in_seq_count; //!< Number of PRNs taking part in sequence
+	std::vector<TrainingCorrelationRecord>& _training_correlation_records; //!< Reference to the training correlation records
+	TimeCorrelationAnalyzer<TrainingCorrelationRecord> _training_time_analyzer;
 };
 
-#endif /* __UNPILOTED_MULTIPLE_PRN_CORRELATOR_H__ */
+#endif /* __UNPILOTED_TRAINING_MESSAGE_CORRELATOR_H__ */

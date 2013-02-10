@@ -30,6 +30,7 @@
 
 #include "WsgcTypes.h"
 #include <vector>
+#include <map>
 
 class CodeModulator;
 class GoldCodeGenerator;
@@ -95,7 +96,10 @@ protected:
 	wsgc_float _f_sampling; //!< Sampling frequency
 	wsgc_float _f_chip; //!< Chip rate
 	std::vector<unsigned int>& _symbols; //!< List of symbols to be processed
+	std::map<unsigned int, unsigned int> _symbols_index_dictionnary; //!< symbol index in the code matrix keyed by symbol
 	unsigned int _nb_code_samples; //!< Number of samples in one code length
+
+	void index_symbol(unsigned int index, unsigned int symbol);
 };
 
 #endif // __LOCAL_CODES_FFT__

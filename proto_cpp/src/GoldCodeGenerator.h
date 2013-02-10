@@ -40,7 +40,14 @@
 class GoldCodeGenerator
 {
     public:
-        GoldCodeGenerator(unsigned int nb_stages, unsigned int nb_message_symbols, unsigned int nb_service_symbols, std::vector<unsigned int>& g1_poly, std::vector<unsigned int>& g2_poly);
+        GoldCodeGenerator(
+        		unsigned int nb_stages,
+        		unsigned int nb_message_symbols,
+        		unsigned int nb_service_symbols,
+        		unsigned int nb_training_symbols,
+        		std::vector<unsigned int>& g1_poly,
+        		std::vector<unsigned int>& g2_poly);
+
         ~GoldCodeGenerator();
         
         /**
@@ -48,7 +55,7 @@ class GoldCodeGenerator
          */
         unsigned int get_nb_codes() const
         {
-            return _nb_message_symbols + _nb_service_symbols;
+            return _nb_message_symbols + _nb_service_symbols + _nb_training_symbols;
         }
         
         /**
@@ -67,6 +74,14 @@ class GoldCodeGenerator
             return _nb_service_symbols;
         }
         
+        /**
+         * \return Number of training symbols
+         */
+        unsigned int get_nb_training_codes() const
+        {
+            return _nb_training_symbols;
+        }
+
         /**
          * \return Number of stages for shift register
          */
@@ -144,9 +159,10 @@ class GoldCodeGenerator
         
         
     private:
-        unsigned int _nb_stages;
-        unsigned int _nb_message_symbols;
-        unsigned int _nb_service_symbols;
+        unsigned int _nb_stages; //!< Number of LFSR stages
+        unsigned int _nb_message_symbols; //!< Symbols used in the messages (first part of possible codes)
+        unsigned int _nb_service_symbols; //!< Symbols used for service such as noise or pilot (middle part of possible codes)
+        unsigned int _nb_training_symbols; //!< Training symbols used for unpiloted correlation (last part of possible codes)
         std::vector<unsigned int>& _g1_poly; // Generator polynomial powers for G1 (excluding max and 0)
         std::vector<unsigned int>& _g2_poly; // Generator polynomial powers for G2 (excluding max and 0)
         std::vector<unsigned int> _g1_regs;  // successive LFSR register values for G1

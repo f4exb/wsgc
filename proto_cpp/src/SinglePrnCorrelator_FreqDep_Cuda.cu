@@ -65,7 +65,6 @@ SinglePrnCorrelator_FreqDep_Cuda::SinglePrnCorrelator_FreqDep_Cuda(
     _d_ifft_in(2*nb_batch_prns*_fft_N*freq_step_division*nb_f_bins),
     _d_ifft_out(2*nb_batch_prns*_fft_N*freq_step_division*nb_f_bins),
     _d_avg_keys(nb_batch_prns*_fft_N*freq_step_division*nb_f_bins),
-    _nb_pilot_prns(_local_codes.get_nb_codes()),
     _cuda_device(cuda_device),
     _pilot_correlation_analyzer(0)
 {
