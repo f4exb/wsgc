@@ -87,6 +87,7 @@ void LocalCodesFFT_Host::fill_codes_matrix()
         }
         
         _codes_matrix.push_back(code_array);
+        //std::cout << "Symbol " << *prni_it << std::endl;
         index_symbol(symbol_index, *prni_it);
     }
 
@@ -101,10 +102,17 @@ const wsgc_complex *LocalCodesFFT_Host::get_local_code(unsigned int symbol) cons
 
 	if (it == _symbols_index_dictionnary.end())
 	{
-		throw WsgcException("Symbol not found in dictionnary");
+		std::ostringstream eos;
+		eos << "Symbol " << symbol << " not found in dictionnary" << std::endl;
+		throw WsgcException(eos.str());
 	}
 	else
 	{
 		return _codes_matrix[it->second];
 	}
+}
+
+const wsgc_complex *LocalCodesFFT_Host::get_local_code_by_index(unsigned int prni) const
+{
+	return _codes_matrix[prni];
 }

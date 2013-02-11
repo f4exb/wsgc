@@ -61,12 +61,18 @@ public:
 			std::vector<unsigned int>& symbols);
 
 	virtual ~LocalCodesFFT_Host();
+
 	/**
-	 * \param prni PRN number
+	 * \param symbol PRN number
 	 * \return Pointer to the first element of the local copy of the code
 	 */
-	const wsgc_complex *get_local_code(unsigned int prni) const;
+	const wsgc_complex *get_local_code(unsigned int symbol) const;
 
+	/**
+	 * \param prni PRN index in codes matrix
+	 * \return Pointer to the first element of the local copy of the code
+	 */
+	const wsgc_complex *get_local_code_by_index(unsigned int prni) const;
 
 protected:
 	std::vector<wsgc_complex*> _codes_matrix; //!< Matrix holding the local copy of the codes

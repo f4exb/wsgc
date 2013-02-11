@@ -97,7 +97,7 @@ void SinglePrnCorrelator_FreqDep_Host::multiply_and_ifft(const wsgc_complex *sou
 			for (unsigned int ffti = 0; ffti < _fft_N; ffti++) // multiply with local code
 			{
 				int lci = (ffti + _fft_N + fpi) % _fft_N;
-				_ifft_code_in_tmp[ffti] = source_block[fsi*_fft_N + ffti] * _local_codes.get_local_code(pilot_prn_index)[lci];
+				_ifft_code_in_tmp[ffti] = source_block[fsi*_fft_N + ffti] * _local_codes.get_local_code_by_index(pilot_prn_index)[lci];
 				//_ifft_code_in_tmp[ffti] /= _fft_N; // pre-scaling
 			}
 

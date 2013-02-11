@@ -32,6 +32,7 @@
 #include "WsgcException.h"
 #include <string.h>
 #include <assert.h>
+#include <iostream>
 
 LocalCodesFFT::LocalCodesFFT(
 			CodeModulator& code_modulator,
@@ -57,6 +58,7 @@ void LocalCodesFFT::index_symbol(unsigned int index, unsigned int symbol)
 {
 	if (_symbols_index_dictionnary.find(symbol) == _symbols_index_dictionnary.end())
 	{
+		//std::cout << "Indexing symbol " << symbol << " with index " << index << std::endl;
 		_symbols_index_dictionnary[symbol] = index;
 	}
 	else
