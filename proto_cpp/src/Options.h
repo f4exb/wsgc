@@ -92,6 +92,8 @@ class Options
         std::string samples_output_file;
         bool simulate_training;
         bool simulate_demod;
+        unsigned int gpu_affinity;
+        bool gpu_affinity_specified;
         FIRCoefGenerator *_fir_coef_generator;
         
     private:        

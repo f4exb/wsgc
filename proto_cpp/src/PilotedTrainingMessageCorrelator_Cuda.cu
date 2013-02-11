@@ -56,7 +56,9 @@ PilotedTrainingMessageCorrelator_Cuda::PilotedTrainingMessageCorrelator_Cuda(
 		wsgc_float f_sampling,
 		wsgc_float f_chip,
         unsigned int analysis_window_size,
-		unsigned int sequence_length) :
+		unsigned int sequence_length,
+		unsigned int cuda_device) :
+	CudaDeviceManager::CudaDeviceManager(cuda_device),
 	PilotedTrainingMessageCorrelator(f_sampling, f_chip, sequence_length),
 	_local_codes(local_codes),
     _local_oscillator(f_sampling, _local_codes.get_gc_generator().get_nb_code_samples(f_sampling, f_chip)),

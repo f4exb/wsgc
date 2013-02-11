@@ -55,7 +55,9 @@ PilotedMessageCorrelator_Cuda::PilotedMessageCorrelator_Cuda(
 		LocalCodes_Cuda& local_codes,
 		wsgc_float f_sampling,
 		wsgc_float f_chip,
-		unsigned int prn_per_symbol) :
+		unsigned int prn_per_symbol,
+		unsigned int cuda_device) :
+	CudaDeviceManager::CudaDeviceManager(cuda_device),
 	PilotedMessageCorrelator(f_sampling, f_chip, prn_per_symbol),
 	_local_codes(local_codes),
     _local_oscillator(f_sampling, _local_codes.get_gc_generator().get_nb_code_samples(f_sampling, f_chip)),

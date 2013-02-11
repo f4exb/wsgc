@@ -30,6 +30,7 @@
 #ifndef __LOCAL_CODES_CUDA_H__
 #define __LOCAL_CODES_CUDA_H__
 
+#include "CudaDeviceManager.h"
 #include "WsgcTypes.h"
 #include "LocalCodes.h"
 #include <vector>
@@ -47,7 +48,7 @@ class GoldCodeGenerator;
  * Creates a local copy of all symbols gold codes
  *
  */
-class LocalCodes_Cuda : public LocalCodes
+class LocalCodes_Cuda : public CudaDeviceManager, public LocalCodes
 {
 public:
     /**
@@ -56,13 +57,15 @@ public:
     * \param f_sampling Sampling frequency
     * \param f_chip Chip rate
 	* \param symbols List of symbols to be processed
+	* \param cuda_device CUDA GPU# on which to run
     */
 	LocalCodes_Cuda(
             CodeModulator& code_modulator, 
             GoldCodeGenerator& gc_generator, 
             wsgc_float f_sampling, 
             wsgc_float f_chip,
-            std::vector<unsigned int>& symbols);
+            std::vector<unsigned int>& symbols,
+            unsigned int cuda_device);
 
 	virtual ~LocalCodes_Cuda();
 

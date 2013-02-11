@@ -62,9 +62,9 @@ PilotCorrelationAnalyzer::PilotCorrelationAnalyzer(
 {
     _samples_ext = (wsgc_complex *) WSGC_FFTW_MALLOC((_sample_buffer_len+2)*fft_N*sizeof(wsgc_fftw_complex));
     _samples = &_samples_ext[_fft_N]; // start is one PRN ahead
-    std::cout << "_analysis_window_size = " << _analysis_window_size <<std::endl;
-    std::cout << "_prn_per_symbol = " << _prn_per_symbol << std::endl;
-    std::cout << "_sample_buffer_len = " << _sample_buffer_len << std::endl;
+    //std::cout << "_analysis_window_size = " << _analysis_window_size <<std::endl;
+    //std::cout << "_prn_per_symbol = " << _prn_per_symbol << std::endl;
+    //std::cout << "_sample_buffer_len = " << _sample_buffer_len << std::endl;
 }
 
 

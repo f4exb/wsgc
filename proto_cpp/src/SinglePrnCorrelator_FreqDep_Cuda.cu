@@ -56,19 +56,19 @@ SinglePrnCorrelator_FreqDep_Cuda::SinglePrnCorrelator_FreqDep_Cuda(
 		wsgc_float f_chip,
 		std::vector<unsigned int>& pilot_symbols,
 		unsigned int nb_f_bins,
+		unsigned int cuda_device,
 		unsigned int prn_per_block,
 		unsigned int nb_batch_prns,
-		unsigned int freq_step_division,
-		unsigned int cuda_device) :
+		unsigned int freq_step_division) :
+	CudaDeviceManager::CudaDeviceManager(cuda_device),
     SinglePrnCorrelator_FreqDep::SinglePrnCorrelator_FreqDep(gc_generator.get_nb_code_samples(f_sampling,f_chip), nb_f_bins, prn_per_block, nb_batch_prns, freq_step_division),
-    _local_codes(code_modulator, gc_generator, f_sampling, f_chip, pilot_symbols),
+    _local_codes(code_modulator, gc_generator, f_sampling, f_chip, pilot_symbols, cuda_device),
     _d_ifft_in(2*nb_batch_prns*_fft_N*freq_step_division*nb_f_bins),
     _d_ifft_out(2*nb_batch_prns*_fft_N*freq_step_division*nb_f_bins),
     _d_avg_keys(nb_batch_prns*_fft_N*freq_step_division*nb_f_bins),
-    _cuda_device(cuda_device),
     _pilot_correlation_analyzer(0)
 {
-	// allocate CuBLAS handle
+    // allocate CuBLAS handle
 	cublasStatus_t stat = cublasCreate(&_cublas_handle);
 	if (stat != CUBLAS_STATUS_SUCCESS)
 	{
@@ -96,9 +96,6 @@ SinglePrnCorrelator_FreqDep_Cuda::SinglePrnCorrelator_FreqDep_Cuda(
     	err_os << "CUFFT Error: Unable to create plan for pilot IFFT RC=" << fft_stat;
     	throw WsgcException(err_os.str());
     }
-
-    // Select CUDA device
-    cutilSafeCall(cudaSetDevice(_cuda_device));
 }
 
 

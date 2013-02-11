@@ -57,8 +57,9 @@ public:
 
 	/**
 	 * Do CUDA system diagnosis and allocates resources
+	 * \return True if GPU devices can be allocated
 	 */
-	void diagnose();
+	bool diagnose();
 
 	/**
 	 * Dump CUDA diagnosis and allocation data
@@ -67,19 +68,11 @@ public:
 
 	/**
 	 * Get pilot device
-	 * \param alternate True for pilot 2
 	 * \return CUDA device ID (index start 0)
 	 */
-	unsigned int get_pilot_device(bool alternate) const
+	unsigned int get_pilot_device() const
 	{
-		if ((alternate) && (_nb_pilots > 1))
-		{
-			return _pilot2_cuda_device;
-		}
-		else
-		{
-			return _pilot1_cuda_device;
-		}
+		return _pilot_cuda_device;
 	}
 
 	/**
@@ -91,6 +84,16 @@ public:
 	{
 		return _message_prn_allocation[prni];
 	}
+
+    /**
+     * Specify a GPU affinity
+     */
+    void set_gpu_affinity(unsigned int gpu_affinity)
+    {
+        _gpu_affinity = gpu_affinity;
+        _gpu_affinity_specified = true;
+    }
+
 
 protected:
     class CudaDeviceProfile
@@ -198,10 +201,12 @@ protected:
 	unsigned int _f_step_division;
 	unsigned int _df_steps;
 	unsigned int _nb_cuda_devices;
-	unsigned int _pilot1_cuda_device;
-	unsigned int _pilot2_cuda_device;
+	unsigned int _pilot_cuda_device;
 	unsigned int _nb_message_devices;
 	unsigned int _message_first_device;
+    unsigned int _gpu_affinity; //!< GPU# affinity 
+    bool         _gpu_affinity_specified; //!< GPU# affinity wish
+
     std::vector<CudaDeviceProfile> _device_profiles;
 	std::vector<unsigned int> _message_prn_allocation;
 	WsgcMemoryProfile _wsgc_memory_profile;
@@ -216,7 +221,6 @@ protected:
      */
     void dump_device_info(std::ostringstream& os) const;
 
-protected:
 	void analyze_memory_profile();
 };
 

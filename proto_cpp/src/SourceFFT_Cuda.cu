@@ -32,12 +32,13 @@
 SourceFFT_Cuda::SourceFFT_Cuda(wsgc_float f_sampling,
                    wsgc_float f_chip,
                    unsigned int fft_N,
-                   unsigned int freq_step_division) :
+                   unsigned int freq_step_division,
+                   unsigned int cuda_device) :
+    CudaDeviceManager::CudaDeviceManager(cuda_device),
     SourceFFT(f_sampling, f_chip, fft_N, freq_step_division),
     _d_fft_in(_fft_N*_freq_step_division),
     _d_fft_out(_fft_N*_freq_step_division)
 {
-
     _h_fft_sample_in  = new wsgc_complex[_fft_N*_freq_step_division];
     cufftResult_t fft_stat = cufftPlan1d(&_fft_plan, _fft_N, CUFFT_C2C, _freq_step_division);
 

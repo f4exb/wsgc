@@ -96,6 +96,8 @@ Options::Options(std::string& _binary_name) :
     analysis_window_size(4),
     simulate_training(false),
     simulate_demod(false),
+    gpu_affinity(0),
+    gpu_affinity_specified(false),
 	_fir_coef_generator(0)
 {
     srand(time(0));
@@ -165,11 +167,12 @@ bool Options::get_options(int argc, char *argv[])
             {"analysis-window-size", required_argument, 0, 'z'},
             {"samples-output-file", required_argument, 0, 'o'},
             {"fir-filter-model", required_argument, 0, 'L'},
+            {"gpu-affinity", required_argument, 0, 'y'}
         };
         
         int option_index = 0;
         
-        c = getopt_long (argc, argv, "s:c:n:t:C:p:N:I:r:R:T:m:M:S:g:G:f:d:a:P:A:F:B:z:U:o:L:Y:", long_options, &option_index);
+        c = getopt_long (argc, argv, "s:c:n:t:C:p:N:I:r:R:T:m:M:S:g:G:f:d:a:P:A:F:B:z:U:o:L:Y:y:", long_options, &option_index);
         
         if (c == -1) // end of options
         {
@@ -194,7 +197,6 @@ bool Options::get_options(int argc, char *argv[])
                 }
                 else if (strcmp("cuda", long_options[option_index].name) == 0)
                 {
-                    std::cout << "Using CUDA implementation" << std::endl;
                     use_cuda = true;
                 }
                 else if (strcmp("simulate-trn", long_options[option_index].name) == 0)
@@ -294,6 +296,10 @@ bool Options::get_options(int argc, char *argv[])
                 break;
             case 'L':
                 status = parse_fir_filter_model_data(std::string(optarg));
+                break;
+            case 'y':
+                status = extract_option<int, unsigned int>(gpu_affinity, 'y');
+                gpu_affinity_specified = true;
                 break;
             case '?':
                 std::ostringstream os;
@@ -641,6 +647,7 @@ void Options::get_help(std::ostringstream& os)
         {"-z", "--analysis-window-size", "Pilot analysis window size in number of symbols", "int", "4", "wsgc_test"},
         {"-o", "--samples-output-file", "Output file for generated samples", "string", "", "wsgc_generator"},
         {"-L", "--fir-filter-model", "Lowpass FIR filter model (see short help below)", "string", "", "any"},
+        {"-y", "--gpu-affinity", "Force CUDA execution on specified GPU ID", "int", "(none)", "wsgc_test"},
         {0,0,0,0,0,0}
     };
     
@@ -855,7 +862,21 @@ void Options::print_options(std::ostringstream& os)
     }
 
     os << "Processing options:" << std::endl;
-    os << " - " << (use_cuda ? "Using CUDA implementation" : "Using Host implementation") << std::endl;
+    
+    if (use_cuda)
+    {
+        os << " - Using CUDA implementation" << std::endl;
+        
+        if (gpu_affinity_specified)
+        {
+            os << " - Running on GPU #" << gpu_affinity << " requested" << std::endl;
+        }
+    }
+    else
+    {
+        std::cout << " - Using Host implementation" << std::endl;
+    }
+    
     if (simulate_training)
     {
         os << " - " << "Simulate synchronization training sequence" << std::endl;
@@ -874,7 +895,7 @@ void Options::print_options(std::ostringstream& os)
     
     if (noise_test)
     {
-        os << "Performing noise measurements" << std::endl;
+        os << " - Performing noise measurements" << std::endl;
     }
     
     os << std::endl;

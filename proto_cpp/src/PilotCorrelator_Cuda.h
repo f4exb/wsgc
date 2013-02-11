@@ -98,6 +98,7 @@ public:
 	* \param f_sampling Sampling frequency
 	* \param f_chip Chip rate (frequency)
     * \param _pilot_symbols Reference to the list of pilot symbol PRNs
+    * \param cuda_device CUDA GPU# on which to run
 	* \param prn_per_symbol Number of PRNs per symbol thus per averaging block
 	* \param nb_pilot_f_bins Number of frequency bins explored for pilot acquisition and tracking
 	* \param nb_batch_prns Number of PRNs processed in one batch ("PRN batch factor")
@@ -109,11 +110,11 @@ public:
         		wsgc_float f_sampling,
         		wsgc_float f_chip,
         		std::vector<unsigned int>& _pilot_symbols,
+        		unsigned int cuda_device,
                 unsigned int prn_per_symbol=4,
                 unsigned int nb_pilot_f_bins=3,
                 unsigned int nb_batch_prns=3,
-                unsigned int freq_step_division=1,
-                unsigned int cuda_device=0);
+                unsigned int freq_step_division=1);
 
     virtual ~PilotCorrelator_Cuda();
         

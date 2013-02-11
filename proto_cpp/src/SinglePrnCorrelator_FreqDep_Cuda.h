@@ -27,6 +27,7 @@
 #ifndef __SINGLE_PRN_CORRELATOR_FREQ_DEP_CUDA_H__
 #define __SINGLE_PRN_CORRELATOR_FREQ_DEP_CUDA_H__
 
+#include "CudaDeviceManager.h"
 #include "SinglePrnCorrelator_FreqDep.h"
 #include "WsgcTypes.h"
 #include "LocalCodesFFT_Cuda.h"
@@ -61,7 +62,7 @@ class PilotCorrelationAnalyzer;
  * This is a GPU implementation using CUDA.
  *
  */
-class SinglePrnCorrelator_FreqDep_Cuda : public SinglePrnCorrelator_FreqDep
+class SinglePrnCorrelator_FreqDep_Cuda : public CudaDeviceManager, public SinglePrnCorrelator_FreqDep
 {
 public:
 	/**
@@ -93,10 +94,10 @@ public:
 	* \param f_chip Chip rate (frequency)
     * \param _pilot_symbols Reference to the list of pilot symbol PRNs
 	* \param nb_f_bins Number of frequency bins explored around IF=0
+	* \param cuda_device CUDA device number to use
 	* \param prn_per_block Number of PRNs per (symbol) block
 	* \param nb_batch_prns Number of PRNs processed in one batch ("PRN batch factor")
 	* \param frequency_step_division Frequency step division
-	* \param cuda_device CUDA device number to use
 	*/
 	SinglePrnCorrelator_FreqDep_Cuda(
 			GoldCodeGenerator& gc_generator,
@@ -105,10 +106,10 @@ public:
 			wsgc_float f_chip,
 			std::vector<unsigned int>& pilot_symbols,
 			unsigned int nb_f_bins,
+			unsigned int cuda_device,
 			unsigned int prn_per_block=4,
 			unsigned int nb_batch_prns=3,
-			unsigned int frequency_step_division=1,
-			unsigned int cuda_device=0);
+			unsigned int frequency_step_division=1);
 
 	virtual ~SinglePrnCorrelator_FreqDep_Cuda();
 
@@ -140,7 +141,6 @@ protected:
 	thrust::device_vector<cuComplex> _d_ifft_in;     //!< Input area for IFFT
 	thrust::device_vector<cuComplex> _d_ifft_out;    //!< Output area for IFFT
 	thrust::device_vector<int> _d_avg_keys;          //!< Result keys for averaging
-	unsigned int _cuda_device;                       //!< CUDA device number on which to run
 	PilotCorrelationAnalyzer *_pilot_correlation_analyzer;
 	cublasHandle_t _cublas_handle;
 };

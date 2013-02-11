@@ -28,6 +28,7 @@
 #ifndef __LOCAL_CODES_FFT_CUDA__
 #define __LOCAL_CODES_FFT_CUDA__
 
+#include "CudaDeviceManager.h"
 #include "WsgcTypes.h"
 #include "LocalCodesFFT.h"
 #include <vector>
@@ -45,7 +46,7 @@ class GoldCodeGenerator;
    This pre-calculates the code to be inserted in the final IFFT.
  *
  */
-class LocalCodesFFT_Cuda : public LocalCodesFFT
+class LocalCodesFFT_Cuda : public CudaDeviceManager, public LocalCodesFFT
 {
     public:
         /**
@@ -53,13 +54,15 @@ class LocalCodesFFT_Cuda : public LocalCodesFFT
         * \param gc_generator Gold Code generator used to build the codes
         * \param f_sampling Sampling frequency
         * \param f_chip Chip rate
-        * \param symbols List of symbols to be processed        
+        * \param symbols List of symbols to be processed
+        * \param cuda_device CUDA GPU# on which to run
         */
         LocalCodesFFT_Cuda(CodeModulator& code_modulator, 
             GoldCodeGenerator& gc_generator, 
             wsgc_float f_sampling, 
             wsgc_float f_chip,
-            std::vector<unsigned int>& symbols);
+            std::vector<unsigned int>& symbols,
+            unsigned int cuda_device);
             
         ~LocalCodesFFT_Cuda();
         

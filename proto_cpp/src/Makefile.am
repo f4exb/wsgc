@@ -69,6 +69,7 @@ wsgc_test_SOURCES = CodeModulator_BPSK.cpp \
     FIRCoefGenerator.cpp \
     FIRCoefGenerator_RCos.cpp \
     CudaManager.cu \
+    CudaDeviceManager.cu \
     LocalCodesFFT_Cuda.cu \
     PilotCorrelator_Cuda.cu \
     SinglePrnCorrelator_FreqDep_Cuda.cu \
@@ -78,6 +79,7 @@ wsgc_test_SOURCES = CodeModulator_BPSK.cpp \
 wsgc_test_LDADD = -lrt $(FFTW3F_LIBS) $(NVLDFLAGS)
 
 wsgc_cuda_SOURCES = CudaManager.cu \
+	CudaDeviceManager.cu \
 	ContinuousPhaseCarrier.cpp \
 	SourceFFT.cpp \
 	SourceFFT_Cuda.cu \

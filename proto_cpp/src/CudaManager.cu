@@ -52,10 +52,11 @@ CudaManager::CudaManager(
 	_nb_prns_per_symbol(nb_prns_per_symbol),
 	_f_step_division(f_step_division),
 	_nb_cuda_devices(0),
-	_pilot1_cuda_device(0),
-	_pilot2_cuda_device(0),
+	_pilot_cuda_device(0),
 	_nb_message_devices(0),
-	_message_first_device(0)
+	_message_first_device(0),
+	_gpu_affinity(0),
+	_gpu_affinity_specified(false)
 {
 	if (_nb_pilots > 2)
 	{
@@ -69,7 +70,7 @@ CudaManager::~CudaManager()
 }
 
 
-void CudaManager::diagnose()
+bool CudaManager::diagnose()
 {
     cudaError_t error_id = cudaGetDeviceCount((int *) &_nb_cuda_devices);
 
@@ -77,7 +78,7 @@ void CudaManager::diagnose()
     {
         std::cout << "cudaGetDeviceCount returned %d\n-> %s\n" << (int)error_id << " -> " << cudaGetErrorString(error_id) << std::endl;
         _nb_cuda_devices = 0;
-        return;
+        return false;
     }
 
    analyze_memory_profile();
@@ -86,69 +87,77 @@ void CudaManager::diagnose()
     // TODO: consider more in detail (devices already sorted in bogomips order) each device capabilities to allocate workload more evenly
     make_device_profiles();
 
-    // Pilot allocation
-    if (_nb_pilots > 0)
+    if (_gpu_affinity_specified)
     {
-    	if (_nb_cuda_devices > 0)
-    	{
-    		_pilot1_cuda_device = 0;
-    	}
+        if (_gpu_affinity >= _nb_cuda_devices)
+        {
+            std::cout << "GPU affinity exceeds the number of GPUs available. GPU affinity is ignored" << std::endl;
+            _gpu_affinity_specified = false;
+        }
     }
+    
+	// Pilot allocation
+	if (_nb_pilots > 0)
+	{
+		if (_gpu_affinity_specified)
+		{
+			_pilot_cuda_device = _gpu_affinity;
+		}
+		else
+		{
+			_pilot_cuda_device = 0;
+		}
+	}
 
-    if (_nb_pilots > 1)
-    {
-    	if (_nb_cuda_devices > 0)
-    	{
-    		_pilot2_cuda_device = 0;
-    	}
-    	else if (_nb_cuda_devices > 1)
-    	{
-    		_pilot2_cuda_device = 1;
-    	}
-    }
+	// Message allocation
 
-    // Message allocation
+	if (_gpu_affinity_specified)
+	{
+		_nb_message_devices = 1;
+		_message_first_device = _gpu_affinity;
+	}
+	else if ((_nb_pilots > 0) && (_nb_cuda_devices > 1)) // route message on devices not processing pilot
+	{
+		_nb_message_devices = _nb_cuda_devices - 1;
+		_message_first_device = 1;
+	}
+	else // route messages on all devices evenly
+	{
+		_nb_message_devices = _nb_cuda_devices;
+		_message_first_device = 0;
+	}
 
-    if (_nb_cuda_devices > _nb_pilots) // route message on devices not processing pilots
-    {
-    	_nb_message_devices = _nb_cuda_devices - _nb_pilots;
-    	_message_first_device = _nb_pilots;
-    }
-    else // route messages on all devices evenly
-    {
-    	_nb_message_devices = _nb_cuda_devices;
-    	_message_first_device = 0;
-    }
+	unsigned int orig_block_size = _nb_message_symbols / _nb_message_devices;
+	unsigned int nb_extra_prns = _nb_message_symbols % orig_block_size;
+	unsigned int message_device = _message_first_device;
+	unsigned int nb_messages_for_device = 0;
 
-    unsigned int orig_block_size = _nb_message_symbols / _nb_message_devices;
-    unsigned int nb_extra_prns = _nb_message_symbols % orig_block_size;
-    unsigned int message_device = _message_first_device;
-    unsigned int nb_messages_for_device = 0;
+	for (unsigned int prni=0; prni < _nb_message_symbols; prni++)
+	{
+		if (nb_messages_for_device < orig_block_size)
+		{
+			_message_prn_allocation.push_back(message_device);
+			nb_messages_for_device++;
+		}
+		else
+		{
+			if (nb_extra_prns > 0)
+			{
+				_message_prn_allocation.push_back(message_device);
+				message_device++;
+				nb_messages_for_device = 0;
+				nb_extra_prns--;
+			}
+			else
+			{
+				message_device++;
+				nb_messages_for_device = 1;
+				_message_prn_allocation.push_back(message_device);
+			}
+		}
+	}
 
-    for (unsigned int prni=0; prni < _nb_message_symbols; prni++)
-    {
-    	if (nb_messages_for_device < orig_block_size)
-    	{
-    		_message_prn_allocation.push_back(message_device);
-    		nb_messages_for_device++;
-    	}
-    	else
-    	{
-    		if (nb_extra_prns > 0)
-    		{
-    			_message_prn_allocation.push_back(message_device);
-    			message_device++;
-    			nb_messages_for_device = 0;
-    			nb_extra_prns--;
-    		}
-    		else
-    		{
-    			message_device++;
-    			nb_messages_for_device = 1;
-    			_message_prn_allocation.push_back(message_device);
-    		}
-    	}
-    }
+	return true;
 }
 
 
@@ -181,14 +190,11 @@ void CudaManager::dump(std::ostringstream& os) const
 	os << "There are " << _nb_cuda_devices << " CUDA devices available" << std::endl;
     dump_device_info(os);
     
-	os << "Allocation for Pilots:" << std::endl;
-	os << "Pilot1 .....: " << _pilot1_cuda_device << std::endl;
+    os << std::endl;
+	os << "Allocation for Pilot:" << std::endl;
+	os << "Pilot ......: " << _pilot_cuda_device << std::endl;
 
-	if (_nb_pilots > 1)
-	{
-		os << "Pilot2 .....: " << _pilot2_cuda_device << std::endl;
-	}
-
+    os << std::endl;
 	os << "Allocation for Messages:" << std::endl;
 
 	for (std::vector<unsigned int>::const_iterator it = _message_prn_allocation.begin(); it != _message_prn_allocation.end(); ++it)
@@ -201,7 +207,7 @@ void CudaManager::dump(std::ostringstream& os) const
 		os << "[" << it-_message_prn_allocation.begin() << "]:" << *it;
 	}
 
-	os << std::endl;
+	os << std::endl << std::endl;
 	os << "Application CUDA memory profile:" << std::endl;
 	_wsgc_memory_profile.dump(os);
 }
@@ -222,7 +228,7 @@ void CudaManager::dump_device_info(std::ostringstream& os) const
 
 void CudaManager::WsgcMemoryProfile::dump(std::ostringstream& os) const
 {
-	unsigned int total;
+	unsigned int total_pilot, total_message;
 
 	os << "Pilot processing:" << std::endl;
 	os << "LocalCodes_FFT matrix ................: " << std::right << std::setw(11) << _local_codes_fft_matrix << std::endl
@@ -232,14 +238,14 @@ void CudaManager::WsgcMemoryProfile::dump(std::ostringstream& os) const
 	   << "Single PRN correlator fDep IFFT in ...: " << std::right << std::setw(11) << _sprn_corr_fdep_ifft_in << std::endl
 	   << "Single PRN correlator fDep IFFT out ..: " << std::right << std::setw(11) << _sprn_corr_fdep_ifft_out << std::endl
 	   << "Single PRN correlator fDep avg keys ..: " << std::right << std::setw(11) << _sprn_corr_fdep_avg_keys << std::endl;
-	total = _local_codes_fft_matrix
+	total_pilot = _local_codes_fft_matrix
 			+ _local_codes_fft_code
 			+ _source_fft_fft_in
 			+ _source_fft_fft_out
 			+ _sprn_corr_fdep_ifft_in
 			+ _sprn_corr_fdep_ifft_out
             + _sprn_corr_fdep_avg_keys;
-	os << "Total Pilot ..........................: " << std::right << std::setw(11) << total << std::endl;
+	os << "Total Pilot ..........................: " << std::right << std::setw(11) << total_pilot << std::endl;
 
 	os << "Message processing:" << std::endl;
 	os << "LocalCodes matrix ....................: " << std::right << std::setw(11) << _local_codes_matrix << std::endl
@@ -250,7 +256,7 @@ void CudaManager::WsgcMemoryProfile::dump(std::ostringstream& os) const
 	   << "Piloted Msg correlator mag ...........: " << std::right << std::setw(11) << _pil_msg_corr_corr_mag << std::endl
 	   << "Piloted Msg correlator mag avgsum ....: " << std::right << std::setw(11) << _pil_msg_corr_corr_mag_avgsum << std::endl
 	   << "Piloted Msg correlator corr keys .....: " << std::right << std::setw(11) << _pil_msg_corr_keys << std::endl;
-	total = _local_codes_matrix
+	total_message = _local_codes_matrix
 			+ _local_codes_code
 			+ _pil_msg_corr_corr_in
 			+ _pil_msg_corr_mul_out
@@ -258,7 +264,10 @@ void CudaManager::WsgcMemoryProfile::dump(std::ostringstream& os) const
 			+ _pil_msg_corr_corr_mag
 			+ _pil_msg_corr_corr_mag_avgsum
 			+ _pil_msg_corr_keys;
-	os << "Total Message ........................: " << std::right << std::setw(11) << total << std::endl;
+	os << "Total Message ........................: " << std::right << std::setw(11) << total_message << std::endl;
+    os << std::endl;
+	os << "Total Pilot + Message ................: " << std::right << std::setw(11) << total_pilot + total_message << std::endl;
+    
 }
 
 void CudaManager::analyze_memory_profile()

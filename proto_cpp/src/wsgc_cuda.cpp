@@ -100,6 +100,8 @@ void fill_options(options_t& options)
 	options.nb_batch_prns = 3;
 	options.nb_f_bins = 2;
 	options.prns_per_symbol = 4;
+
+	options.cuda_device = 0;
 }
 
 

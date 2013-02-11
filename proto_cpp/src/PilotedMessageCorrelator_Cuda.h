@@ -32,6 +32,7 @@
 #ifndef __PILOTED_MESSAGE_CORRELATOR_CUDA_H__
 #define __PILOTED_MESSAGE_CORRELATOR_CUDA_H__
 
+#include "CudaDeviceManager.h"
 #include "WsgcTypes.h"
 #include "CorrelationRecord.h"
 #include "ContinuousPhaseCarrier.h"
@@ -50,7 +51,7 @@ class PilotCorrelationAnalyzer;
  * \brief Correlator engine to acquire and track message PRN(s) using the frequency
  * and time displacement of correlation peak given by the Pilot Correlator - Host implementation
  */
-class PilotedMessageCorrelator_Cuda : public PilotedMessageCorrelator
+class PilotedMessageCorrelator_Cuda : public CudaDeviceManager, public PilotedMessageCorrelator
 {
 public:
     /**
@@ -59,8 +60,14 @@ public:
     * \param f_sampling Sampling frequency
     * \param f_chip Chip rate (frequency)
     * \param prn_per_symbol Number of PRNs per symbol or averaging block
+    * \param cuda_device CUDA GPU# on which to run
     */
-	PilotedMessageCorrelator_Cuda(LocalCodes_Cuda& local_codes, wsgc_float f_sampling, wsgc_float f_chip, unsigned int prn_per_symbol);
+	PilotedMessageCorrelator_Cuda(
+			LocalCodes_Cuda& local_codes,
+			wsgc_float f_sampling,
+			wsgc_float f_chip,
+			unsigned int prn_per_symbol,
+			unsigned int cuda_device);
 	virtual ~PilotedMessageCorrelator_Cuda();
 
 	/**

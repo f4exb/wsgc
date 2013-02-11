@@ -21,6 +21,7 @@ typedef struct options_s
 	unsigned int nb_batch_prns;
 	unsigned int nb_f_bins;
 	unsigned int prns_per_symbol;
+	unsigned int cuda_device;
 } options_t;
 
 class CudaManager;

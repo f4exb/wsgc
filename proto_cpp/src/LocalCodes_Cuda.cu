@@ -42,7 +42,9 @@ LocalCodes_Cuda::LocalCodes_Cuda(CodeModulator& code_modulator,
             GoldCodeGenerator& gc_generator, 
             wsgc_float f_sampling, 
             wsgc_float f_chip,
-            std::vector<unsigned int>& symbols) :
+            std::vector<unsigned int>& symbols,
+            unsigned int cuda_device) :
+    CudaDeviceManager::CudaDeviceManager(cuda_device),
     LocalCodes(code_modulator, gc_generator, f_sampling, f_chip, symbols),
     _nb_codes(symbols.size()),
     _codes_matrix(_nb_code_samples*symbols.size())

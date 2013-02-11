@@ -44,14 +44,14 @@ PilotCorrelator_Cuda::PilotCorrelator_Cuda(
 			wsgc_float f_sampling,
 			wsgc_float f_chip,
 			std::vector<unsigned int>& pilot_symbols,
+			unsigned int cuda_device,
 			unsigned int prn_per_symbol,
 			unsigned int nb_pilot_f_bins,
 			unsigned int nb_batch_prns,
-			unsigned int freq_step_division,
-			unsigned int cuda_device) :
+			unsigned int freq_step_division) :
 	PilotCorrelator(f_sampling, f_chip, gc_generator.get_nb_code_samples(f_sampling,f_chip), pilot_symbols, prn_per_symbol, nb_pilot_f_bins, nb_batch_prns, freq_step_division),
-	_source_fft(f_sampling, f_chip, _fft_N, freq_step_division),
-	_ifft_correlator_pilot(gc_generator, code_modulator, f_sampling, f_chip, pilot_symbols, nb_pilot_f_bins, prn_per_symbol, nb_batch_prns, freq_step_division, cuda_device)
+	_source_fft(f_sampling, f_chip, _fft_N, freq_step_division, cuda_device),
+	_ifft_correlator_pilot(gc_generator, code_modulator, f_sampling, f_chip, pilot_symbols, nb_pilot_f_bins, cuda_device, prn_per_symbol, nb_batch_prns, freq_step_division)
 {
 }
 

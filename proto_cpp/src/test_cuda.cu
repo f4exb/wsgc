@@ -45,7 +45,11 @@ test_cuda::test_cuda(options_t& options) :
 			options.prns_per_symbol,
 			options.freq_step_division
 			);
-    _cuda_manager->diagnose();
+	_cuda_manager->set_gpu_affinity(options.cuda_device);
+	if (!_cuda_manager->diagnose())
+	{
+		throw WsgcException("No CUDA device found");
+	}
     std::ostringstream cuda_os;
     _cuda_manager->dump(cuda_os);
     std::cout << cuda_os.str() << std::endl << std::endl;
@@ -63,7 +67,7 @@ void test_cuda::test1()
     ContinuousPhaseCarrier source_oscillator(_options.f_sampling, _options.fft_N);
     source_oscillator.make_next_samples(_options.f_chip);
 
-    SourceFFT_Cuda source_fft(_options.f_sampling, _options.f_chip, _options.fft_N, _options.freq_step_division);
+    SourceFFT_Cuda source_fft(_options.f_sampling, _options.f_chip, _options.fft_N, _options.freq_step_division, _options.cuda_device);
 
     thrust::device_vector<cuComplex>& d_fft_source = source_fft.do_fft(source_oscillator.get_samples());
     thrust::host_vector<cuComplex> h_fft_source(_options.freq_step_division*_options.fft_N);
@@ -90,10 +94,10 @@ void test_cuda::test2(wsgc_complex *message_samples, GoldCodeGenerator& gc_gener
 		std::cout << i << ": (" << message_samples[i].real() << "," << message_samples[i].imag() << ")" << std::endl;
 	}
 
-	SourceFFT_Cuda source_fft(_options.f_sampling, _options.f_chip, _options.fft_N, _options.freq_step_division);
+	SourceFFT_Cuda source_fft(_options.f_sampling, _options.f_chip, _options.fft_N, _options.freq_step_division, _options.cuda_device);
 	thrust::device_vector<cuComplex>& d_fft_source = source_fft.do_fft(message_samples);
 
-	LocalCodesFFT_Cuda local_codes(code_modulator, gc_generator, _options.f_sampling, _options.f_chip, _options.prn_list);
+	LocalCodesFFT_Cuda local_codes(code_modulator, gc_generator, _options.f_sampling, _options.f_chip, _options.prn_list, _options.cuda_device);
 
 	thrust::device_vector<cuComplex> d_result(_options.fft_N);
 	const thrust::device_vector<cuComplex>& d_local_codes = local_codes.get_local_codes();
@@ -143,10 +147,10 @@ void test_cuda::test2(wsgc_complex *message_samples, GoldCodeGenerator& gc_gener
 
 void test_cuda::test3(wsgc_complex *message_samples, GoldCodeGenerator& gc_generator, CodeModulator_BPSK& code_modulator)
 {
-	SourceFFT_Cuda source_fft(_options.f_sampling, _options.f_chip, _options.fft_N, _options.freq_step_division);
+	SourceFFT_Cuda source_fft(_options.f_sampling, _options.f_chip, _options.fft_N, _options.freq_step_division, _options.cuda_device);
 	thrust::device_vector<cuComplex>& d_source_block = source_fft.do_fft(message_samples);
 
-	LocalCodesFFT_Cuda local_codes(code_modulator, gc_generator, _options.f_sampling, _options.f_chip, _options.prn_list);
+	LocalCodesFFT_Cuda local_codes(code_modulator, gc_generator, _options.f_sampling, _options.f_chip, _options.prn_list, _options.cuda_device);
 	const thrust::device_vector<cuComplex>& d_local_codes = local_codes.get_local_codes();
 
 	thrust::device_vector<cuComplex> d_ifft_in(_options.fft_N*_options.nb_f_bins*_options.freq_step_division*2*_options.nb_batch_prns);
@@ -274,10 +278,10 @@ void test_cuda::test3(wsgc_complex *message_samples, GoldCodeGenerator& gc_gener
 
 void test_cuda::test4(wsgc_complex *message_samples, GoldCodeGenerator& gc_generator, CodeModulator_BPSK& code_modulator)
 {
-	SourceFFT_Cuda source_fft(_options.f_sampling, _options.f_chip, _options.fft_N, _options.freq_step_division);
+	SourceFFT_Cuda source_fft(_options.f_sampling, _options.f_chip, _options.fft_N, _options.freq_step_division, _options.cuda_device);
 	thrust::device_vector<cuComplex>& d_source_block = source_fft.do_fft(message_samples);
 
-	LocalCodesFFT_Cuda local_codes(code_modulator, gc_generator, _options.f_sampling, _options.f_chip, _options.prn_list);
+	LocalCodesFFT_Cuda local_codes(code_modulator, gc_generator, _options.f_sampling, _options.f_chip, _options.prn_list, _options.cuda_device);
 	const thrust::device_vector<cuComplex>& d_local_codes = local_codes.get_local_codes();
 
 	thrust::device_vector<cuComplex> d_ifft_in(_options.fft_N*_options.nb_f_bins*_options.freq_step_division*2*_options.nb_batch_prns);
@@ -767,7 +771,7 @@ void test_cuda::test_simple_time_correlation(wsgc_complex *message_samples, Gold
         d_source_block.begin()
     );
 
-    LocalCodes_Cuda local_codes(code_modulator, gc_generator, _options.f_sampling, _options.f_chip, _options.prn_list);
+    LocalCodes_Cuda local_codes(code_modulator, gc_generator, _options.f_sampling, _options.f_chip, _options.prn_list, _options.cuda_device);
     const thrust::device_vector<cuComplex>& lc_matrix = local_codes.get_local_codes();
     shifted_range<thrust::device_vector<cuComplex>::const_iterator > lc_shifted_matrix(lc_matrix.begin(), lc_matrix.end(), -_options.code_shift);
     thrust::transform(lc_shifted_matrix.begin(), lc_shifted_matrix.end(), d_source_block.begin(), d_mul_block.begin(), cmulc_functor2());
@@ -804,7 +808,7 @@ void test_cuda::test_multiple_time_correlation(wsgc_complex *message_samples, Go
     // make repetition of input
     repeat_range<thrust::device_vector<cuComplex>::iterator> d_source_block_multi(d_source_block.begin(), d_source_block.end(), _options.prn_list.size());
     // get local codes serial matrix    
-    LocalCodes_Cuda local_codes(code_modulator, gc_generator, _options.f_sampling, _options.f_chip, _options.prn_list);
+    LocalCodes_Cuda local_codes(code_modulator, gc_generator, _options.f_sampling, _options.f_chip, _options.prn_list, _options.cuda_device);
     const thrust::device_vector<cuComplex>& lc_matrix = local_codes.get_local_codes();
     // shift local codes to match source delay
     shifted_by_segments_range<thrust::device_vector<cuComplex>::const_iterator > lc_shifted_matrix(lc_matrix.begin(), lc_matrix.end(), _options.fft_N, -_options.code_shift);

@@ -28,6 +28,7 @@
 #ifndef __SOURCE_FFT_CUDA__
 #define __SOURCE_FFT_CUDA__
 
+#include "CudaDeviceManager.h"
 #include "WsgcTypes.h"
 #include "SourceFFT.h"
 #include <vector>
@@ -47,7 +48,7 @@ class ContinuousPhaseCarrier;
    This pre-calculates the code to be inserted in the final IFFT.
  *
  */
-class SourceFFT_Cuda : public SourceFFT
+class SourceFFT_Cuda : public CudaDeviceManager, public SourceFFT
 {
 public:
     /**
@@ -55,11 +56,13 @@ public:
     * \param f_chip Chip rate
     * \param fft_N FFT size
     * \param freq_step_division Number of frequency sub steps
+    * \param cuda_device GPU# on which to run
     */
     SourceFFT_Cuda(wsgc_float f_sampling, 
                    wsgc_float f_chip,
                    unsigned int fft_N,
-                   unsigned int freq_step_division);
+                   unsigned int freq_step_division,
+                   unsigned int cuda_device);
 
     virtual ~SourceFFT_Cuda();
 
@@ -84,7 +87,6 @@ protected:
     thrust::device_vector<cuComplex> _d_fft_in;  //!< Signal input samples for FFT
     thrust::device_vector<cuComplex> _d_fft_out; //!< Signal FFT output samples
     wsgc_complex *_h_fft_sample_in;              //!< Host input samples
-
 };
 
 #endif // __SOURCE_FFT_CUDA__

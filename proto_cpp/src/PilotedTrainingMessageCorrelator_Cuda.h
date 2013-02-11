@@ -33,6 +33,7 @@
 #ifndef __PILOTED_TRAINING_MESSAGE_CORRELATOR_CUDA_H__
 #define __PILOTED_TRAINING_MESSAGE_CORRELATOR_CUDA_H__
 
+#include "CudaDeviceManager.h"
 #include "WsgcTypes.h"
 #include "ContinuousPhaseCarrier.h"
 #include "PilotedTrainingMessageCorrelator.h"
@@ -49,7 +50,7 @@ class PilotCorrelationAnalyzer;
  * \brief Correlator engine to acquire starting point in time of the training sequence using the frequency
  * and time displacement of correlation peak given by the Pilot Correlator - Host implementation
  */
-class PilotedTrainingMessageCorrelator_Cuda : public PilotedTrainingMessageCorrelator
+class PilotedTrainingMessageCorrelator_Cuda : public CudaDeviceManager, public PilotedTrainingMessageCorrelator
 {
 public:
     /**
@@ -59,12 +60,14 @@ public:
     * \param f_chip Chip rate (frequency)
     * \param analysis_window_size Analysis window size in number of PRNs
     * \param sequence_length Length of training sequence should be less than possible symbol numbers
+    * \param cuda_device CUDA GPU# on which to run
     */
 	PilotedTrainingMessageCorrelator_Cuda(LocalCodes_Cuda& local_codes, 
             wsgc_float f_sampling, 
             wsgc_float f_chip, 
             unsigned int analysis_window_size,
-            unsigned int sequence_length);
+            unsigned int sequence_length,
+            unsigned int cuda_device);
             
 	virtual ~PilotedTrainingMessageCorrelator_Cuda();
 
