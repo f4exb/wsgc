@@ -27,6 +27,7 @@
 #include "WsgcUtils.h"
 #include <iostream>
 #include <algorithm>
+#include <ctime>
 
 // magnitude estimation constants, minimizes average error
 const wsgc_float WsgcUtils::magnitude_estimation_alpha = 0.948059448969;
@@ -168,3 +169,20 @@ void WsgcUtils::print_interval(std::ostringstream& os, unsigned int start, unsig
         }
     }
 }
+
+
+unsigned long WsgcUtils::timenow_usec()
+{
+    timespec ts;
+    clock_gettime(CLOCK_REALTIME, &ts); 
+    return (ts.tv_sec*1000000) + (ts.tv_nsec / 1000);
+}
+
+
+unsigned int WsgcUtils::timenow_usec_hour()
+{
+    timespec ts;
+    clock_gettime(CLOCK_REALTIME, &ts);
+    return ((ts.tv_sec % 3600)*1000000) + (ts.tv_nsec / 1000);
+}
+

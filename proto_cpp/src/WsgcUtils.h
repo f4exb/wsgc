@@ -147,6 +147,8 @@ class WsgcUtils
         static void magnitude_algebraic(wsgc_complex *in, wsgc_float *magnitude);
         static void print_histo(const std::vector<std::pair<unsigned int, unsigned int> >& histo, std::ostringstream& os);
         static void print_interval(std::ostringstream& os, unsigned int start, unsigned int length, unsigned int wrap_limit = 0);
+        static unsigned long timenow_usec();
+        static unsigned int timenow_usec_hour();
         
     private:
         static const wsgc_float magnitude_estimation_alpha;

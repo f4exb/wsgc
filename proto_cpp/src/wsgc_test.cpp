@@ -115,6 +115,8 @@ int main(int argc, char *argv[])
 	std::string binary_name(argv[0]);
     Options options(binary_name);
 
+    srand(WsgcUtils::timenow_usec_hour());
+
     if (options.get_options(argc,argv))
     {
         std::ostringstream os;
@@ -577,9 +579,9 @@ void message_processing(
             decision_box->dump_decision_status(os_result, options.prns);
             os_result << std::endl << "Index, original and decoded symbols (-1 denotes an erasure):";
             os_result << std::endl << "-----------------------------------------------------------" << std::endl;
-            print_vector<unsigned int, unsigned int>(symbol_indices, 4, os_result); os_result << std::endl;
-            print_vector<unsigned int, unsigned int>(options.prns, 4, os_result); os_result << std::endl;
-            print_vector<int, int>(decision_box->get_decoded_symbols(), 4, os_result); os_result << std::endl;
+            os_result << "_SIN "; print_vector<unsigned int, unsigned int>(symbol_indices, 4, os_result); os_result << std::endl;
+            os_result << "_SOR "; print_vector<unsigned int, unsigned int>(options.prns, 4, os_result); os_result << std::endl;
+            os_result << "_SRS "; print_vector<int, int>(decision_box->get_decoded_symbols(), 4, os_result); os_result << std::endl;
             std::cout << os_result.str() << std::endl;
 
             unsigned int erasure_counts = 0;
@@ -603,6 +605,7 @@ void message_processing(
             std::cout << erasure_counts << " erasures (" << ((float) erasure_counts)/decision_box->get_decoded_symbols().size() << ")" << std::endl;
             std::cout << error_counts << " errors (" << ((float) error_counts)/decision_box->get_decoded_symbols().size() << ")" << std::endl;
             std::cout << erasure_counts+error_counts << " total (" << ((float) erasure_counts+error_counts)/decision_box->get_decoded_symbols().size() << ")" << std::endl;
+            std::cout << "_SUM " << erasure_counts << "," << error_counts << "," << erasure_counts+error_counts << std::endl;
         }
 
         // Delete dynamically allocated objects

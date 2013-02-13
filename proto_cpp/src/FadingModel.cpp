@@ -26,6 +26,7 @@
 */
 
 #include "FadingModel.h"
+#include "WsgcUtils.h"
 #include <iostream>
 #include <cmath>
 #include <assert.h>
@@ -37,7 +38,8 @@ FadingModel::FadingModel(wsgc_float f_sampling, bool active) :
     _active(active),
     _verbose(false)
 {
-    _random_engine.seed(time(0));
+    //_random_engine.seed(time(0));
+    _random_engine.seed(WsgcUtils::timenow_usec());
 }
 
 

@@ -750,6 +750,7 @@ void Options::print_options(std::ostringstream& os)
     os << std::setiosflags(std::ios_base::fixed);
     os << "Sampling frequency ........: " << std::setw(8) << std::setprecision(1) << std::right << f_sampling << std::endl;
     os << "Chip frequency ............: " << std::setw(8) << std::setprecision(1) << std::right << f_chip << std::endl;
+    os << "Samples per chip ..........: " << std::setw(10) << std::setprecision(3) << std::right << f_sampling/f_chip << std::endl;
     os << "Code length ...............: " << std::setw(6) << std::right << code_length << std::endl;
     os << "Code period ...............: " << std::setw(9) << std::setprecision(2) << std::right << code_period << std::endl;
     os << "Samples/code = FFT size ...: " << std::setw(6) << std::right << nb_samples_per_code << std::endl;

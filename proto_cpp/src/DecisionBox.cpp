@@ -209,7 +209,7 @@ void DecisionBox::dump_decision_records(std::ostringstream& os) const
     
     for (; it != it_end; ++it)
     {
-        it->dump_line(os, _mag_display_adj_factor);
+        it->dump_line(os, "_DCR", _mag_display_adj_factor);
     }
 }
 
@@ -264,7 +264,7 @@ void DecisionBox::dump_decision_status(std::ostringstream& os, std::vector<unsig
 			{
 				dump_decoding_status(os, decision_status);
 				os << " ";
-				_decision_records[i].dump_line(os, _mag_display_adj_factor);
+				_decision_records[i].dump_line(os, "_DCS", _mag_display_adj_factor);
 			}
 		}
 	}

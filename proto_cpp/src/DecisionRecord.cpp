@@ -89,10 +89,11 @@ void DecisionRecord::dump(std::ostringstream& os, wsgc_float magnitude_factor) c
 }
 
 
-void DecisionRecord::dump_line(std::ostringstream& os, wsgc_float magnitude_factor) const
+void DecisionRecord::dump_line(std::ostringstream& os, std::string tag, wsgc_float magnitude_factor) const
 {
     os << std::setiosflags(std::ios_base::fixed);
-    os << std::setw(3) << symbol_index
+    os << tag
+       << " " << std::setw(3) << symbol_index
        << " " << std::setw(3) << global_prn_index
        << " " << std::setw(2) << prn_per_symbol_index
        << " " << std::setw(3) << prn_index_max
@@ -119,7 +120,7 @@ void DecisionRecord::dump_line(std::ostringstream& os, wsgc_float magnitude_fact
     	os << " " << std::setw(5) << std::setprecision(2) << 0.0;
     }
 
-    os << " " << std::setw(4) << shift_index_max
+    os << " " << std::setw(5) << shift_index_max
        << " " << std::setw(6) << std::setprecision(2) << std::setfill(' ') << f_rx << " ";
        
     dump_decision_type(os);
@@ -129,7 +130,7 @@ void DecisionRecord::dump_line(std::ostringstream& os, wsgc_float magnitude_fact
 
 void DecisionRecord::dump_banner(std::ostringstream& os)
 {
-    os << " Si PNi Pi PN# S# Mag.Max Max/Avg Nse.Avg S/N.. Ti.. Frx... Decision" << std::endl;
+    os << "Tag. Si. PNi Pi PN# S# Mag.Max Max/Avg Nse.Avg S/N.. Ti... Frx... Decision" << std::endl;
 }
 
 

@@ -46,7 +46,7 @@ public:
     
     void reset();
     void dump(std::ostringstream& os, wsgc_float magnitude_factor = 1.0) const;
-    void dump_line(std::ostringstream& os, wsgc_float magnitude_factor = 1.0) const;
+    void dump_line(std::ostringstream& os, std::string tag, wsgc_float magnitude_factor = 1.0) const;
     static void dump_banner(std::ostringstream& os);
     
     // Ni, prn_index_max, value_max, bin_index_max, phase_max, fd, frequency_locked
