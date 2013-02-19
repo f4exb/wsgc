@@ -22,6 +22,7 @@
 #include "Demodulator.h"
 #include "DemodulatorDifferential.h"
 #include "DemodulatorSquaring.h"
+#include "CodeModulator_MFSK.h"
 
 void apply_fir(wsgc_complex *inout, unsigned int& nb_samples, const std::vector<wsgc_float>& fir_coef);
 
@@ -40,6 +41,9 @@ int main(int argc, char *argv[])
 
         GoldCodeGenerator gc_generator(options.gc_nb_stages, options.nb_message_symbols, options.nb_service_symbols, options.nb_training_symbols, options.g1_poly_powers, options.g2_poly_powers);
         CodeModulator *codeModulator = 0;
+        CodeModulator_MFSK *codeModulator_MFSK = 0;
+        wsgc_complex *source_samples = 0;
+        unsigned int nb_source_samples = 0;
         SimulatedSource *message_source = 0;
         SourceMixer *source_mixer = 0;
         std::vector<unsigned int> pilot_prns;
@@ -64,16 +68,15 @@ int main(int argc, char *argv[])
         {
             codeModulator = new CodeModulator_CW_Test();
         }
+        else if (options.modulation.getScheme() == Modulation::Modulation_MFSK)
+        {
+            codeModulator_MFSK = new CodeModulator_MFSK(options.mfsk_options._f_sampling, options.mfsk_options._zero_frequency, options.mfsk_options._symbol_bandwidth, options.mfsk_options._symbol_time);
+        }
 
         if (codeModulator) // if a code modulator is available then the actual signal processing can take place
         {
             // Produce signal samples
             std::cout << "Produce signal samples..." << std::endl;
-
-            LocalCodesFFT *local_codes_fft = 0;
-            LocalCodes *local_codes = 0;
-            wsgc_complex *source_samples = 0;
-            unsigned int nb_source_samples = 0;
 
             message_source = new SimulatedSource(gc_generator, options.prns, options.f_sampling, options.f_chip,
                                                  options.f_tx, options.code_shift, options.nb_prns_per_symbol, 0.0);
@@ -99,6 +102,22 @@ int main(int argc, char *argv[])
             	source_samples = message_source->get_samples();
             	nb_source_samples = message_source->get_nb_samples();
             }
+        }
+        else if (codeModulator_MFSK != 0)
+        {
+        	nb_source_samples = codeModulator_MFSK->get_nb_symbol_samples()*options.prns.size();
+        	source_samples = (wsgc_complex *) WSGC_FFTW_MALLOC(nb_source_samples*sizeof(wsgc_fftw_complex));
+        	codeModulator_MFSK->modulate(reinterpret_cast<wsgc_fftw_complex*>(source_samples), options.prns);
+        }
+        else
+        {
+            std::cout << "Code modulator not implemented for this modulation scheme" << std::endl;
+        }
+
+        if (source_samples)
+        {
+            LocalCodesFFT *local_codes_fft = 0;
+            LocalCodes *local_codes = 0;
 
             // Apply lowpass filter if any
             if (options._fir_coef_generator != 0)
@@ -205,7 +224,7 @@ int main(int argc, char *argv[])
         }
         else
         {
-            std::cout << "Code modulator not implemented for this modulation scheme" << std::endl;
+            std::cout << "No source samples were generated" << std::endl;
         }
 
         return 0;

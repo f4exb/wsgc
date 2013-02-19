@@ -1,66 +1,54 @@
 /*
      Copyright 2012 Edouard Griffiths <f4exb at free dot fr>
-
+ 
      This file is part of WSGC. A Weak Signal transmission mode using Gold Codes
-
+ 
      This program is free software; you can redistribute it and/or modify
      it under the terms of the GNU General Public License as published by
      the Free Software Foundation; either version 2 of the License, or
      (at your option) any later version.
-
+ 
      This program is distributed in the hope that it will be useful,
      but WITHOUT ANY WARRANTY; without even the implied warranty of
      MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
      GNU General Public License for more details.
-
+ 
      You should have received a copy of the GNU General Public License
      along with this program; if not, write to the Free Software
      Foundation, Inc., 51 Franklin Street, Boston, MA  02110-1301  USA
 
      Static not real time prototype in C++
+      
+     Options specific to MFSK
 
-     Modulation
-
-     Represents a modulation its properties, specific methods and attributes
+     Options parsing and holding
+     
 */
-#ifndef __MODULATION_H__
-#define __MODULATION_H__
+#ifndef __MFSK_OPTIONS_H__
+#define __MFSK_OPTIONS_H__
 
+#include "WsgcTypes.h"
+#include <string>
 #include <sstream>
 
-class Modulation
+class MFSK_Options
 {
 public:
-    typedef enum
-    {
-        Modulation_BPSK,
-        Modulation_DBPSK,
-        Modulation_OOK,
-        Modulation_CW,
-        Modulation_MFSK
-    } ModulationScheme_t;
+	MFSK_Options(wsgc_float f_sampling);
+    ~MFSK_Options();
 
-    Modulation(ModulationScheme_t modulation_scheme) : _modulation_scheme(modulation_scheme)
-    {}
-
-    void setScheme(ModulationScheme_t modulation_scheme)
-    {
-        _modulation_scheme = modulation_scheme;
-    }
-
-    const ModulationScheme_t getScheme() const
-    {
-        return _modulation_scheme;
-    }
-
-    bool isFrequencyDependant();
-    bool isCodeDivisionCapable();
-    bool isDifferential();
-    bool demodulateBeforeCorrelate();
-    void print_modulation_data(std::ostringstream& os);
-
-private:
-    ModulationScheme_t _modulation_scheme;
+    bool parse_options(std::string& mfsk_params);
+	void print_options(std::ostringstream& os);
+        
+	wsgc_float _f_sampling;
+	unsigned int _symbol_bandwidth_log2;
+	int _symbol_time_log2;
+	int _zero_frequency_slot;
+	wsgc_float _symbol_bandwidth;
+	wsgc_float _symbol_time;
+	wsgc_float _zero_frequency;
+	unsigned int _fft_N;
+	unsigned int _nb_fft_per_symbol;
 };
 
-#endif // __MODULATION_H__
+#endif // __MFSK_OPTIONS_H__

@@ -98,7 +98,8 @@ Options::Options(std::string& _binary_name) :
     simulate_demod(false),
     gpu_affinity(0),
     gpu_affinity_specified(false),
-	_fir_coef_generator(0)
+	_fir_coef_generator(0),
+	mfsk_options(4096.0)
 {
     srand(time(0));
 
@@ -735,8 +736,21 @@ void Options::get_help(std::ostringstream& os)
     }
 }
 
-        
+
 void Options::print_options(std::ostringstream& os)
+{
+	if (modulation.getScheme() == Modulation::Modulation_MFSK)
+	{
+		print_mfsk_options(os);
+	}
+	else
+	{
+		print_standard_options(os);
+	}
+}
+
+        
+void Options::print_standard_options(std::ostringstream& os)
 {
     // additional computations
     unsigned int code_length = (1<<gc_nb_stages)-1;
@@ -905,6 +919,65 @@ void Options::print_options(std::ostringstream& os)
 }
 
 
+void Options::print_mfsk_options(std::ostringstream& os)
+{
+    os << "Using options:" << std::endl;
+    os << "------------- " << std::endl;
+    os << std::endl;
+    os << "Modulation ................: "; modulation.print_modulation_data(os); os << std::endl;
+    mfsk_options.print_options(os);
+    os << "Nb message symbols ........: " << std::setw(6) << std::right << nb_message_symbols << std::endl;
+    os << "Nb service symbols ........: " << std::setw(6) << std::right << nb_service_symbols << std::endl;
+    os << "Nb training symbols .......: " << std::setw(6) << std::right << nb_training_symbols << std::endl;
+	os << "Max symbol frequency.......: " << std::setw(9) << std::setprecision(2) << std::right << (nb_message_symbols+nb_service_symbols)*mfsk_options._symbol_bandwidth + mfsk_options._zero_frequency << std::endl;
+    os << "Nb of generated symbols ...: " << std::setw(6) << std::right << prns.size() << std::endl;
+	os << "Message time ..............: " << std::setw(9) << std::setprecision(2) << std::right <<  prns.size() * mfsk_options._symbol_time << std::endl;
+	os << "Tx shift frequency ........: " << std::setw(9) << std::setprecision(2) << std::right << f_tx << std::endl;
+    os << "SNR(dB) ...................: ";
+
+    if (make_noise)
+    {
+        os << std::setw(8) << std::setprecision(1) << std::right << snr << std::endl;
+    }
+    else
+    {
+        os << "No noise" << std::endl;
+    }
+
+    if (_fading_model != 0)
+    {
+        os << "Fading Model ..............: "; print_fading_model_data(os); os << std::endl;
+    }
+
+
+	if (binary_name == "wsgc_generator")
+	{
+		os << "Samples output file .......: " << samples_output_file << std::endl;
+		os << "Demodulation ..............: " << (simulate_demod ? "Yes" : "No") << std::endl;
+	}
+
+	os << "Processing options:" << std::endl;
+
+    if (use_cuda)
+    {
+        os << " - Using CUDA implementation" << std::endl;
+
+        if (gpu_affinity_specified)
+        {
+            os << " - Running on GPU #" << gpu_affinity << " requested" << std::endl;
+        }
+    }
+    else
+    {
+        std::cout << " - Using Host implementation" << std::endl;
+    }
+
+    os << std::endl;
+    os << "Processing " << prns.size() << " symbols: ";
+    print_vector<unsigned int, unsigned int>(prns, 4, os); os << std::endl;
+}
+
+
 void Options::print_fading_model_data(std::ostringstream& os)
 {
     if (_fading_model)
@@ -1061,26 +1134,35 @@ bool Options::parse_modulation_data(std::string modulation_data_str)
         modulation.setScheme(Modulation::Modulation_CW);
         return true;
 	}
+	else if (modulation_data_str.compare(0,4,"MFSK") == 0)
+	{
+		if (modulation_data_str.size() < 6)
+		{
+			std::cout << "MFSK modulation specification is incorrect" << std::endl;
+			return false;
+		}
+		else
+		{
+			size_t colon_pos = modulation_data_str.find(":");
+
+			if (colon_pos == std::string::npos)
+			{
+				std::cout << "MFSK modulation specification is incorrect" << std::endl;
+				return false;
+			}
+			else
+			{
+				modulation.setScheme(Modulation::Modulation_MFSK);
+				std::string parameter_str = modulation_data_str.substr(colon_pos+1);
+				bool status = mfsk_options.parse_options(parameter_str);
+				return status;
+			}
+		}
+	}
 	else
 	{
         return false;
 	}
-
-	/*
-    switch(modulation_data_str[0])
-    {
-        case 'B':
-        case 'b':
-            modulation.setScheme(Modulation::Modulation_BPSK);
-            return true;
-        case 'O':
-        case 'o':
-            modulation.setScheme(Modulation::Modulation_OOK);
-            return true;
-        default:
-            return false;
-    }
-    */
 }
 
 

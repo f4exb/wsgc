@@ -12,7 +12,7 @@ AM_CXXFLAGS += $(CUDA_CFLAGS)
 wsgc_test_SOURCES = CodeModulator_BPSK.cpp \
     CodeModulator_DBPSK.cpp \
     CodeModulator_OOK.cpp \
-    CodeModulator_OOK_detection.cpp \
+    CodeModulator_MFSK.cpp \
     ContinuousPhaseCarrier.cpp \
     TimeCorrelationAnalyzer.cpp \
     CorrelationRecord.cpp \
@@ -44,6 +44,7 @@ wsgc_test_SOURCES = CodeModulator_BPSK.cpp \
     PilotedTrainingMultiplePrnCorrelator.cpp \
     TrainingCorrelationRecord.cpp \
     Options.cpp \
+    MFSK_Options.cpp \
     Path.cpp \
     PilotCorrelationAnalyzer.cpp \
     PilotCorrelationRecord.cpp \
@@ -68,6 +69,8 @@ wsgc_test_SOURCES = CodeModulator_BPSK.cpp \
     FIR_RCoef.cpp \
     FIRCoefGenerator.cpp \
     FIRCoefGenerator_RCos.cpp \
+    MFSK_MessageDemodulationRecord.cpp \
+    MFSK_MessageDemodulator.cpp \
     CudaManager.cu \
     CudaDeviceManager.cu \
     LocalCodesFFT_Cuda.cu \
@@ -101,7 +104,7 @@ else
 wsgc_test_SOURCES = CodeModulator_BPSK.cpp \
     CodeModulator_DBPSK.cpp \
     CodeModulator_OOK.cpp \
-    CodeModulator_OOK_detection.cpp \
+    CodeModulator_MFSK.cpp \
     ContinuousPhaseCarrier.cpp \
     TimeCorrelationAnalyzer.cpp \
     CorrelationRecord.cpp \
@@ -130,6 +133,7 @@ wsgc_test_SOURCES = CodeModulator_BPSK.cpp \
     PilotedTrainingMultiplePrnCorrelator.cpp \
     TrainingCorrelationRecord.cpp \
     Options.cpp \
+    MFSK_Options.cpp \
     Path.cpp \
     PilotCorrelationAnalyzer.cpp \
     PilotCorrelationRecord.cpp \
@@ -153,7 +157,9 @@ wsgc_test_SOURCES = CodeModulator_BPSK.cpp \
     WsgcUtils.cpp \
     FIR_RCoef.cpp \
     FIRCoefGenerator.cpp \
-    FIRCoefGenerator_RCos.cpp
+    FIRCoefGenerator_RCos.cpp \
+    MFSK_MessageDemodulationRecord.cpp \
+    MFSK_MessageDemodulator.cpp 
 
 wsgc_test_LDADD = -lrt $(FFTW3F_LIBS)
 
@@ -167,9 +173,9 @@ wsgc_generator_SOURCES = wsgc_generator.cpp \
     LocalCodesFFT.cpp \
     WsgcUtils.cpp \
     Options.cpp \
+    MFSK_Options.cpp \
     SimulatedSource.cpp \
     CodeModulator_OOK.cpp \
-    CodeModulator_OOK_detection.cpp \
     CodeModulator_CW_Test.cpp \
     FadingModel.cpp \
     FadingModelNone.cpp \
@@ -184,7 +190,8 @@ wsgc_generator_SOURCES = wsgc_generator.cpp \
     FIRCoefGenerator.cpp \
     FIRCoefGenerator_RCos.cpp \
     DemodulatorDifferential.cpp \
-    DemodulatorSquaring.cpp
+    DemodulatorSquaring.cpp \
+    CodeModulator_MFSK.cpp
 
 wsgc_generator_LDADD = -lrt $(FFTW3F_LIBS)
 

@@ -64,6 +64,12 @@ void Modulation::print_modulation_data(std::ostringstream& os)
         case Modulation_OOK:
             os << "OOK";
             break;
+        case Modulation_CW:
+            os << "CW";
+            break;
+        case Modulation_MFSK:
+            os << "MFSK";
+            break;
         default:
             os << "None";
             break;

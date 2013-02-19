@@ -19,48 +19,36 @@
 
      Static not real time prototype in C++
 
-     Modulation
+     MFSK_MessageDemodulationRecord
 
-     Represents a modulation its properties, specific methods and attributes
+     Class that holds messsage demodulation data
+
 */
-#ifndef __MODULATION_H__
-#define __MODULATION_H__
+#ifndef __MFSK_MESSAGE_DEMODULATION_RECORD__
+#define __MFSK_MESSAGE_DEMODULATION_RECORD__
 
+#include "WsgcTypes.h"
 #include <sstream>
 
-class Modulation
+/**
+ * \brief Class that holds messsage demodulation data
+ */
+class MFSK_MessageDemodulationRecord
 {
 public:
-    typedef enum
-    {
-        Modulation_BPSK,
-        Modulation_DBPSK,
-        Modulation_OOK,
-        Modulation_CW,
-        Modulation_MFSK
-    } ModulationScheme_t;
+	MFSK_MessageDemodulationRecord();
+	~MFSK_MessageDemodulationRecord();
 
-    Modulation(ModulationScheme_t modulation_scheme) : _modulation_scheme(modulation_scheme)
-    {}
+    void reset();
+    void dump(std::ostringstream& os, wsgc_float magnitude_factor = 1.0) const;
+    void dump_line(std::ostringstream& os, wsgc_float magnitude_factor = 1.0) const;
+    static void dump_banner(std::ostringstream& os);
 
-    void setScheme(ModulationScheme_t modulation_scheme)
-    {
-        _modulation_scheme = modulation_scheme;
-    }
-
-    const ModulationScheme_t getScheme() const
-    {
-        return _modulation_scheme;
-    }
-
-    bool isFrequencyDependant();
-    bool isCodeDivisionCapable();
-    bool isDifferential();
-    bool demodulateBeforeCorrelate();
-    void print_modulation_data(std::ostringstream& os);
-
-private:
-    ModulationScheme_t _modulation_scheme;
+	unsigned int _symbol_index;
+	unsigned int _symbol_ordinal;
+	wsgc_float   _max_magnitude;
+	wsgc_float   _avg_magnitude;
+	wsgc_float   _noise_magnitude;
 };
 
-#endif // __MODULATION_H__
+#endif // __MFSK_MESSAGE_DEMODULATION_RECORD__

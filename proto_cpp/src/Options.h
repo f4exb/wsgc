@@ -31,6 +31,7 @@
 #include "FadingModel.h"
 #include "Modulation.h"
 #include "FIRCoefGenerator.h"
+#include "MFSK_Options.h"
 #include <vector>
 #include <string>
 #include <sstream>
@@ -95,6 +96,7 @@ class Options
         unsigned int gpu_affinity;
         bool gpu_affinity_specified;
         FIRCoefGenerator *_fir_coef_generator;
+        MFSK_Options mfsk_options;
         
     private:        
         int _indicator_int;
@@ -106,6 +108,9 @@ class Options
         bool parse_modulation_data(std::string modulation_data_str);
         bool parse_pilot_prns_data(std::string pilot_data_str);
         bool parse_fir_filter_model_data(std::string fir_data_str);
+        void print_standard_options(std::ostringstream& os);
+        void print_mfsk_options(std::ostringstream& os);
+
 };
 
 #endif // __OPTIONS_H__
