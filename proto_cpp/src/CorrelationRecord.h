@@ -37,7 +37,7 @@ class CorrelationRecord : public  TimeCorrelationRecord
         virtual ~CorrelationRecord();
         
         void reset();
-        void dump(unsigned int magnitude_factor, std::ostringstream& os) const;
+        void dump(wsgc_float magnitude_factor, std::ostringstream& os) const;
         void dump_line(wsgc_float magnitude_factor, std::ostringstream& os) const;
         static void dump_banner(std::ostringstream& os);
         
