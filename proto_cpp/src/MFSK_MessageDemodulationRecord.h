@@ -45,6 +45,7 @@ public:
     static void dump_banner(std::ostringstream& os);
 
 	unsigned int _symbol_index;
+	unsigned int _fft_index;
 	unsigned int _symbol_ordinal;
 	wsgc_float   _max_magnitude;
 	wsgc_float   _avg_magnitude;

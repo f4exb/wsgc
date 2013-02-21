@@ -32,7 +32,7 @@ MFSK_Options::MFSK_Options(wsgc_float f_sampling) :
 	_f_sampling(f_sampling),
 	_symbol_bandwidth_log2(0),
 	_symbol_time_log2(0),
-	_zero_frequency_slot(0),
+	_zero_fft_slot(0),
 	_fft_N(int(f_sampling)),
 	_nb_fft_per_symbol(1),
 	_symbol_time(1.0),
@@ -63,7 +63,7 @@ bool MFSK_Options::parse_options(std::string& mfsk_params)
 	{
 		int symbol_bandwidth_log2 = raw_mfsk_params[0];
 		_symbol_time_log2 = raw_mfsk_params[1];
-		_zero_frequency_slot = raw_mfsk_params[2];
+		_zero_fft_slot = raw_mfsk_params[2];
 
 		if (symbol_bandwidth_log2 < 0)
 		{
@@ -81,7 +81,7 @@ bool MFSK_Options::parse_options(std::string& mfsk_params)
 			_symbol_bandwidth = (wsgc_float) (1 << _symbol_bandwidth_log2);
 			_fft_N = int(_f_sampling / _symbol_bandwidth);
 
-			if (abs(_zero_frequency_slot) > _fft_N/2)
+			if (abs(_zero_fft_slot) > _fft_N/2)
 			{
 				std::cout << "MFSK zero frequency slot cannot be larger than half the FFT size" << std::endl;
 				return false;
@@ -97,7 +97,7 @@ bool MFSK_Options::parse_options(std::string& mfsk_params)
 			}
 
 			_nb_fft_per_symbol = 1 << (_symbol_time_log2+symbol_bandwidth_log2);
-			_zero_frequency = _zero_frequency_slot * _symbol_bandwidth;
+			_zero_frequency = _zero_fft_slot * _symbol_bandwidth;
 
 			return true;
 		}
@@ -113,5 +113,6 @@ void MFSK_Options::print_options(std::ostringstream& os)
     os << "Zero frequency ............: " << std::setw(8) << std::setprecision(1) << std::right << _zero_frequency << std::endl;
     os << "Symbol time ...............: " << std::setw(10) << std::setprecision(3) << std::right << _symbol_time << std::endl;
     os << "FFT size ..................: " << std::setw(6) << std::right << _fft_N << std::endl;
+    os << "Zero FFT slot .............: " << std::setw(6) << std::right << _zero_fft_slot << std::endl;
     os << "Nb FFT per symbol .........: " << std::setw(6) << std::right << _nb_fft_per_symbol << std::endl;
 }

@@ -24,14 +24,13 @@
      Class to incoherently demodulate MFSK message. This is not using a correlation scheme
      and is there only for comparison to incoherent MFSK
 
-     Abstract class to support Host or CUDA implementation
+     This is the Host implementation
 
 */
-#ifndef __MFSK_MESSAGE_DEMODULATOR__
-#define __MFSK_MESSAGE_DEMODULATOR__
+#ifndef __MFSK_MESSAGE_DEMODULATOR_HOST__
+#define __MFSK_MESSAGE_DEMODULATOR_HOST__
 
-#include "WsgcTypes.h"
-#include <vector>
+#include "MFSK_MessageDemodulator.h"
 
 class MFSK_MessageDemodulationRecord;
 
@@ -39,59 +38,44 @@ class MFSK_MessageDemodulationRecord;
  * \brief Class to incoherently demodulate MFSK message. This is not using a correlation scheme
  *        and is there only for comparison to incoherent MFSK. Abstract class to support Host or CUDA implementation
  */
-class MFSK_MessageDemodulator
+class MFSK_MessageDemodulator_Host : public MFSK_MessageDemodulator
 {
 public:
 	/**
 	 * Build a new MFSK incoherent demodulator object
 	 * \param fft_N Individual FFT size
 	 * \param nb_fft_per_symbol Number of FFTs in one symbol
-	 * \param zero_fft_slot FFT slot of ordinal zero symbol
+	 * \param zero_frequency_slot FFT frequency slot of ordinal zero symbol frequency
 	 * \param nb_message_symbols Number of message symbols
 	 * \param nb_service_symbols Number of service symbols (second is noise PRN)
 	 */
-	MFSK_MessageDemodulator(
-			unsigned int _fft_N,
-			unsigned int _nb_fft_per_symbol,
-			int zero_ffty_slot,
+	MFSK_MessageDemodulator_Host(
+			unsigned int fft_N,
+			unsigned int nb_fft_per_symbol,
+			int zero_frequency_slot,
 			unsigned int nb_message_symbols,
 			unsigned int nb_service_symbols);
 
-	virtual ~MFSK_MessageDemodulator();
+	virtual ~MFSK_MessageDemodulator_Host();
 
 	/**
 	 * Execute demodulation on one symbol length of samples. Time and frequency synchronization is supposed to have taken place
 	 * Implementation (Host or CUDA) dependent
 	 * \param symbol_samples Pointer to the symbol samples. Number of samples is assumed to be FFT size times the number of FFTs per symbol
 	 */
-	virtual void execute(wsgc_complex *symbol_samples) = 0;
-
-	/**
-	 * Dumps the demodulation records data to output stream
-	 * \param os The output stream
-	 * \param magnitude_factor Magnitudes are divided by this factor before display
-	 */
-	void dump_demodulation_records(std::ostringstream& os, wsgc_float magnitude_factor = 1.0) const;
-
-	/**
-	 * Get a reference to the message demodulation records
-	 * \return Reference to the message demodulation records
-	 */
-	const std::vector<MFSK_MessageDemodulationRecord>& get_demodulation_records() const
-	{
-		return _demodulation_records;
-	}
+	virtual void execute(wsgc_complex *symbol_samples);
 
 protected:
-	unsigned int _fft_N; //!< Individual FFT size
-	unsigned int _nb_fft_per_symbol; //!< Number of FFTs in one symbol
-	int _zero_fft_slot; //!< FFT slot of ordinal zero symbol
-	unsigned int _nb_message_symbols; //!< Number of message symbols
-	unsigned int _nb_service_symbols; //!< Number of service symbols (second is noise PRN)
-	std::vector<MFSK_MessageDemodulationRecord> _demodulation_records; //!< Demodulation results storage, one element per symbol
-
-	int get_fft_slot(int symbol_ordinal) const;
-	int get_symbol_ordinal(int fft_slot) const;
+    wsgc_fftw_plan _fft_plan; //!< FFTW plan for forward FFT.
+    wsgc_complex *_samples; //!< Source samples for one symbol length
+    wsgc_complex *_src_fft; //!< Result of FFT of source samples for one symbol length
+    wsgc_float *_magsum_fft; //!< magnitude sum of all FFTs in symbol
+    unsigned int _symbol_i; //!< index of symbol in message sequence
+    unsigned int _fft_i; //!< index of FFT in symbol
+    
+    void clean_magsum();
+    void cumulate_magsum(unsigned int fft_index);
+    void estimate_magpeak();
 };
 
-#endif // __MFSK_MESSAGE_DEMODULATOR__
+#endif // __MFSK_MESSAGE_DEMODULATOR_HOST__

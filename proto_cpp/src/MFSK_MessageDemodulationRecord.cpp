@@ -62,8 +62,9 @@ void MFSK_MessageDemodulationRecord::dump(std::ostringstream& os, wsgc_float mag
 void MFSK_MessageDemodulationRecord::dump_line(std::ostringstream& os, wsgc_float magnitude_factor) const
 {
     os << std::setiosflags(std::ios_base::fixed);
-    os << std::setw(3) << _symbol_index
-       << " " << std::setw(3) << std::setfill('0') << _symbol_ordinal
+    os << std::setfill('0') << std::setw(3) << _symbol_index
+       << " " << std::setw(5) << _fft_index
+       << " " << std::setw(3) << _symbol_ordinal
        << " " << std::setw(7) << std::setprecision(1) << _max_magnitude / magnitude_factor;
 
     if (_avg_magnitude == 0.0)
@@ -81,6 +82,6 @@ void MFSK_MessageDemodulationRecord::dump_line(std::ostringstream& os, wsgc_floa
 
 void MFSK_MessageDemodulationRecord::dump_banner(std::ostringstream& os)
 {
-    os << "Si. So. Mag.Max Max/Avg Nse.Max" << std::endl;
+    os << "Si. FFTi. So. Mag.Max Max/Avg Nse.Max" << std::endl;
 }
 

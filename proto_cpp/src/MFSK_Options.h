@@ -43,7 +43,7 @@ public:
 	wsgc_float _f_sampling;
 	unsigned int _symbol_bandwidth_log2;
 	int _symbol_time_log2;
-	int _zero_frequency_slot;
+	int _zero_fft_slot;
 	wsgc_float _symbol_bandwidth;
 	wsgc_float _symbol_time;
 	wsgc_float _zero_frequency;

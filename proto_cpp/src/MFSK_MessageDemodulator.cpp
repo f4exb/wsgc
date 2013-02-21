@@ -30,13 +30,20 @@
 
 #include "MFSK_MessageDemodulator.h"
 #include "MFSK_MessageDemodulationRecord.h"
+#include <iostream>
 
 
 MFSK_MessageDemodulator::MFSK_MessageDemodulator(
 		unsigned int fft_N,
-		unsigned int nb_fft_per_symbol) :
+		unsigned int nb_fft_per_symbol,
+		int zero_fft_slot,
+		unsigned int nb_message_symbols,
+		unsigned int nb_service_symbols) :
 	_fft_N(fft_N),
-	_nb_fft_per_symbol(nb_fft_per_symbol)
+	_nb_fft_per_symbol(nb_fft_per_symbol),
+	_zero_fft_slot(zero_fft_slot),
+	_nb_message_symbols(nb_message_symbols),
+	_nb_service_symbols(nb_service_symbols)
 {}
 
 
@@ -56,3 +63,28 @@ void MFSK_MessageDemodulator::dump_demodulation_records(std::ostringstream& os, 
 		it->dump_line(os, magnitude_factor);
 	}
 }
+
+
+int MFSK_MessageDemodulator::get_fft_slot(int symbol_ordinal) const
+{
+	int z_fft_slot = symbol_ordinal + _zero_fft_slot;
+
+	if (z_fft_slot < 0)
+	{
+		z_fft_slot += _fft_N;
+	}
+
+	return z_fft_slot;
+}
+
+
+int MFSK_MessageDemodulator::get_symbol_ordinal(int fft_slot) const
+{
+	if (fft_slot > _fft_N/2)
+	{
+		fft_slot -= _fft_N;
+	}
+
+	return fft_slot - _zero_fft_slot;
+}
+

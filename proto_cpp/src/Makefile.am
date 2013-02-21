@@ -71,6 +71,8 @@ wsgc_test_SOURCES = CodeModulator_BPSK.cpp \
     FIRCoefGenerator_RCos.cpp \
     MFSK_MessageDemodulationRecord.cpp \
     MFSK_MessageDemodulator.cpp \
+    MFSK_MessageDemodulator_Host.cpp \
+    DecisionBox_MFSK.cpp \
     CudaManager.cu \
     CudaDeviceManager.cu \
     LocalCodesFFT_Cuda.cu \
@@ -159,7 +161,9 @@ wsgc_test_SOURCES = CodeModulator_BPSK.cpp \
     FIRCoefGenerator.cpp \
     FIRCoefGenerator_RCos.cpp \
     MFSK_MessageDemodulationRecord.cpp \
-    MFSK_MessageDemodulator.cpp 
+    MFSK_MessageDemodulator.cpp \
+    MFSK_MessageDemodulator_Host.cpp \
+    DecisionBox_MFSK.cpp 
 
 wsgc_test_LDADD = -lrt $(FFTW3F_LIBS)
 

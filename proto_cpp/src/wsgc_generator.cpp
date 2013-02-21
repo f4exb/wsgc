@@ -70,7 +70,11 @@ int main(int argc, char *argv[])
         }
         else if (options.modulation.getScheme() == Modulation::Modulation_MFSK)
         {
-            codeModulator_MFSK = new CodeModulator_MFSK(options.mfsk_options._f_sampling, options.mfsk_options._zero_frequency, options.mfsk_options._symbol_bandwidth, options.mfsk_options._symbol_time);
+            codeModulator_MFSK = new CodeModulator_MFSK(
+            		options.mfsk_options._f_sampling,
+            		options.mfsk_options._zero_frequency + options.f_tx,
+            		options.mfsk_options._symbol_bandwidth,
+            		options.mfsk_options._symbol_time);
         }
 
         if (codeModulator) // if a code modulator is available then the actual signal processing can take place

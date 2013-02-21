@@ -35,7 +35,7 @@
 #include "CodeModulator_BPSK.h"
 #include "CodeModulator_DBPSK.h"
 #include "CodeModulator_OOK.h"
-#include "CodeModulator_OOK_detection.h"
+#include "CodeModulator_MFSK.h"
 #include "LocalCodes.h"
 #include "LocalCodes_Host.h"
 #include "WsgcUtils.h"
@@ -76,6 +76,9 @@
 #include "UnpilotedTrainingMessageCorrelator_Host.h"
 #include "DemodulatorDifferential.h"
 #include "DemodulatorSquaring.h"
+#include "MFSK_MessageDemodulator.h"
+#include "MFSK_MessageDemodulator_Host.h"
+#include "DecisionBox_MFSK.h"
 
 #ifdef _CUDA
 #include "CudaManager.h"
@@ -102,6 +105,17 @@ void training_processing(
     wsgc_complex *faded_source_samples,
     unsigned int nb_faded_source_samples
 );
+
+void message_processing_MFSK(
+#ifdef _CUDA
+    CudaManager& cuda_manager,
+#endif
+    Options& options,
+    wsgc_complex *faded_source_samples,
+    unsigned int nb_faded_source_samples
+);
+
+
 
 void generate_training_prn_list(std::vector<unsigned int>& prn_list, GoldCodeGenerator& gc_generator);
 void generate_training_prn_list_unpiloted(std::vector<unsigned int>& prn_list, GoldCodeGenerator& gc_generator);
@@ -147,6 +161,7 @@ int main(int argc, char *argv[])
 
         CodeModulator *codeModulator = 0;
         CodeModulator *localCodeModulator = 0;
+        CodeModulator_MFSK *codeModulator_MFSK = 0;
 
         unsigned int fft_N = gc_generator.get_nb_code_samples(options.f_sampling, options.f_chip);
         
@@ -169,18 +184,26 @@ int main(int argc, char *argv[])
             codeModulator = new CodeModulator_DBPSK();
             localCodeModulator = new CodeModulator_BPSK();
         }
+        else if (options.modulation.getScheme() == Modulation::Modulation_MFSK)
+        {
+            codeModulator_MFSK = new CodeModulator_MFSK(
+            		options.mfsk_options._f_sampling,
+            		options.mfsk_options._zero_frequency + options.f_tx,
+            		options.mfsk_options._symbol_bandwidth,
+            		options.mfsk_options._symbol_time);
+        }
         
+        wsgc_complex *source_samples = 0;
+        unsigned int nb_source_samples = 0;
+        SourceMixer *source_mixer = 0;
+        SimulatedSource *message_source = 0;
+        SimulatedSource *pilot_source = 0;
+
         if (codeModulator) // if a code modulator is available then the actual signal processing can take place
         {
             // Produce signal samples
             std::cout << "Produce signal samples..." << std::endl;
 
-            wsgc_complex *source_samples = 0;
-            unsigned int nb_source_samples = 0;
-            SimulatedSource *message_source = 0;
-            SimulatedSource *pilot_source = 0;
-            SourceMixer *source_mixer = 0;
-            Demodulator *demodulator = 0;
             std::vector<unsigned int> pilot_prns;
             
             if (options.simulate_training)
@@ -228,7 +251,17 @@ int main(int argc, char *argv[])
             	source_samples = message_source->get_samples();
             	nb_source_samples = message_source->get_nb_samples();
             }
+        }
+        else if (codeModulator_MFSK)
+        {
+        	options.prns.push_back(0); // pad with one symbol
+        	nb_source_samples = codeModulator_MFSK->get_nb_symbol_samples()*options.prns.size();
+        	source_samples = (wsgc_complex *) WSGC_FFTW_MALLOC(nb_source_samples*sizeof(wsgc_fftw_complex));
+        	codeModulator_MFSK->modulate(reinterpret_cast<wsgc_fftw_complex*>(source_samples), options.prns);
+        }
 
+        if (source_samples)
+        {
             // Apply lowpass filter if any
             if (options._fir_coef_generator != 0)
             {
@@ -236,7 +269,7 @@ int main(int argc, char *argv[])
             	apply_fir(source_samples, nb_source_samples, options._fir_coef_generator->get_coefs());
             }
 
-            // get fading model                              
+            // get fading model
             FadingModel *fading = options._fading_model;
             wsgc_complex *faded_source_samples;
             unsigned int nb_faded_source_samples; // fading may add delay hence there could be more samples after the fading process
@@ -246,7 +279,7 @@ int main(int argc, char *argv[])
             {
             	std::cout << "Apply fading" << std::endl;
                 nb_faded_source_samples = fading->get_output_size(nb_source_samples);
-                faded_source_samples = (wsgc_complex *) WSGC_FFTW_MALLOC(nb_faded_source_samples*sizeof(wsgc_fftw_complex)); 
+                faded_source_samples = (wsgc_complex *) WSGC_FFTW_MALLOC(nb_faded_source_samples*sizeof(wsgc_fftw_complex));
                 fading->apply_fading(source_samples, faded_source_samples, nb_source_samples);
             }
             else
@@ -261,10 +294,12 @@ int main(int argc, char *argv[])
             	std::cout << "Apply AWGN" << std::endl;
                 fading->apply_awgn(faded_source_samples, nb_faded_source_samples, options.code_shift, options.snr);
             }
-                      
+
             // demodulate OOK
             if (options.modulation.demodulateBeforeCorrelate())
             {
+                Demodulator *demodulator = 0;
+
             	if (options.modulation.getScheme() == Modulation::Modulation_OOK)
 				{
 					demodulator = new DemodulatorSquaring();
@@ -280,51 +315,65 @@ int main(int argc, char *argv[])
 				}
 
 			    demodulator->demodulate_in_place(faded_source_samples, nb_faded_source_samples);
+
+	            if (demodulator)
+	            {
+	                delete demodulator;
+	            }
             }
 
-            // Implement correlator(s)
-            if (options.simulate_training)
+            if (codeModulator_MFSK)
             {
-                training_processing(
-#ifdef _CUDA
-                    cuda_manager, 
-#endif    
-                    options, 
-                    gc_generator,
-                    localCodeModulator,
-                    faded_source_samples,
-                    nb_faded_source_samples
-                    );
-            }
-            else
-            {
-				message_processing(
+				message_processing_MFSK(
 #ifdef _CUDA
 				cuda_manager,
-#endif    
+#endif
 				options,
-				gc_generator,
-				localCodeModulator,
 				faded_source_samples,
 				nb_faded_source_samples
 				);
             }
-            
-            if (demodulator)
+            else
             {
-                delete demodulator;
+				// Implement correlator(s)
+				if (options.simulate_training)
+				{
+					training_processing(
+	#ifdef _CUDA
+						cuda_manager,
+	#endif
+						options,
+						gc_generator,
+						localCodeModulator,
+						faded_source_samples,
+						nb_faded_source_samples
+						);
+				}
+				else
+				{
+					message_processing(
+	#ifdef _CUDA
+					cuda_manager,
+	#endif
+					options,
+					gc_generator,
+					localCodeModulator,
+					faded_source_samples,
+					nb_faded_source_samples
+					);
+				}
             }
-
+            
             if (source_mixer)
             {
                 delete source_mixer;
             }
-            
+
             if (pilot_source)
             {
                 delete pilot_source;
             }
-            
+
             if (message_source)
             {
                 delete message_source;
@@ -832,6 +881,91 @@ void training_processing(
     {
         delete pilot_correlation_analyzer;
     }
+}
+
+
+//=================================================================================================
+void message_processing_MFSK(
+#ifdef _CUDA
+    CudaManager& cuda_manager,
+#endif
+    Options& options,
+    wsgc_complex *faded_source_samples,
+    unsigned int nb_faded_source_samples
+)
+{
+    timespec time1, time2;
+    int time_option = CLOCK_REALTIME;
+    MFSK_MessageDemodulator *mfsk_message_demodulator;
+
+    mfsk_message_demodulator = new MFSK_MessageDemodulator_Host(
+    		options.mfsk_options._fft_N,
+    		options.mfsk_options._nb_fft_per_symbol,
+    		options.mfsk_options._zero_fft_slot,
+    		options.nb_message_symbols,
+    		options.nb_service_symbols);
+    SampleSequencer sample_sequencer(faded_source_samples, nb_faded_source_samples, options.mfsk_options._fft_N*options.mfsk_options._nb_fft_per_symbol);
+
+	wsgc_complex *signal_samples;
+
+    clock_gettime(time_option, &time1);
+
+    while (sample_sequencer.get_next_code_samples(&signal_samples)) // pseudo real time loop, one PRN length at a time
+    {
+    	mfsk_message_demodulator->execute(signal_samples);
+    }
+
+    clock_gettime(time_option, &time2);
+    std::cout << "MFSK message sequence decoding time: " << std::setw(12) << std::setprecision(9) << WsgcUtils::get_time_difference(time2,time1) << " s" << std::endl << std::endl;
+
+    std::ostringstream demod_os;
+    demod_os << "--- demodulation records:" << std::endl;
+    mfsk_message_demodulator->dump_demodulation_records(demod_os);
+    std::cout << demod_os.str() << std::endl;
+
+    DecisionBox_MFSK decision_box(options.mfsk_options._fft_N, options.mfsk_options._nb_fft_per_symbol);
+    decision_box.estimate_symbols(mfsk_message_demodulator->get_demodulation_records());
+
+    options.prns.pop_back(); // pop padding symbol
+
+    std::vector<unsigned int> symbol_indices;
+    for (unsigned int i=0; i<options.prns.size(); i++)
+    {
+        symbol_indices.push_back(i);
+    }
+
+    std::ostringstream os_result;
+    os_result << std::endl << "Decisions status:" << std::endl;
+    decision_box.dump_decision_status(os_result, options.prns, mfsk_message_demodulator->get_demodulation_records());
+    os_result << std::endl << "Index, original and decoded symbols (-1 denotes an erasure):";
+    os_result << std::endl << "-----------------------------------------------------------" << std::endl;
+    os_result << "_SIN "; print_vector<unsigned int, unsigned int>(symbol_indices, 4, os_result); os_result << std::endl;
+    os_result << "_SOR "; print_vector<unsigned int, unsigned int>(options.prns, 4, os_result); os_result << std::endl;
+    os_result << "_SRS "; print_vector<int, int>(decision_box.get_decoded_symbols(), 4, os_result); os_result << std::endl;
+    std::cout << os_result.str() << std::endl;
+
+    unsigned int erasure_counts = 0;
+    unsigned int error_counts = 0;
+
+    for (std::vector<int>::const_iterator it = decision_box.get_decoded_symbols().begin(); it != decision_box.get_decoded_symbols().end(); ++it)
+    {
+        if (*it < 0)
+        {
+            erasure_counts++;
+        }
+        else
+        {
+            if (*it != options.prns[it-decision_box.get_decoded_symbols().begin()])
+            {
+                error_counts++;
+            }
+        }
+    }
+
+    std::cout << erasure_counts << " erasures (" << ((float) erasure_counts)/decision_box.get_decoded_symbols().size() << ")" << std::endl;
+    std::cout << error_counts << " errors (" << ((float) error_counts)/decision_box.get_decoded_symbols().size() << ")" << std::endl;
+    std::cout << erasure_counts+error_counts << " total (" << ((float) erasure_counts+error_counts)/decision_box.get_decoded_symbols().size() << ")" << std::endl;
+    std::cout << "_SUM " << erasure_counts << "," << error_counts << "," << erasure_counts+error_counts << std::endl;
 }
 
 
