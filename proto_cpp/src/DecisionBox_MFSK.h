@@ -30,6 +30,7 @@
 #include <vector>
 
 class MFSK_MessageDemodulationRecord;
+class DecisionBox_Thresholds;
 
 /**
  * \brief Demodulated data analysis and message estimation for MFSK.
@@ -53,7 +54,8 @@ public:
 	 */
 	DecisionBox_MFSK(
 			unsigned int fft_size,
-			unsigned int nb_fft_per_symbol);
+			unsigned int nb_fft_per_symbol,
+            const DecisionBox_Thresholds& decision_thresholds);
 
 	virtual ~DecisionBox_MFSK();
 
@@ -89,7 +91,7 @@ protected:
 	unsigned int _fft_size; //!< Size of the FFT, this is also the number of samples in one PRN
 	unsigned int _nb_fft_per_symbol; //!< Number of FFTs in one symbol
 	std::vector<int> _decoded_symbols; //!< Symbols decoded, -1 for erasure
-	static const wsgc_float peak_margin_threshold;  //!< selected correlation peak max difference with next / correlations ratio threshold
+    const DecisionBox_Thresholds& _decision_thresholds; //!< Reference to decision thresholds
 
 	void dump_decoding_status(std::ostringstream& os, decision_status_t decision_status) const;
 };

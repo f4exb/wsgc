@@ -32,6 +32,7 @@
 #include "Modulation.h"
 #include "FIRCoefGenerator.h"
 #include "MFSK_Options.h"
+#include "DecisionBox_Thresholds.h"
 #include <vector>
 #include <string>
 #include <sstream>
@@ -97,6 +98,8 @@ class Options
         bool gpu_affinity_specified;
         FIRCoefGenerator *_fir_coef_generator;
         MFSK_Options mfsk_options;
+        DecisionBox_Thresholds decision_thresholds;
+        bool decision_thresholds_specified;
         
     private:        
         int _indicator_int;

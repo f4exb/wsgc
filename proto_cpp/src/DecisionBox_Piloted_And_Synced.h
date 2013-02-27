@@ -34,6 +34,7 @@
 #include <vector>
 
 class PilotCorrelationAnalyzer;
+class DecisionBox_Thresholds;
 
 /**
  * \brief Correlation data analysis and message estimation. For operation with pilot(s) PRN(s)
@@ -47,9 +48,13 @@ public:
 	 * Constructor
 	 * \param prn_per_symbol Number of PRNs per symbol
      * \param fft_N Size of the FFT, this is also the number of samples in one PRN
+     * \param decision_thresholds Reference to the decision thresholds
      * \param pilot_correlation_analyzer Reference to the pilot correlation analyzer
 	 */
-	DecisionBox_Piloted_And_Synced(unsigned int prn_per_symbol, unsigned int fft_size, const PilotCorrelationAnalyzer& pilot_correlation_analyzer);
+	DecisionBox_Piloted_And_Synced(unsigned int prn_per_symbol, 
+        unsigned int fft_size, 
+        const DecisionBox_Thresholds& decision_thresholds,
+        const PilotCorrelationAnalyzer& pilot_correlation_analyzer);
 
     virtual ~DecisionBox_Piloted_And_Synced();
 
@@ -66,19 +71,6 @@ public:
 protected:
     const PilotCorrelationAnalyzer& _pilot_correlation_analyzer;
         
-	static const wsgc_float max_to_avg_ok_threshold;   //<! max / average ratio threshold of unconditionnal acceptance
-	static const wsgc_float max_to_avg_ok_threshold_cuda; //<! max / average ratio threshold of unconditionnal acceptance for CUDA version
-	static const wsgc_float max_to_avg_ok_threshold_ner_0_5; //<! max / average ratio threshold of unconditionnal acceptance when not enough valid records (< 0.5)
-	static const wsgc_float max_to_avg_ok_threshold_ner_0_5_cuda; //<! max / average ratio threshold of unconditionnal acceptance when not enough valid records
-	static const wsgc_float max_to_avg_ok_threshold_ner_0_75; //<! max / average ratio threshold of unconditionnal acceptance when not enough valid records (<0.75)
-	static const wsgc_float max_to_avg_ok_threshold_ner_0_75_cuda; //<! max / average ratio threshold of unconditionnal acceptance when not enough valid records
-	static const wsgc_float max_to_avg_cdt_threshold;   //<! max / average ratio threshold of conditionnal acceptance
-	static const wsgc_float max_to_avg_cdt_threshold_cuda;   //<! max / average ratio threshold of conditionnal acceptance for CUDA version
-	static const wsgc_float signal_to_noise_avg_ko_threshold; //<! signal / noise average threshold of unconditional rejection
-	static const wsgc_float signal_to_noise_avg_ko_threshold_cuda; //<! signal / noise average threshold of unconditional rejection for CUDA version
-	static const wsgc_float signal_to_noise_avg_cdt_threshold; //<! signal / noise average threshold of conditional acceptance
-	static const wsgc_float signal_to_noise_avg_cdt_threshold_cuda; //<! signal / noise average threshold of conditional acceptance for CUDA version
-
 	bool challenge_matching_symbol(std::vector<CorrelationRecord>::const_iterator& matching_record_it);
 	bool test_maxavg_override(std::vector<CorrelationRecord>::const_iterator& matching_record_it, wsgc_float ratio);
 

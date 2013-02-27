@@ -28,28 +28,18 @@
 #include "DecisionBox_Piloted_And_Synced.h"
 #include "PilotCorrelationAnalyzer.h"
 #include "DecisionRecord.h"
+#include "DecisionBox_Thresholds.h"
 #include <iostream>
 #include <iomanip>
 #include <algorithm>
 
-const wsgc_float DecisionBox_Piloted_And_Synced::max_to_avg_ok_threshold = 1.85;
-const wsgc_float DecisionBox_Piloted_And_Synced::max_to_avg_ok_threshold_ner_0_5 = 4.0; // guessed
-const wsgc_float DecisionBox_Piloted_And_Synced::max_to_avg_ok_threshold_ner_0_75 = 3.0; // guessed
-const wsgc_float DecisionBox_Piloted_And_Synced::max_to_avg_cdt_threshold = 1.6;
-const wsgc_float DecisionBox_Piloted_And_Synced::signal_to_noise_avg_ko_threshold = 1.0;
-const wsgc_float DecisionBox_Piloted_And_Synced::signal_to_noise_avg_cdt_threshold = 2.0;
-
-const wsgc_float DecisionBox_Piloted_And_Synced::max_to_avg_ok_threshold_cuda = 3.4; // was 3.0
-const wsgc_float DecisionBox_Piloted_And_Synced::max_to_avg_ok_threshold_ner_0_5_cuda = 7.0;
-const wsgc_float DecisionBox_Piloted_And_Synced::max_to_avg_ok_threshold_ner_0_75_cuda = 5.0;
-const wsgc_float DecisionBox_Piloted_And_Synced::max_to_avg_cdt_threshold_cuda = 2.6;
-const wsgc_float DecisionBox_Piloted_And_Synced::signal_to_noise_avg_ko_threshold_cuda = 3.0;
-const wsgc_float DecisionBox_Piloted_And_Synced::signal_to_noise_avg_cdt_threshold_cuda = 3.5;
-
 
 //=================================================================================================
-DecisionBox_Piloted_And_Synced::DecisionBox_Piloted_And_Synced(unsigned int prn_per_symbol, unsigned int fft_size, const PilotCorrelationAnalyzer& pilot_correlation_analyzer) :
-    DecisionBox(prn_per_symbol, fft_size),
+DecisionBox_Piloted_And_Synced::DecisionBox_Piloted_And_Synced(unsigned int prn_per_symbol, 
+        unsigned int fft_size, 
+        const DecisionBox_Thresholds& decision_thresholds,
+        const PilotCorrelationAnalyzer& pilot_correlation_analyzer) :
+    DecisionBox(prn_per_symbol, fft_size, decision_thresholds),
     _pilot_correlation_analyzer(pilot_correlation_analyzer)
 {
 	std::cout << "using DecisionBox_Piloted_And_Synced" << std::endl;
@@ -303,22 +293,22 @@ bool DecisionBox_Piloted_And_Synced::challenge_matching_symbol(std::vector<Corre
     
     if (matching_record_it->noise_avg == 0)
     {
-        return max_to_avg > (_use_cuda ? max_to_avg_ok_threshold_cuda : max_to_avg_ok_threshold); // noise test disabled
+        return max_to_avg > _decision_thresholds._max_to_avg_ok_threshold; // noise test disabled
     }
     else
     {
         wsgc_float signal_to_noise = matching_record_it->magnitude_max / matching_record_it->noise_avg;
-        if (signal_to_noise < (_use_cuda ? signal_to_noise_avg_ko_threshold_cuda : signal_to_noise_avg_ko_threshold))
+        if (signal_to_noise < _decision_thresholds._signal_to_noise_avg_ko_threshold)
         {
         	return false;
         }
-        else if (max_to_avg > (_use_cuda ? max_to_avg_ok_threshold_cuda : max_to_avg_ok_threshold))
+        else if (max_to_avg > _decision_thresholds._max_to_avg_ok_threshold)
         {
         	return true;
         }
-        else if (max_to_avg > (_use_cuda ? max_to_avg_cdt_threshold_cuda : max_to_avg_cdt_threshold))
+        else if (max_to_avg > _decision_thresholds._max_to_avg_cdt_threshold)
         {
-        	if (signal_to_noise > (_use_cuda ? signal_to_noise_avg_cdt_threshold_cuda : signal_to_noise_avg_cdt_threshold))
+        	if (signal_to_noise > _decision_thresholds._signal_to_noise_avg_cdt_threshold)
         	{
         		return true;
         	}
@@ -331,7 +321,6 @@ bool DecisionBox_Piloted_And_Synced::challenge_matching_symbol(std::vector<Corre
         {
         	return false;
         }
-        //return (max_to_avg > max_to_avg_threshold) && (signal_to_noise > signal_to_noise_avg_threshold);
     }
 }
 
@@ -351,11 +340,11 @@ bool DecisionBox_Piloted_And_Synced::test_maxavg_override(
 
 	if (ratio < 0.5)
 	{
-		return max_to_avg > (_use_cuda ? max_to_avg_ok_threshold_ner_0_5_cuda : max_to_avg_ok_threshold_ner_0_5);
+		return max_to_avg > _decision_thresholds._max_to_avg_ok_threshold_ner_0_5;
 	}
 	else if (ratio < 0.75)
 	{
-		return max_to_avg > (_use_cuda ? max_to_avg_ok_threshold_ner_0_75_cuda : max_to_avg_ok_threshold_ner_0_75);
+		return max_to_avg > _decision_thresholds._max_to_avg_ok_threshold_ner_0_75;
 	}
 	else
 	{

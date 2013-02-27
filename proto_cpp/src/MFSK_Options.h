@@ -39,6 +39,7 @@ public:
 
     bool parse_options(std::string& mfsk_params);
 	void print_options(std::ostringstream& os);
+	void get_help(std::ostringstream& os);
         
 	wsgc_float _f_sampling;
 	unsigned int _symbol_bandwidth_log2;

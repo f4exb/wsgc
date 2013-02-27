@@ -36,6 +36,7 @@
 #include <vector>
 
 class CorrelationRecord;
+class DecisionBox_Thresholds;
 
 /**
  * \brief Correlation data analysis and message estimation.
@@ -51,10 +52,12 @@ public:
 	 * Constructor
 	 * \param prn_per_symbol Number of PRNs per symbol
      * \param fft_N Size of the FFT, this is also the number of samples in one PRN
+     * \param decision_thresholds Reference to the decision thresholds
      * \param correlation_records Reference to the vector of correlation records
 	 */
 	DecisionBox_Unpiloted_And_Synced(unsigned int prn_per_symbol,
 			unsigned int fft_size,
+            const DecisionBox_Thresholds& decision_thresholds,
 			std::vector<CorrelationRecord>& correlation_records);
 
     virtual ~DecisionBox_Unpiloted_And_Synced();
@@ -69,14 +72,7 @@ public:
 	 */
     virtual void estimate_symbols();
 
-    /**
-     * Sets thresholds depending on modulation type
-     */
-    void set_thresholds(Modulation& modulation);
-        
 protected:
-	wsgc_float _max_to_avg_ok_threshold;   //<! max / average ratio threshold of unconditionnal acceptance
-	wsgc_float _max_to_avg_ok_threshold_cuda; //<! max / average ratio threshold of unconditionnal acceptance for CUDA version
     std::vector<CorrelationRecord>& _correlation_records;
 
 	bool challenge_matching_symbol(std::vector<CorrelationRecord>::const_iterator& matching_record_it);

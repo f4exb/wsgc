@@ -99,7 +99,8 @@ Options::Options(std::string& _binary_name) :
     gpu_affinity(0),
     gpu_affinity_specified(false),
 	_fir_coef_generator(0),
-	mfsk_options(4096.0)
+	mfsk_options(4096.0),
+    decision_thresholds_specified(false)
 {
     srand(time(0));
 
@@ -168,12 +169,13 @@ bool Options::get_options(int argc, char *argv[])
             {"analysis-window-size", required_argument, 0, 'z'},
             {"samples-output-file", required_argument, 0, 'o'},
             {"fir-filter-model", required_argument, 0, 'L'},
-            {"gpu-affinity", required_argument, 0, 'y'}
+            {"gpu-affinity", required_argument, 0, 'y'},
+            {"decision-thresholds", required_argument, 0, 'H'}
         };
         
         int option_index = 0;
         
-        c = getopt_long (argc, argv, "s:c:n:t:C:p:N:I:r:R:T:m:M:S:g:G:f:d:a:P:A:F:B:z:U:o:L:Y:y:", long_options, &option_index);
+        c = getopt_long (argc, argv, "s:c:n:t:C:p:N:I:r:R:T:m:M:S:g:G:f:d:a:P:A:F:B:z:U:o:L:Y:y:H:", long_options, &option_index);
         
         if (c == -1) // end of options
         {
@@ -301,6 +303,10 @@ bool Options::get_options(int argc, char *argv[])
             case 'y':
                 status = extract_option<int, unsigned int>(gpu_affinity, 'y');
                 gpu_affinity_specified = true;
+                break;
+            case 'H':
+                status = decision_thresholds.parse_options(std::string(optarg));
+                decision_thresholds_specified = true;
                 break;
             case '?':
                 std::ostringstream os;
@@ -649,6 +655,7 @@ void Options::get_help(std::ostringstream& os)
         {"-o", "--samples-output-file", "Output file for generated samples", "string", "", "wsgc_generator"},
         {"-L", "--fir-filter-model", "Lowpass FIR filter model (see short help below)", "string", "", "any"},
         {"-y", "--gpu-affinity", "Force CUDA execution on specified GPU ID", "int", "(none)", "wsgc_test"},
+        {"-H", "--decision-thresholds", "Specify decision box thresholds (see decision thresholds below)", "string", "(none)", "wsgc_test"},
         {0,0,0,0,0,0}
     };
     
@@ -707,6 +714,7 @@ void Options::get_help(std::ostringstream& os)
     os << " - DBPSK: DBPSK (incomplete and experimental for now, work is in progress...)" << std::endl;
     os << " - OOK  : OOK"  << std::endl;
     os << " - CW   : CW (no message: only to test fading models with wsgc_generator)" << std::endl;
+    os << " - MFSK : MFSK (no correlation, used for benchmarking, see MFSK options)" << std::endl;
     os << std::endl;
     os << "Fading models:" << std::endl;
     os << " - Clarke:    -f \"C:<nb paths>,<frequency spread (Hz)>\"" << std::endl;
@@ -724,6 +732,10 @@ void Options::get_help(std::ostringstream& os)
     os << " - Raised cosine: \"RCOS:<nb_taps>,<rolloff>,<cutoff frequency>\"" << std::endl;
     os << "   Rolloff factor must be between 0.0 and 1.0. Invalid values yield 1.0" << std::endl;
     os << " Cutoff frequency must be lower or equal to half the sampling frequency. Invalid values yield fs/2" << std::endl;
+    os << std::endl;
+    mfsk_options.get_help(os);
+    os << std::endl;
+    decision_thresholds.get_help(os);
     os << std::endl;
 
     if (binary_name == "wsgc_test")
@@ -1154,6 +1166,7 @@ bool Options::parse_modulation_data(std::string modulation_data_str)
 			{
 				modulation.setScheme(Modulation::Modulation_MFSK);
 				std::string parameter_str = modulation_data_str.substr(colon_pos+1);
+                mfsk_options._f_sampling = f_sampling;
 				bool status = mfsk_options.parse_options(parameter_str);
 				return status;
 			}

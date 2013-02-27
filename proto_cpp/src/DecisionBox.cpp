@@ -25,6 +25,7 @@
 */
 #include "WsgcUtils.h"
 #include "DecisionBox.h"
+#include "DecisionBox_Thresholds.h"
 #include <iostream>
 #include <sstream>
 #include <iomanip>
@@ -32,17 +33,17 @@
 
 const unsigned int DecisionBox::preferred_symbol_prn_i_margin_threshold = 2;
 const unsigned int DecisionBox::single_preferred_symbol_prn_i_threshold = 4;
-const wsgc_float DecisionBox::peak_margin_threshold = 0.13; // selected correlation peak max difference with next / correlations ratio threshold
 
 
 //=================================================================================================
-DecisionBox::DecisionBox(unsigned int prn_per_symbol, unsigned int _fft_size) :
+DecisionBox::DecisionBox(unsigned int prn_per_symbol, unsigned int _fft_size, const DecisionBox_Thresholds& decision_thresholds) :
 	_prn_per_symbol(prn_per_symbol),
 	_fft_size(_fft_size),
 	_preferred_symbol_prn_i(0),
 	_mag_display_adj_factor(1.0),
 	_prni_at_max_invalid(true),
-	_use_cuda(false)
+	_use_cuda(false),
+    _decision_thresholds(decision_thresholds)
 {}
 
 
@@ -217,6 +218,11 @@ void DecisionBox::dump_decision_records(std::ostringstream& os) const
 //=================================================================================================
 void DecisionBox::dump_decision_status(std::ostringstream& os, std::vector<unsigned int>& original_symbols, bool no_trivial) const
 {
+    unsigned int count_false_reject = 0;
+    unsigned int count_false_accept = 0;
+    unsigned int count_true_reject = 0;
+    unsigned int count_true_accept = 0;
+
 	os << "St ";
 	DecisionRecord::dump_banner(os);
 
@@ -232,6 +238,7 @@ void DecisionBox::dump_decision_status(std::ostringstream& os, std::vector<unsig
 				if (_decision_records[i].validated)
 				{
 					decision_status = decision_status_true_accept;
+                    count_true_accept++;                    
 
 					if (_decision_records[i].decision_type == DecisionRecord::decision_ok_strong)
 					{
@@ -241,6 +248,7 @@ void DecisionBox::dump_decision_status(std::ostringstream& os, std::vector<unsig
 				else
 				{
 					decision_status = decision_status_false_reject;
+                    count_false_reject++;
 				}
 			}
 			else
@@ -248,10 +256,12 @@ void DecisionBox::dump_decision_status(std::ostringstream& os, std::vector<unsig
 				if (_decision_records[i].validated)
 				{
 					decision_status = decision_status_false_accept;
+                    count_false_accept++;
 				}
 				else
 				{
 					decision_status = decision_status_true_reject;
+                    count_true_reject++;
 
 					if (_decision_records[i].decision_type == DecisionRecord::decision_ko_no_valid_rec)
 					{
@@ -268,6 +278,11 @@ void DecisionBox::dump_decision_status(std::ostringstream& os, std::vector<unsig
 			}
 		}
 	}
+    
+    unsigned int count_erasures = count_true_reject + count_false_reject;
+    unsigned int count_errors = count_false_accept;
+    unsigned int rs_corr = count_erasures + 2*count_errors; // Number of symbols that need to be corrected by Reed Solomon to get clean decode (number of erasures plus two times the number of errors)
+    os << "_SDC " << count_true_accept << "," << count_true_reject << "," << count_false_accept << "," << count_false_reject << "," << rs_corr << std::endl;
 }
 
 

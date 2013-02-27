@@ -48,8 +48,8 @@ MFSK_Options::~MFSK_Options()
 bool MFSK_Options::parse_options(std::string& mfsk_params)
 {
 	bool status;
-	std::vector<int> raw_mfsk_params;
-	status = extract_vector<int>(raw_mfsk_params, mfsk_params);
+	std::vector<wsgc_float> raw_mfsk_params;
+	status = extract_vector<wsgc_float>(raw_mfsk_params, mfsk_params);
 
 	if (!status)
 	{
@@ -61,9 +61,9 @@ bool MFSK_Options::parse_options(std::string& mfsk_params)
 	}
 	else
 	{
-		int symbol_bandwidth_log2 = raw_mfsk_params[0];
-		_symbol_time_log2 = raw_mfsk_params[1];
-		_zero_fft_slot = raw_mfsk_params[2];
+		int symbol_bandwidth_log2 = int(raw_mfsk_params[0]);
+		_symbol_time_log2 = int(raw_mfsk_params[1]);
+		_zero_fft_slot = int(raw_mfsk_params[2]);
 
 		if (symbol_bandwidth_log2 < 0)
 		{
@@ -115,4 +115,11 @@ void MFSK_Options::print_options(std::ostringstream& os)
     os << "FFT size ..................: " << std::setw(6) << std::right << _fft_N << std::endl;
     os << "Zero FFT slot .............: " << std::setw(6) << std::right << _zero_fft_slot << std::endl;
     os << "Nb FFT per symbol .........: " << std::setw(6) << std::right << _nb_fft_per_symbol << std::endl;
+}
+
+
+void MFSK_Options::get_help(std::ostringstream& os)
+{
+    os << "MFSK options:" << std::endl;
+    os << "   MFSK:<log2(f_bandwidth)>,<log2(symbol_time)>,<zero frequency fft slot>" << std::endl;
 }

@@ -153,7 +153,8 @@ int main(int argc, char *argv[])
         {
         	cuda_manager.set_gpu_affinity(options.gpu_affinity);
         }
-        options.use_cuda = cuda_manager.diagnose();
+        bool use_cuda_ok = cuda_manager.diagnose();
+        options.use_cuda = options.use_cuda && use_cuda_ok;
         std::ostringstream cuda_os;
         cuda_manager.dump(cuda_os);
         std::cout << cuda_os.str() << std::endl << std::endl;
@@ -577,7 +578,7 @@ void message_processing(
         
         if (options.modulation.isCodeDivisionCapable() && (options.nb_pilot_prns > 0))
         {
-            decision_box = new DecisionBox_Piloted_And_Synced(options.nb_prns_per_symbol, fft_N, *pilot_correlation_analyzer);
+            decision_box = new DecisionBox_Piloted_And_Synced(options.nb_prns_per_symbol, fft_N, options.decision_thresholds, *pilot_correlation_analyzer);
         }
     }
     else if (dm_correlator != 0)
@@ -591,9 +592,8 @@ void message_processing(
         corr_os << std::endl;
         std::cout << corr_os.str() << std::endl;
         
-        decision_box = new DecisionBox_Unpiloted_And_Synced(options.nb_prns_per_symbol, fft_N, correlation_records);
+        decision_box = new DecisionBox_Unpiloted_And_Synced(options.nb_prns_per_symbol, fft_N, options.decision_thresholds, correlation_records);
         decision_box->set_mag_display_adj_factor(fft_N);
-        ((DecisionBox_Unpiloted_And_Synced *) decision_box)->set_thresholds(options.modulation);
     }
 
     if (decision_box)
@@ -603,6 +603,10 @@ void message_processing(
         {
         	decision_box->set_mag_display_adj_factor(fft_N/2);
         	decision_box->set_use_cuda(true);
+            if (!options.decision_thresholds_specified)
+            {
+                options.decision_thresholds.set_cuda_defaults();
+            }
         }
 #endif
         decision_box->analyze_records();
@@ -622,6 +626,8 @@ void message_processing(
             }
             
             std::ostringstream os_result;
+            os_result << std::endl;
+            options.decision_thresholds.print_options(os_result);
             os_result << std::endl << "Decision box records:" << std::endl;
             decision_box->dump_decision_records(os_result);
             os_result << std::endl << "Decisions status:" << std::endl;
@@ -923,7 +929,7 @@ void message_processing_MFSK(
     mfsk_message_demodulator->dump_demodulation_records(demod_os);
     std::cout << demod_os.str() << std::endl;
 
-    DecisionBox_MFSK decision_box(options.mfsk_options._fft_N, options.mfsk_options._nb_fft_per_symbol);
+    DecisionBox_MFSK decision_box(options.mfsk_options._fft_N, options.mfsk_options._nb_fft_per_symbol, options.decision_thresholds);
     decision_box.estimate_symbols(mfsk_message_demodulator->get_demodulation_records());
 
     options.prns.pop_back(); // pop padding symbol
@@ -935,6 +941,7 @@ void message_processing_MFSK(
     }
 
     std::ostringstream os_result;
+    options.decision_thresholds.print_options(os_result);
     os_result << std::endl << "Decisions status:" << std::endl;
     decision_box.dump_decision_status(os_result, options.prns, mfsk_message_demodulator->get_demodulation_records());
     os_result << std::endl << "Index, original and decoded symbols (-1 denotes an erasure):";

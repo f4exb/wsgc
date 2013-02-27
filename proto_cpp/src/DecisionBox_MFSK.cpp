@@ -26,19 +26,23 @@
 #include "WsgcUtils.h"
 #include "DecisionBox_MFSK.h"
 #include "MFSK_MessageDemodulationRecord.h"
+#include "DecisionBox_Thresholds.h"
 #include <iostream>
 #include <sstream>
 #include <iomanip>
 #include <algorithm>
 #include <cassert>
 
-const wsgc_float DecisionBox_MFSK::peak_margin_threshold = 1.45; // selected peak max / average ratio threshold
 
 
 //=================================================================================================
-DecisionBox_MFSK::DecisionBox_MFSK(unsigned int fft_size, unsigned int nb_fft_per_symbol) :
+DecisionBox_MFSK::DecisionBox_MFSK(
+		unsigned int fft_size,
+		unsigned int nb_fft_per_symbol,
+        const DecisionBox_Thresholds& decision_thresholds) :
 	_fft_size(_fft_size),
-	_nb_fft_per_symbol(nb_fft_per_symbol)
+	_nb_fft_per_symbol(nb_fft_per_symbol),
+    _decision_thresholds(decision_thresholds)
 {}
 
 
@@ -55,7 +59,7 @@ void DecisionBox_MFSK::estimate_symbols(const std::vector<MFSK_MessageDemodulati
 
 	for (; demod_it != demod_end; ++demod_it)
 	{
-		if ((demod_it->_max_magnitude / demod_it->_avg_magnitude) > peak_margin_threshold)
+		if ((demod_it->_max_magnitude / demod_it->_avg_magnitude) > _decision_thresholds._peak_margin_threshold)
 		{
 			_decoded_symbols.push_back(demod_it->_symbol_ordinal);
 		}
@@ -75,6 +79,10 @@ void DecisionBox_MFSK::dump_decision_status(
 {
 	assert(_decoded_symbols.size() == demodulation_records.size());
 	std::vector<decision_status_t> symbols_decision_status;
+    unsigned int count_false_reject = 0;
+    unsigned int count_false_accept = 0;
+    unsigned int count_true_reject = 0;
+    unsigned int count_true_accept = 0;
 
 	for (unsigned int i=0; i < original_symbols.size(); i++)
 	{
@@ -85,10 +93,12 @@ void DecisionBox_MFSK::dump_decision_status(
 				if (demodulation_records[i]._symbol_ordinal == original_symbols[i])
 				{
 					symbols_decision_status.push_back(decision_status_false_reject);
+                    count_false_reject++;
 				}
 				else
 				{
 					symbols_decision_status.push_back(decision_status_true_reject);
+                    count_true_reject++;
 				}
 			}
 			else
@@ -96,10 +106,12 @@ void DecisionBox_MFSK::dump_decision_status(
 				if (_decoded_symbols[i] == original_symbols[i])
 				{
 					symbols_decision_status.push_back(decision_status_true_accept);
+                    count_true_accept++;
 				}
 				else
 				{
 					symbols_decision_status.push_back(decision_status_false_accept);
+                    count_false_accept++;
 				}
 			}
 		}
@@ -118,6 +130,11 @@ void DecisionBox_MFSK::dump_decision_status(
 			os << " " << demodulation_records[si]._max_magnitude/demodulation_records[si]._avg_magnitude << std::endl;
 		}
 	}
+    
+    unsigned int count_erasures = count_true_reject + count_false_reject;
+    unsigned int count_errors = count_false_accept;
+    unsigned int rs_corr = count_erasures + 2*count_errors;
+    os << "_SDC " << count_true_accept << "," << count_true_reject << "," << count_false_accept << "," << count_false_reject << "," << rs_corr << std::endl;
 }
 
 

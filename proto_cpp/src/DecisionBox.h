@@ -33,6 +33,8 @@
 #include <vector>
 #include <map>
 
+class DecisionBox_Thresholds;
+
 /**
  * \brief Correlation data analysis and message estimation. Derivated into two flavours, see:
  *    - DecisionBox_Piloted   : for operation with pilot(s) PRN(s) transmitted simultaneously with the message PRNs
@@ -55,7 +57,7 @@ class DecisionBox
 		 * \param prn_per_symbol Number of PRNs per symbol
          * \param fft_N Size of the FFT, this is also the number of samples in one PRN
 		 */
-        DecisionBox(unsigned int prn_per_symbol, unsigned int _fft_size);
+        DecisionBox(unsigned int prn_per_symbol, unsigned int _fft_size, const DecisionBox_Thresholds& decision_thresholds);
         
         virtual ~DecisionBox();
 
@@ -175,10 +177,10 @@ class DecisionBox
         std::vector<std::pair<unsigned int, unsigned int> > _histo_symbol_prn_i_at_max; //!< Maxumum module PRN index in symbol histogram
         std::vector<int> _decoded_symbols; //!< Symbols decoded, -1 for erasure
         std::vector<DecisionRecord> _decision_records; //!< Decision records giving details on decision process
+        const DecisionBox_Thresholds& _decision_thresholds; //!< Reference to the decision thresholds
 
         static const unsigned int preferred_symbol_prn_i_margin_threshold; //!< minimum margin between preferred PRN index in symbol and next preferred to have confidence
         static const unsigned int single_preferred_symbol_prn_i_threshold; //!< minimum number of occurences of preferred PRN index in symbol when single to have confidence
-        static const wsgc_float peak_margin_threshold;  //!< selected correlation peak max difference with next / correlations ratio threshold
 
         /**
          * Do an estimation of the preferred PRN index in the symbol PRN repetition for estimation (estimates end of symbol)

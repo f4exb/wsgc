@@ -29,6 +29,7 @@
 */
 #include "DecisionBox_Unpiloted_And_Synced.h"
 #include "CorrelationRecord.h"
+#include "DecisionBox_Thresholds.h"
 
 #include <iostream>
 #include <iomanip>
@@ -37,11 +38,10 @@
 //=================================================================================================
 DecisionBox_Unpiloted_And_Synced::DecisionBox_Unpiloted_And_Synced(unsigned int prn_per_symbol,
 		unsigned int fft_size,
+        const DecisionBox_Thresholds& decision_thresholds,
 		std::vector<CorrelationRecord>& correlation_records) :
-	DecisionBox(prn_per_symbol, fft_size),
-	_correlation_records(correlation_records),
-	_max_to_avg_ok_threshold(1.1),
-	_max_to_avg_ok_threshold_cuda(1.1)
+	DecisionBox(prn_per_symbol, fft_size, decision_thresholds),
+	_correlation_records(correlation_records)
 {
 	_prni_at_max_invalid = false; // N/A in this case
 }
@@ -122,7 +122,7 @@ bool DecisionBox_Unpiloted_And_Synced::challenge_matching_symbol(std::vector<Cor
     wsgc_float max_to_avg = matching_record_it->magnitude_max / matching_record_it->magnitude_avg;
 	std::cout << "    +  challenge rec # " << matching_record_it->global_prn_index << std::endl;
 
-    if (max_to_avg > (_use_cuda ? _max_to_avg_ok_threshold_cuda : _max_to_avg_ok_threshold))
+    if (max_to_avg > _decision_thresholds._max_to_avg_ok_threshold)
     {
     	return true;
     }
@@ -130,21 +130,4 @@ bool DecisionBox_Unpiloted_And_Synced::challenge_matching_symbol(std::vector<Cor
     {
     	return false;
     }
-}
-
-
-//=================================================================================================
-void DecisionBox_Unpiloted_And_Synced::set_thresholds(Modulation& modulation)
-{
-	if (modulation.getScheme() == Modulation::Modulation_OOK)
-	{
-		_max_to_avg_ok_threshold_cuda = 1.06;
-		_max_to_avg_ok_threshold = 1.06;
-	}
-	else if (modulation.getScheme() == Modulation::Modulation_DBPSK)
-	{
-		_max_to_avg_ok_threshold_cuda = 1.15;
-		_max_to_avg_ok_threshold = 1.15;
-	}
-	// else leave defaults (normally not used)
 }

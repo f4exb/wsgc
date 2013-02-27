@@ -21,6 +21,7 @@ wsgc_test_SOURCES = CodeModulator_BPSK.cpp \
     DecisionBox.cpp \
     DecisionBox_Piloted_And_Synced.cpp \
     DecisionBox_Unpiloted_And_Synced.cpp \
+    DecisionBox_Thresholds.cpp \
     FadingModelClarke.cpp \
     FadingModel.cpp \
     FadingModelNone.cpp \
@@ -115,6 +116,7 @@ wsgc_test_SOURCES = CodeModulator_BPSK.cpp \
     DecisionBox.cpp \
     DecisionBox_Piloted_And_Synced.cpp \
     DecisionBox_Unpiloted_And_Synced.cpp \
+    DecisionBox_Thresholds.cpp \
     FadingModelClarke.cpp \
     FadingModel.cpp \
     FadingModelNone.cpp \
@@ -178,6 +180,7 @@ wsgc_generator_SOURCES = wsgc_generator.cpp \
     WsgcUtils.cpp \
     Options.cpp \
     MFSK_Options.cpp \
+    DecisionBox_Thresholds.cpp \
     SimulatedSource.cpp \
     CodeModulator_OOK.cpp \
     CodeModulator_CW_Test.cpp \
