@@ -7,6 +7,14 @@ do ./bootstrap.sh
 
 3. Make yourself a build directory, say: /opt/build/wsgc_test
 
+4. Prerequisites
+	- FFTW 3.3.2: for Ubuntu distributions you have to have the 12.10 release. However you can download and install the .deb
+	  file from this link: https://launchpad.net/ubuntu/+source/fftw3/3.3.2-3.1ubuntu1 follow the "Builds" link for your 
+	  architecture and look for the libfftw3-3 libfftw3-bin and libfftw3-dev packages (install in this order)
+	- libboost-dev (>= 1.48)
+	- Cuda libraries and driver when using graphics card acceleration: see README.cuda
+	- g++-4.5 when compiling for Cuda
+
 4. Run configure that is in the source root, with above example paths, installing into /opt/install/wsgc_test:
 CXXFLAGS="-g -O2" /opt/code/wsgc/proto_cpp/configure --prefix=/opt/install/wsgc_test (release with optimization)
 CXXFLAGS="-g -O0" /opt/code/wsgc/proto_cpp/configure --prefix=/opt/install/wsgc_test (debug without optimization)
