@@ -1,6 +1,6 @@
 This project is based on autotools. To build and install:
 
-1. You must have autotools installed
+1. You must have autotools and autoconf-archive installed
 
 2. Go to where you installed the source root, say /opt/code/wsgc/proto_cpp
 do ./bootstrap.sh
@@ -11,20 +11,20 @@ do ./bootstrap.sh
 	- FFTW 3.3.2: for Ubuntu distributions you have to have the 12.10 release. However you can download and install the .deb
 	  file from this link: https://launchpad.net/ubuntu/+source/fftw3/3.3.2-3.1ubuntu1 follow the "Builds" link for your 
 	  architecture and look for the libfftw3-3 libfftw3-bin and libfftw3-dev packages (install in this order)
-	- libboost-dev (>= 1.48)
+	- libboost-dev (>= 1.42)
 	- Cuda libraries and driver when using graphics card acceleration: see README.cuda
 	- g++-4.5 when compiling for Cuda
 
-4. Run configure that is in the source root, with above example paths, installing into /opt/install/wsgc_test:
+5. Run configure that is in the source root, with above example paths, installing into /opt/install/wsgc_test:
 CXXFLAGS="-g -O2" /opt/code/wsgc/proto_cpp/configure --prefix=/opt/install/wsgc_test (release with optimization)
 CXXFLAGS="-g -O0" /opt/code/wsgc/proto_cpp/configure --prefix=/opt/install/wsgc_test (debug without optimization)
 
-5. Run make
+6. Run make
 Hint: Use make -j<2*n> where n is the number of machine threads to speed up. For example on a core i7 (4 cores 2 threads each, you do: make -j16)
 
-6. Run make install
+7. Run make install
 
-7. The programs are ready to use in /opt/install/wsgc_test/bin
+8. The programs are ready to use in /opt/install/wsgc_test/bin
 
 - wsgc_test: runs an execution on simulated samples
              run wsgc_test -h to list all options
