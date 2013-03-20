@@ -660,7 +660,7 @@ void message_processing(
             std::cout << erasure_counts << " erasures (" << ((float) erasure_counts)/decision_box->get_decoded_symbols().size() << ")" << std::endl;
             std::cout << error_counts << " errors (" << ((float) error_counts)/decision_box->get_decoded_symbols().size() << ")" << std::endl;
             std::cout << erasure_counts+error_counts << " total (" << ((float) erasure_counts+error_counts)/decision_box->get_decoded_symbols().size() << ")" << std::endl;
-            std::cout << "_SUM " << erasure_counts << "," << error_counts << "," << erasure_counts+error_counts << std::endl;
+            std::cout << "_SUM " << erasure_counts << "," << error_counts << "," << erasure_counts+error_counts << "," << erasure_counts+2*error_counts << std::endl;
         }
 
         // Delete dynamically allocated objects
@@ -972,7 +972,7 @@ void message_processing_MFSK(
     std::cout << erasure_counts << " erasures (" << ((float) erasure_counts)/decision_box.get_decoded_symbols().size() << ")" << std::endl;
     std::cout << error_counts << " errors (" << ((float) error_counts)/decision_box.get_decoded_symbols().size() << ")" << std::endl;
     std::cout << erasure_counts+error_counts << " total (" << ((float) erasure_counts+error_counts)/decision_box.get_decoded_symbols().size() << ")" << std::endl;
-    std::cout << "_SUM " << erasure_counts << "," << error_counts << "," << erasure_counts+error_counts << std::endl;
+    std::cout << "_SUM " << erasure_counts << "," << error_counts << "," << erasure_counts+error_counts << "," << erasure_counts+2*error_counts << std::endl;
 }
 
 
