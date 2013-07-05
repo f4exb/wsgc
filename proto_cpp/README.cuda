@@ -18,13 +18,17 @@ NVCCFLAGS=-arch=sm_20 /shared/development/wsgc/cpp_proto/configure --prefix=/opt
 Another possibility is to use --with-cuda-arch=sm_20 option. Don't use both possibilities at the same time or the compilator will refuse to work.
 
 Thus a typical configure invocation is:
-CXXFLAGS="-g -O2" NVCCFLAGS=-arch=sm_20 /shared/development/google_code/wsgc/proto_cpp/configure --prefix=/opt/install/wsgc_test --enable-cuda --with-cuda=/opt/install/cuda-5.
-0 --with-cuda-sdk=/opt/cudaSDK
+CXXFLAGS="-g -O2" NVCCFLAGS=-arch=sm_20 /shared/development/google_code/wsgc/proto_cpp/configure --prefix=/opt/install/wsgc_test --enable-cuda --with-cuda=/opt/install/cuda-5.0 --with-cuda-sdk=/opt/cudaSDK
 
 Note 2: From CUDA 5.0 Thrust is part of the CUDA install in $CUDA_INSTALL_PATH/include/thrust so there is no need for a specific path. To compile with earlier versions
 you need to symlink to your installed Thrust includes directory
 
 Note 3: Please note that CUDA, CUDA SDK and Thrust are all necessary to compile CUDA specific code
+
+Note 4: To use Reed Solomon soft decision decoding support with rssoft library (see https://code.google.com/p/rssoft) use the following options on the configure line:
+--enable-rssoft --with-rssoft=/opt/install/rssoft assuming /opt/install/rssoft is where you installed rssoft
+Complete command:
+CXXFLAGS="-g -O2" NVCCFLAGS=-arch=sm_20 /shared/development/google_code/wsgc/proto_cpp/configure --prefix=/opt/install/wsgc_test --enable-cuda --with-cuda=/opt/install/cuda-5.0 --with-cuda-sdk=/opt/cudaSDK --enable-rssoft --with-rssoft=/opt/install/rssoft
 
 
 2. To build programs with CUDA support

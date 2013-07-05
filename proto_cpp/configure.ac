@@ -1,4 +1,6 @@
 AC_INIT(wsgc_test, 0.1.0)
+AC_CONFIG_MACRO_DIR([m4])
+m4_include([m4/boost.m4])
 AM_INIT_AUTOMAKE(wsgc_test, 0.1.0)
 AC_LANG_PUSH([C++])
 
@@ -7,7 +9,7 @@ ARCH=`uname -m`
 # ------------------------------------------------------------------------------
 # Boost
 # ------------------------------------------------------------------------------
-AX_BOOST_BASE([1.42])
+BOOST_REQUIRE([1.42])
 
 # ------------------------------------------------------------------------------
 # FFTW3
@@ -29,6 +31,56 @@ fi
 
 AM_CONDITIONAL([HAVE_DOXYGEN], 
 [test -n "$DOXYGEN"])AM_COND_IF([HAVE_DOXYGEN], [AC_CONFIG_FILES([doc/Doxyfile])])
+
+# ------------------------------------------------------------------------------
+# RSSOFT
+# ------------------------------------------------------------------------------
+
+# Setup defaut RSSoft paths
+RSSOFT_INSTALL_PATH="/usr/local/rssoft"
+
+# Check: enable RSSoft?
+AC_MSG_CHECKING([whether to use RSSoft library])
+AC_ARG_ENABLE(rssoft,
+    [AS_HELP_STRING(--enable-rssoft,enable RSSoft support)],
+    rssoftval="yes",
+    rssoftval="no")
+AC_MSG_RESULT([$rssoftval])
+
+# check to see if RSSoft been selected
+if test "x$rssoftval" == "xno"; then
+    AC_MSG_WARN([Not using RSSoft!])
+fi
+
+# Setup custom RSSoft paths
+AC_ARG_WITH([rssoft],
+   [AS_HELP_STRING(
+        [--with-rssoft=PATH],
+        [prefix where RSSoft is installed @<:@default=auto@:>@])],
+   [RSSOFT_INSTALL_PATH=$withval],
+   [with_rssoft=auto])
+
+# Verify RSSoft paths
+if test  "x$rssoftval" == "xyes"; then
+    AC_CHECK_FILE([${RSSOFT_INSTALL_PATH}/include/GFq.h],[hasrssoft="yes"],[hasrssoft="no"])
+    if test "x$hasrssoft" == "xno"; then
+       AC_MSG_WARN([RSSoft library not found - will not have RSSoft support])
+       rssoftval="no"
+    fi
+    AM_CONDITIONAL([HAS_RSSOFT],[test "x$rssoftval" == "xyes"]) 
+else
+    AM_CONDITIONAL([HAS_RSSOFT],[false])     
+fi
+
+# Setup RSSoft flags
+if test  "x$rssoftval" == "xyes"; then
+	RSSOFT_CFLAGS="-I$RSSOFT_INSTALL_PATH/include"
+	RSSOFT_LDFLAGS="-L$RSSOFT_INSTALL_PATH/lib -lrssoft"
+	AC_SUBST(RSSOFT_CFLAGS)
+	AC_SUBST(RSSOFT_LDFLAGS)
+	AC_DEFINE([_RSSOFT],[1],[Defined if RSSoft should be used])
+fi
+
 
 # ------------------------------------------------------------------------------
 # CUDA

@@ -19,6 +19,9 @@ do ./bootstrap.sh
 CXXFLAGS="-g -O2" /opt/code/wsgc/proto_cpp/configure --prefix=/opt/install/wsgc_test (release with optimization)
 CXXFLAGS="-g -O0" /opt/code/wsgc/proto_cpp/configure --prefix=/opt/install/wsgc_test (debug without optimization)
 
+5a. To use Reed Solomon soft decision decoding support with rssoft library (see https://code.google.com/p/rssoft) use the following options on the configure line:
+--enable-rssoft --with-rssoft=/opt/install/rssoft assuming /opt/install/rssoft is where you installed rssoft 
+
 6. Run make
 Hint: Use make -j<2*n> where n is the number of machine threads to speed up. For example on a core i7 (4 cores 2 threads each, you do: make -j16)
 

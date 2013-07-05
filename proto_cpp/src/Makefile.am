@@ -1,6 +1,14 @@
 bin_PROGRAMS = wsgc_test wsgc_generator
+wsgc_test_SOURCES =
+wsgc_test_LDADD =
 
 AM_CXXFLAGS = $(FFTW3F_CFLAGS) 
+
+if HAS_RSSOFT
+wsgc_test_SOURCES += RSSoft_Engine.cpp
+wsgc_test_LDADD += $(RSSOFT_LDFLAGS)
+AM_CXXFLAGS += $(RSSOFT_CFLAGS)
+endif
 
 if HAS_CUDA
 
@@ -9,7 +17,7 @@ bin_PROGRAMS += wsgc_cuda
 AM_CXXFLAGS += $(CUDA_CFLAGS)
 
 # ls *.cpp -1 | awk '{printf "%s \\\n", $1}'
-wsgc_test_SOURCES = CodeModulator_BPSK.cpp \
+wsgc_test_SOURCES += CodeModulator_BPSK.cpp \
     CodeModulator_DBPSK.cpp \
     CodeModulator_OOK.cpp \
     CodeModulator_MFSK.cpp \
@@ -80,9 +88,7 @@ wsgc_test_SOURCES = CodeModulator_BPSK.cpp \
     PilotCorrelator_Cuda.cu \
     SinglePrnCorrelator_FreqDep_Cuda.cu \
     SourceFFT_Cuda.cu \
-    Cuda_Operators.cu
-
-wsgc_test_LDADD = -lrt $(FFTW3F_LIBS) $(NVLDFLAGS)
+    Cuda_Operators.cu 
 
 wsgc_cuda_SOURCES = CudaManager.cu \
 	CudaDeviceManager.cu \
@@ -100,11 +106,12 @@ wsgc_cuda_SOURCES = CudaManager.cu \
 	test_cuda.cu \
 	wsgc_cuda.cpp
 	
-wsgc_cuda_LDADD = -lrt $(FFTW3F_LIBS) $(NVLDFLAGS)
-
+wsgc_test_LDADD += $(NVLDFLAGS)
+wsgc_cuda_LDADD = -lrt $(FFTW3F_LIBS) $(NVLDFLAGS)	
+	
 else
 
-wsgc_test_SOURCES = CodeModulator_BPSK.cpp \
+wsgc_test_SOURCES += CodeModulator_BPSK.cpp \
     CodeModulator_DBPSK.cpp \
     CodeModulator_OOK.cpp \
     CodeModulator_MFSK.cpp \
@@ -167,10 +174,8 @@ wsgc_test_SOURCES = CodeModulator_BPSK.cpp \
     MFSK_MessageDemodulator_Host.cpp \
     DecisionBox_MFSK.cpp 
 
-wsgc_test_LDADD = -lrt $(FFTW3F_LIBS)
-
 endif
-                    
+
 wsgc_generator_SOURCES = wsgc_generator.cpp \
 	CodeModulator_BPSK.cpp \
 	CodeModulator_DBPSK.cpp \
@@ -199,8 +204,9 @@ wsgc_generator_SOURCES = wsgc_generator.cpp \
     DemodulatorDifferential.cpp \
     DemodulatorSquaring.cpp \
     CodeModulator_MFSK.cpp
-
+    
 wsgc_generator_LDADD = -lrt $(FFTW3F_LIBS)
+wsgc_test_LDADD += -lrt $(FFTW3F_LIBS)
 
 .cu.o:
 	$(NVCC) $(NVCCFLAGS) $(FFTW3F_CFLAGS) -c -o $@ $<
