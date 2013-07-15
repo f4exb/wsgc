@@ -39,7 +39,66 @@
 #include "RR_Factorization.h"
 #include "FinalEvaluation.h"
 #include "RS_Encoding.h"
+#include "WsgcTypes.h"
 
+/**
+ * \brief Class to handle primitive polynomials for RSSoft engine
+ */
+class RSSoft_PPolys
+{
+public:
+    RSSoft_PPolys();
+    ~RSSoft_PPolys();
+    const rssoft::gf::GF2_Polynomial& get_ppoly(unsigned int order);
+private:
+    std::vector<rssoft::gf::GF2_Polynomial> ppolys; //!< Predefined primitive polynomials
+};
+
+/**
+ * \brief Generic codeword class, can be either a message or an encoded codeword
+ */
+class RSSoft_generic_codeword
+{
+public:
+	RSSoft_generic_codeword();
+	~RSSoft_generic_codeword();
+
+	std::vector<int>& get_symbols()
+	{
+		return symbols;
+	}
+
+	const std::vector<int>& get_symbols() const
+	{
+		return symbols;
+	}
+
+	float get_reliability() const
+	{
+		return reliability;
+	}
+
+	void set_reliability(float _reliability)
+	{
+		reliability = _reliability;
+	}
+
+	/**
+	 * reliability order
+	 */
+	bool operator<(const RSSoft_generic_codeword& other) const
+	{
+		return reliability < other.reliability;
+	}
+
+protected:
+	std::vector<int> symbols;
+	float reliability;
+};
+
+/**
+ * \brief Interface engine with the RSSoft Reed Solomon soft decision librarys
+ */
 class RSSoft_Engine
 {
 public:
@@ -66,7 +125,36 @@ public:
 	{
 		return k;
 	}
-
+    
+    void set_initial_global_multiplicity(unsigned int _M)
+    {
+        M = _M;
+    }
+    
+    void set_nb_retries(unsigned int _nb_retries)
+    {
+        nb_retries = _nb_retries;
+    }
+    
+    /**
+     * Encode message into codeword
+     * \param in_msg Message
+     * \param out_codeword Codeword
+     */
+    void encode(const std::vector<int>& in_msg, std::vector<int>& out_codeword);
+    
+    /**
+     * Record symbol magnitudes for one symbol position
+     * \param magnitudes Pointer to magnitudes array. It is assumed to be of 2^m size.
+     */
+    void record_magnitudes(wsgc_float *magnitudes);
+    
+    /**
+     * Decode one codeword based on given magnitudes for the length of one codeword. Return all unique candidate
+     * messages along with their best value of reliability. It will systematically loop the given number of retries.
+     * \param candidate_messages Vector of candidate messages filled in in decreasing value of reliability
+     */
+    void decode(std::vector<RSSoft_generic_codeword>& candidate_messages);
 
 protected:
 	unsigned int m; //!< GF(2^m)
@@ -75,7 +163,14 @@ protected:
 	unsigned int k; //!< RS(n,k), n = 2^m-1
 	unsigned int nb_retries; //!< Number of soft decision retries
 	unsigned int M; //!< Global multiplicity for soft decision multiplicity matrix
-
+    RSSoft_PPolys ppolys; //!< Collection of pre-defined primitive polynomials
+    rssoft::gf::GFq gf; //!< Galois Field being used
+    rssoft::EvaluationValues evaluation_values; //!< Evaluation values for RS
+    rssoft::RS_Encoding rs_encoding; //!< Encoder
+    rssoft::ReliabilityMatrix mat_Pi; //!< Reliability matrix
+    rssoft::GSKV_Interpolation gskv; //!< Guruswami-Sudan-Koetter-Vardy interpolation engine
+    rssoft::RR_Factorization rr; //!< Roth-Ruckensteil factorization engine
+    rssoft::FinalEvaluation final_evaluation; //!< Evaluation engine
 };
 
 
