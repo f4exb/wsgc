@@ -24,10 +24,13 @@
      Reed Solomon soft decision engine based on rssoft library
      https://code.google.com/p/rssoft
 
+     Requires -std=c++0x compiler option for regex support
+
 */
 #include "RSSoft_Engine.h"
 #include "WsgcException.h"
 #include <algorithm>
+#include <boost/tr1/regex.hpp>
 
 //=================================================================================================
 RSSoft_PPolys::RSSoft_PPolys()
@@ -55,7 +58,8 @@ RSSoft_PPolys::~RSSoft_PPolys()
 
 //=================================================================================================
 RSSoft_generic_codeword::RSSoft_generic_codeword() :
-		reliability(0.0)
+		reliability(0.0),
+        retry_nb(0)
 {}
 
 
@@ -103,7 +107,7 @@ RSSoft_Engine::~RSSoft_Engine()
 
 
 //=================================================================================================
-void RSSoft_Engine::encode(const std::vector<int>& in_msg, std::vector<int>& out_codeword)
+void RSSoft_Engine::encode(const std::vector<unsigned int>& in_msg, std::vector<unsigned int>& out_codeword)
 {
 	rs_encoding.run(in_msg, out_codeword);
 }
@@ -122,7 +126,7 @@ void RSSoft_Engine::decode(std::vector<RSSoft_generic_codeword>& candidate_messa
 	mat_Pi.normalize();
 	unsigned int global_multiplicity = M;
 
-    for (unsigned int ni=1; (ni<=nb_retries); ni++)
+    for (unsigned int ni=1; (ni<=nb_retries); ni++) // Retry loop
     {
     	rssoft::MultiplicityMatrix mat_M(mat_Pi, global_multiplicity);
     	const rssoft::gf::GFq_BivariatePolynomial& Q = gskv.run(mat_M);
@@ -148,6 +152,7 @@ void RSSoft_Engine::decode(std::vector<RSSoft_generic_codeword>& candidate_messa
     						if (msg_it->get_probability_score() > candidates_it->get_reliability())
     						{
     							candidates_it->set_reliability(msg_it->get_probability_score());
+                                candidates_it->set_retry_nb(ni);
         						msg_found = true;
     						}
     					}
@@ -157,6 +162,7 @@ void RSSoft_Engine::decode(std::vector<RSSoft_generic_codeword>& candidate_messa
     				{
     					static RSSoft_generic_codeword tmp_codeword;
     					candidate_messages.push_back(tmp_codeword);
+                        candidate_messages.back().set_retry_nb(ni);
     					candidate_messages.back().set_reliability(msg_it->get_probability_score());
     					candidate_messages.back().get_symbols() = msg_it->get_codeword();
     				}
@@ -167,4 +173,100 @@ void RSSoft_Engine::decode(std::vector<RSSoft_generic_codeword>& candidate_messa
 
     std::sort(candidate_messages.begin(), candidate_messages.end());
     std::reverse(candidate_messages.begin(), candidate_messages.end());
+}
+
+
+//=================================================================================================
+bool RSSoft_Engine::decode(RSSoft_generic_codeword& retrieved_message, RSSoft_generic_codeword& retrieved_codeword, const RSSoft_generic_codeword& sent_message)
+{
+	mat_Pi.normalize();
+	unsigned int global_multiplicity = M;
+    bool found = false;
+
+    for (unsigned int ni=1; (ni<=nb_retries) && !found; ni++) // Retry loop
+    {
+    	rssoft::MultiplicityMatrix mat_M(mat_Pi, global_multiplicity);
+    	const rssoft::gf::GFq_BivariatePolynomial& Q = gskv.run(mat_M);
+    	if (!Q.is_in_X()) // Interpolation successful
+    	{
+    		std::vector<rssoft::gf::GFq_Polynomial>& res_polys = rr.run(Q);
+
+    		if (res_polys.size() > 0) // Factorization successful
+    		{
+    			final_evaluation.run(res_polys, mat_Pi);
+    			const std::vector<rssoft::ProbabilityCodeword>& messages = final_evaluation.get_messages();
+    			const std::vector<rssoft::ProbabilityCodeword>& codewords = final_evaluation.get_codewords();
+    			std::vector<rssoft::ProbabilityCodeword>::const_iterator msg_it = messages.begin();
+    			std::vector<rssoft::ProbabilityCodeword>::const_iterator cdw_it = codewords.begin();
+
+    			for (; (msg_it != messages.end()) && (cdw_it != codewords.end()); ++ msg_it, ++cdw_it) // Explore results
+    			{
+                    if (msg_it->get_codeword() == sent_message.get_symbols())
+                    {
+                        retrieved_message.get_symbols() = msg_it->get_codeword();
+                        retrieved_message.set_retry_nb(ni);
+                        retrieved_message.set_reliability(msg_it->get_probability_score());
+                        retrieved_codeword.get_symbols() = cdw_it->get_codeword();
+                        retrieved_codeword.set_retry_nb(ni);
+                        retrieved_codeword.set_reliability(cdw_it->get_probability_score());
+                        found = true;
+                        break;
+                    }
+    			} // Explore results
+    		} // Factorization successful
+    	} // Interpolation successful
+    } // Retry loop
+    
+    return found;
+}
+
+
+//=================================================================================================
+bool RSSoft_Engine::decode(std::string& retrieved_text_msg,
+        RSSoft_generic_codeword& retrieved_message, 
+        const SourceCodec& src_codec,
+        const std::string& regexp)
+{
+	mat_Pi.normalize();
+	unsigned int global_multiplicity = M;
+    bool found = false;
+
+    for (unsigned int ni=1; (ni<=nb_retries) && !found; ni++) // Retry loop
+    {
+    	rssoft::MultiplicityMatrix mat_M(mat_Pi, global_multiplicity);
+    	const rssoft::gf::GFq_BivariatePolynomial& Q = gskv.run(mat_M);
+    	if (!Q.is_in_X()) // Interpolation successful
+    	{
+    		std::vector<rssoft::gf::GFq_Polynomial>& res_polys = rr.run(Q);
+
+    		if (res_polys.size() > 0) // Factorization successful
+    		{
+    			final_evaluation.run(res_polys, mat_Pi);
+    			const std::vector<rssoft::ProbabilityCodeword>& messages = final_evaluation.get_messages();
+    			std::vector<rssoft::ProbabilityCodeword>::const_iterator msg_it = messages.begin();
+
+    			for (; msg_it != messages.end(); ++ msg_it) // Explore results
+    			{
+                    src_codec.decode(msg_it->get_codeword(), retrieved_text_msg);
+                    if (regexp_match(retrieved_text_msg,regexp))
+                    {
+                        retrieved_message.get_symbols() = msg_it->get_codeword();
+                        retrieved_message.set_retry_nb(ni);
+                        retrieved_message.set_reliability(msg_it->get_probability_score());
+                        found = true;
+                        break;
+                    }
+    			} // Explore results
+    		} // Factorization successful
+    	} // Interpolation successful
+    } // Retry loop
+    
+    return found;
+}
+
+
+//=================================================================================================
+bool RSSoft_Engine::regexp_match(const std::string& value, const std::string& regexp) const
+{
+    return std::tr1::regex_match(value, std::tr1::regex(regexp));
 }

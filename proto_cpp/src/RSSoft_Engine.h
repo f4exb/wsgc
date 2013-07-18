@@ -40,6 +40,8 @@
 #include "FinalEvaluation.h"
 #include "RS_Encoding.h"
 #include "WsgcTypes.h"
+#include "SourceCodec.h"
+#include <string>
 
 /**
  * \brief Class to handle primitive polynomials for RSSoft engine
@@ -63,12 +65,12 @@ public:
 	RSSoft_generic_codeword();
 	~RSSoft_generic_codeword();
 
-	std::vector<int>& get_symbols()
+	std::vector<unsigned int>& get_symbols()
 	{
 		return symbols;
 	}
 
-	const std::vector<int>& get_symbols() const
+	const std::vector<unsigned int>& get_symbols() const
 	{
 		return symbols;
 	}
@@ -82,9 +84,14 @@ public:
 	{
 		reliability = _reliability;
 	}
+    
+    void set_retry_nb(unsigned int _retry_nb)
+    {
+        retry_nb = _retry_nb;
+    }
 
 	/**
-	 * reliability order
+	 * reliability increasing order
 	 */
 	bool operator<(const RSSoft_generic_codeword& other) const
 	{
@@ -92,8 +99,9 @@ public:
 	}
 
 protected:
-	std::vector<int> symbols;
+	std::vector<unsigned int> symbols;
 	float reliability;
+    unsigned int retry_nb;
 };
 
 /**
@@ -141,7 +149,7 @@ public:
      * \param in_msg Message
      * \param out_codeword Codeword
      */
-    void encode(const std::vector<int>& in_msg, std::vector<int>& out_codeword);
+    void encode(const std::vector<unsigned int>& in_msg, std::vector<unsigned int>& out_codeword);
     
     /**
      * Record symbol magnitudes for one symbol position
@@ -155,8 +163,34 @@ public:
      * \param candidate_messages Vector of candidate messages filled in in decreasing value of reliability
      */
     void decode(std::vector<RSSoft_generic_codeword>& candidate_messages);
+    
+    /**
+     * Decode one codeword based on given magnitudes for the length of one codeword. Tries to find the message that was sent
+     * and returns the corresponding decoded message and codeword. Of course this is of no use in real life conditions when you 
+     * don't know which message was sent. This is to be used only for prototyping.
+     * \param retrieved_message Retrieved message
+     * \param retrieved_codeword Retrieved codeword
+     * \param sent_message Message that was sent
+     * \return true if the message sent was found
+     */
+    bool decode(RSSoft_generic_codeword& retrieved_message, RSSoft_generic_codeword& retrieved_codeword, const RSSoft_generic_codeword& sent_message);
+    
+    /**
+     * Decode one codeword based on given magnitudes for the length of one codeword. Tries to match found textual messages with the given
+     * regular expression and returns the first match
+     * \param retrieved_text_msg Retrieved textual message
+     * \param retrieved_message Retrieved message symbols and associated reliability data
+     * \param src_codec Source codec being used
+     * \param regexp Regular expression to match with the textual message
+     * \return true if a matching message is found
+     */
+    bool decode(std::string& retrieved_text_msg,
+        RSSoft_generic_codeword& retrieved_message, 
+        const SourceCodec& src_codec,
+        const std::string& regexp);
 
 protected:
+    bool regexp_match(const std::string& value, const std::string& regexp) const;
 	unsigned int m; //!< GF(2^m)
 	unsigned int n; //!< 2^m-1
 	unsigned int q; //!< 2^m

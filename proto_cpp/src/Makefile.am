@@ -1,12 +1,12 @@
-bin_PROGRAMS = wsgc_test wsgc_generator
+bin_PROGRAMS = wsgc_test wsgc_generator wsgc_jt65src
 wsgc_test_SOURCES =
-wsgc_test_LDADD =
+wsgc_test_LDADD = 
 
 AM_CXXFLAGS = $(FFTW3F_CFLAGS) 
 
 if HAS_RSSOFT
 wsgc_test_SOURCES += RSSoft_Engine.cpp
-wsgc_test_LDADD += $(RSSOFT_LDFLAGS)
+wsgc_test_LDADD += $(RSSOFT_LDFLAGS) -lboost_regex
 AM_CXXFLAGS += $(RSSOFT_CFLAGS)
 endif
 
@@ -82,6 +82,8 @@ wsgc_test_SOURCES += CodeModulator_BPSK.cpp \
     MFSK_MessageDemodulator.cpp \
     MFSK_MessageDemodulator_Host.cpp \
     DecisionBox_MFSK.cpp \
+    SourceCodec_JT65.cpp \
+    Locator.cpp \
     CudaManager.cu \
     CudaDeviceManager.cu \
     LocalCodesFFT_Cuda.cu \
@@ -172,7 +174,9 @@ wsgc_test_SOURCES += CodeModulator_BPSK.cpp \
     MFSK_MessageDemodulationRecord.cpp \
     MFSK_MessageDemodulator.cpp \
     MFSK_MessageDemodulator_Host.cpp \
-    DecisionBox_MFSK.cpp 
+    DecisionBox_MFSK.cpp \
+    SourceCodec_JT65.cpp \
+    Locator.cpp
 
 endif
 
@@ -205,6 +209,11 @@ wsgc_generator_SOURCES = wsgc_generator.cpp \
     DemodulatorSquaring.cpp \
     CodeModulator_MFSK.cpp
     
+wsgc_jt65src_SOURCES = wsgc_jt65src.cpp \
+    SourceCodec_JT65.cpp \
+    Locator.cpp
+    
+wsgc_jt65src_LDADD = -lrt -lm
 wsgc_generator_LDADD = -lrt $(FFTW3F_LIBS)
 wsgc_test_LDADD += -lrt $(FFTW3F_LIBS)
 
