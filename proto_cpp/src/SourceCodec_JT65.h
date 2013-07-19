@@ -139,12 +139,32 @@ protected:
     bool pack_plain_callsign(const std::string& callsign, unsigned int& packed_callsign) const;
 
     /**
-     * Unpack 28 bits callsign into textual callsign
+     * Unpack 28 bits first callsign into textual field
      * \param packed_callsign Input packed callsign
-     * \param callsign output textual callsign
+     * \param callsign output textual first field 
+     * \param pfxsfx_str Prefix or suffix v.2 string
+     * \param pfxsfx_v2 Prefix or suffix v.2 indicator
      * \return true if successful
      */
-    bool unpack_callsign(unsigned int packed_callsign, std::string& callsign) const;
+    bool unpack_callsign_1(unsigned int packed_callsign, std::string& field_1, std::string& pfxsfx_str, unsigned int& pfxsfx_v2) const;
+
+    /**
+     * Unpack 28 bits plain callsign into textual callsign
+     * \param packed_callsign Input packed callsign
+     * \param packed_callsign Output packed callsign
+     * \return true if successful
+     */
+    bool unpack_plain_callsign(unsigned int packed_callsign, std::string& callsign) const;
+
+    /**
+     * Unpack 15 bits locator into textual field
+     * \param packed_locator Input packed locator
+     * \param field_3 output textual third field 
+     * \param pfxsfx_str Prefix or suffix v.1 string
+     * \param pfxsfx_v1 Prefix or suffix v.1 indicator: 0: no prefix nor suffix, 1: prefix for first callsign, 2: prefix for second callsign, 3: suffix for first callsign, 4: suffix for second callsign 
+     * \return true if successful
+     */
+    bool unpack_locator(unsigned int packed_locator, std::string& field_3, std::string& pfxsfx_str, unsigned int& pfxsfx_v1) const;
 
     /**
      * Pack 4 character locator into 15 bits
@@ -173,6 +193,15 @@ protected:
     bool pack_pfxsfx_v2(unsigned int v2_indicator, int pfxsfx_index, unsigned int call_indicator, unsigned int& packed_callsign) const;
 
     /**
+     * Unpack v.2 packed prefix or suffix into random 4 character prefix or random 3 character suffix
+     * \param pfxsfx_index Prefix or suffix index
+     * \param pfxsfx_str Output textual prefix or suffix
+     * \param max_chars Maximum number of characters expected
+     * \return true if successful
+     */
+    bool unpack_pfxsfx_v2(int pfxsfx_index, std::string& pfxsfx_str, unsigned int max_chars) const;
+
+    /**
      * Pack report in JT format (R-NN or -NN)
      * \param r_prefix true if "R" prefix was present
      * \param report_str 2 character "NN" string
@@ -181,14 +210,6 @@ protected:
      */
     bool pack_report_jt(bool r_prefix, const std::string& report_str, unsigned int& packed_locator) const;
 
-    /**
-     * Unpack 15 bits locator into textual 4 character locator
-     * \param packed_locator Input packed locator
-     * \param locator output textual locator
-     * \return true if successful
-     */
-    bool unpack_locator(unsigned int packed_locator, std::string& locator) const;
-    
     /**
      * Pack 13 character arbitrary text into 2 packed callsigns and a packed locator resulting in 71 bits
      * \param text Input text
@@ -211,9 +232,9 @@ protected:
      * \return true if successful
      */
     bool unpack_text(std::string& text,
-        unsigned int& packed_callsign_1,
-        unsigned int& packed_callsign_2,
-        unsigned int& packed_locator) const;
+        unsigned int packed_callsign_1,
+        unsigned int packed_callsign_2,
+        unsigned int packed_locator) const;
         
     /**
      * Pack 2 packed callsigns and a packed locator into 12 6-bit symbols message
@@ -242,6 +263,29 @@ protected:
         unsigned int& packed_callsign_2,
         unsigned int& packed_locator,
         bool& arbitrary_text) const;
+        
+    /**
+     * Compose the decoded formatted message from its decoded elements
+     * \param out_msg formatted message
+     * \param field_1 Field 1 string
+     * \param field_2 Field 2 string
+     * \param field_3 Field 3 string
+     * \param pfxsfx_v1 Prefix or suffix v.1 indicator
+     * \param pfxsfx_v2 Prefix or suffix v.2 indicator
+     * \param pfxsfx_str_v1 Prefix or suffix v.1 string
+     * \param pfxsfx_str_v2 Prefix or suffix v.2 string
+     */
+    void compose_formatted_message(std::string& out_msg,
+        const std::string& field_1,
+        const std::string& field_2,
+        const std::string& field_3,
+        unsigned int pfxsfx_v1,
+        unsigned int pfxsfx_v2,
+        const std::string& pfxsfx_str_v1,
+        const std::string& pfxsfx_str_v2) const;
+        
+        
+    unsigned int long_lat_to_pfxsfx_index(unsigned int nlat, unsigned int nlong) const;
 
     static const unsigned int call_nbase;
     static const unsigned int locator_nbase;

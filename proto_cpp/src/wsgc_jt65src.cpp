@@ -68,7 +68,7 @@ const char *InputMessages::messages_vinit[] = {
     "EA3XU F4EXB R-22",     // Plain 2 calls and report
     "F4EXB EA3XU RRR",      // Plain 2 calls and RRR
     "CQ 112 F4EXB JN33",    // CQ with frequency
-    "THIS IS FREEFLOW",     // Freeflow
+    "THIS IS FREE ",        // Freeflow
     "CQ F4EXB/P JN33",      // v.1 suffix
     "F6HTJ 3A/F4EXB RRR",   // v.1 prefix on 2nd call
     "3A/F6HTJ F4EXB RRR",   // v.1 prefix on 1st call
@@ -85,6 +85,7 @@ int main(int argc, char *argv[])
 {
 	SourceCodec_JT65 src_codec;
 	std::vector<unsigned int> out_msg;
+    std::string decoded_msg;
 
 	if (argc < 2)
 	{
@@ -93,13 +94,22 @@ int main(int argc, char *argv[])
 		for (unsigned int ti = 0; ti < input_messages.nb_messages(); ti++)
 		{
 			std::cout << "=== Test #" << ti+1 << " ===" << std::endl;
-			std::cout << "Input: \"" << input_messages.get_message(ti) << "\"" << std::endl;
+			std::cout << "Input   : \"" << input_messages.get_message(ti) << "\"" << std::endl;
 
 			if (src_codec.encode(input_messages.get_message(ti), out_msg))
 			{
-				std::cout << "Output: ";
+				std::cout << "Output  : ";
 				print_msg_symbols(out_msg, std::cout);
 				std::cout << std::endl;
+                
+                if (src_codec.decode(out_msg, decoded_msg))
+                {
+                    std::cout << "Decoded : \"" << decoded_msg << "\"" << std::endl;
+                }
+                else
+                {
+                    std::cout << "Message could not be decoded" << std::endl;
+                }
 			}
 			else
 			{
@@ -113,13 +123,22 @@ int main(int argc, char *argv[])
 	else
 	{
 		std::string input_msg(argv[1]);
-		std::cout << "Input: \"" << input_msg << "\"" << std::endl;
+		std::cout << "Input   : \"" << input_msg << "\"" << std::endl;
 
 		if (src_codec.encode(input_msg, out_msg))
 		{
-			std::cout << "Output: ";
+			std::cout << "Output  : ";
 			print_msg_symbols(out_msg, std::cout);
 			std::cout << std::endl;
+            
+            if (src_codec.decode(out_msg, decoded_msg))
+            {
+                std::cout << "Decoded : \"" << decoded_msg << "\"" << std::endl;
+            }
+            else
+            {
+                std::cout << "Message could not be decoded" << std::endl;
+            }
 		}
 		else
 		{

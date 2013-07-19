@@ -29,6 +29,7 @@
 #include "Locator.h"
 #include <boost/tokenizer.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/algorithm/string.hpp>
 
 const char *StandardPrefixes::prefix_vinit[] = {
        "1A","1S","3A","3B6","3B8","3B9","3C","3C0",
@@ -84,12 +85,12 @@ const unsigned int SourceCodec_JT65::call_DE = 267796945;
 const std::string  SourceCodec_JT65::free_text_chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ +-./?";
 const std::string  SourceCodec_JT65::suffix_chars = "P0123456789A";
 const std::string  SourceCodec_JT65::callsign_chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ ";
-const unsigned int SourceCodec_JT65::v2_prefix_cq_shift  = 262178563;
-const unsigned int SourceCodec_JT65::v2_prefix_qrz_shift = 264002072;
+const unsigned int SourceCodec_JT65::v2_prefix_cq_shift  = 262178563; // call_nbase + 1003
+const unsigned int SourceCodec_JT65::v2_prefix_qrz_shift = 264002072; 
 const unsigned int SourceCodec_JT65::v2_prefix_de_shift  = 265825581;
-const unsigned int SourceCodec_JT65::v2_suffix_cq_shift  = 267649090;
+const unsigned int SourceCodec_JT65::v2_suffix_cq_shift  = 267649090; 
 const unsigned int SourceCodec_JT65::v2_suffix_qrz_shift = 267698375;
-const unsigned int SourceCodec_JT65::v2_suffix_de_shift  = 267747660;
+const unsigned int SourceCodec_JT65::v2_suffix_de_shift  = 267747660; 
 
 //=================================================================================================
 StandardPrefixes::StandardPrefixes()
@@ -246,15 +247,29 @@ bool SourceCodec_JT65::encode(const std::string& in_msg, std::vector<unsigned in
     		{
     			std::string loc_rpt(*tok_iter);
 
-    			if (loc_rpt.size() == 4)
+    			if (loc_rpt.size() > 2)  
     			{
     				if (loc_rpt[0] == 'R' && loc_rpt[1] == '-') // Report as R-NN
     				{
-    					success = pack_report_jt(true, loc_rpt.substr(2,2), packed_locator);
+                        if (loc_rpt.size() == 4)
+                        {
+                            success = pack_report_jt(true, loc_rpt.substr(2,2), packed_locator);    
+                        }
+                        else
+                        {
+                            success = false;
+                        }
     				}
     				else if (loc_rpt[0] == '-') // Report as -NN
     				{
-    					success = pack_report_jt(false, loc_rpt.substr(1,2), packed_locator);
+                        if (loc_rpt.size() == 3)
+                        {
+                            success = pack_report_jt(false, loc_rpt.substr(1,2), packed_locator);
+                        }
+                        else
+                        {
+                            success = false;
+                        }
     				}
     				else // true locator
     				{
@@ -327,7 +342,60 @@ bool SourceCodec_JT65::encode(const std::string& in_msg, std::vector<unsigned in
 
 //=================================================================================================
 bool SourceCodec_JT65::decode(const std::vector<unsigned int>& in_msg, std::string& out_msg) const
-{}
+{
+    unsigned int packed_callsign_1;
+    unsigned int packed_callsign_2;
+    unsigned int packed_locator;
+    bool is_arbitrary_text;
+    std::string field_1;
+    std::string field_2;
+    std::string field_3;
+    std::string pfxsfx_v1_str;
+    std::string pfxsfx_v2_str;
+    unsigned int pfxsfx_v2 = 0;
+    unsigned int pfxsfx_v1 = 0;
+    bool success = true;
+    
+    unpack_message(in_msg, packed_callsign_1, packed_callsign_2, packed_locator, is_arbitrary_text);
+    //std::cout << packed_callsign_1 << ":" << packed_callsign_2 << ":" << packed_locator << (is_arbitrary_text ? ":freetext" : "") << std::endl;
+    
+    if (is_arbitrary_text)
+    {
+        return unpack_text(out_msg, packed_callsign_1, packed_callsign_2, packed_locator);
+    }
+    else
+    {
+        for (unsigned int n_field = 0; (n_field < 3) && success; n_field++)
+        {
+        	//std::cout << "n_field = " << n_field << std::endl;
+            if (n_field == 0)
+            {
+                success = unpack_callsign_1(packed_callsign_1, field_1, pfxsfx_v2_str, pfxsfx_v2);
+            }
+            else if (n_field == 1)
+            {
+                success = unpack_plain_callsign(packed_callsign_2, field_2);
+            }
+            else if (n_field == 2)
+            {
+                success = unpack_locator(packed_locator, field_3, pfxsfx_v1_str, pfxsfx_v1);
+            }
+        }
+        
+        //std::cout << (success ? "ok" : "ko") << std::endl;
+
+        if (success)
+        {
+        	//std::cout << "field_1 = " << field_1 << ", field_2 = " << field_2 << ", field_3 = " << field_3 << ", pfxsfx_v1 = " << pfxsfx_v1 << ", pfxsfx_v2 = " << pfxsfx_v2 << ", pfxsfx_v1_str = " << pfxsfx_v1_str << ", pfxsfx_v2_str = " << pfxsfx_v2_str << std::endl;
+            compose_formatted_message(out_msg, field_1, field_2, field_3, pfxsfx_v1, pfxsfx_v2, pfxsfx_v1_str, pfxsfx_v2_str);
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+}
 
 //=================================================================================================
 bool SourceCodec_JT65::pack_pfxsfx_v1(int pfxsfx_index, unsigned int& packed_locator) const
@@ -628,19 +696,20 @@ bool SourceCodec_JT65::pack_callsign(const std::string& callsign, unsigned int& 
 bool SourceCodec_JT65::pack_report_jt(bool r_prefix, const std::string& report_str, unsigned int& packed_locator) const
 {
     unsigned int report;
-
+    //std::cout << "report_str = " << report_str << std::endl;
+    
     try // try to find a number
     {
         report = boost::lexical_cast<unsigned int>(report_str);
 
-        if (report > 30)
+        if (report > 30) // report in [0..30] (31 values)
         {
             report = 30;
         }
         
         if (r_prefix)
         {
-            packed_locator = locator_nbase + 31 + report;
+            packed_locator = locator_nbase + 1 + 31 + report;
         }
         else
         {
@@ -761,6 +830,377 @@ bool SourceCodec_JT65::pack_text(const std::string& text,
 }
 
 //=================================================================================================
+bool SourceCodec_JT65::unpack_text(std::string& text,
+        unsigned int packed_callsign_1,
+        unsigned int packed_callsign_2,
+        unsigned int packed_locator) const
+{
+    packed_locator &= 0x7FFF; // Remove arbitrary text indicator bit
+    
+    if (packed_callsign_1 & 0x01)
+    {
+        packed_locator |= 0x8000;
+    }
+
+    if (packed_callsign_2 & 0x01)
+    {
+        packed_locator |= 0x10000;
+    }
+    
+    packed_callsign_1 >>= 1;
+    packed_callsign_2 >>= 1;
+    unsigned int i;
+    unsigned int j;
+    unsigned int alphabet_size = free_text_chars.size();
+    text = "             ";
+    
+    for (i=5; i>0; i--)
+    {
+        j = packed_callsign_1 % alphabet_size;
+        text[i-1] = free_text_chars[j];
+        packed_callsign_1 /= alphabet_size;
+    }
+    
+    for (i=10; i>5; i--)
+    {
+        j = packed_callsign_2 % alphabet_size;
+        text[i-1] = free_text_chars[j];
+        packed_callsign_2 /= alphabet_size;
+    }
+    
+    for (i=13; i>10; i--)
+    {
+        j = packed_locator % alphabet_size;
+        text[i-1] = free_text_chars[j];
+        packed_locator /= alphabet_size;
+    }
+    
+    return true;
+}
+
+//=================================================================================================
+bool SourceCodec_JT65::unpack_callsign_1(unsigned int packed_callsign, std::string& field_1, std::string& pfxsfx_str, unsigned int& pfxsfx_v2) const
+{
+    if (packed_callsign > call_DE) // This is the maximum indicator
+    {
+        return false; 
+    }
+    else if (packed_callsign <= call_nbase) // plain callsign
+    {
+        pfxsfx_v2 = 0;
+        return unpack_plain_callsign(packed_callsign, field_1);
+    }
+    else if (packed_callsign == call_nbase + 1) // plain CQ
+    {
+        pfxsfx_v2 = 0;
+        field_1 = "CQ";
+        return true;
+    }
+    else if (packed_callsign == call_nbase + 2) // plain QRZ
+    {
+        pfxsfx_v2 = 0;
+        field_1 = "QRZ";
+        return true;
+    }
+    else if (packed_callsign < call_nbase + 1003) // CQ + frequency
+    {
+        pfxsfx_v2 = 0;
+        unsigned int frequency = packed_callsign - call_nbase - 3;
+        std::ostringstream os;
+        os << "CQ " << frequency;
+        field_1 = os.str();
+        return true;
+    }
+    else if (packed_callsign <  v2_prefix_qrz_shift) // v.2 prefix CQ range
+    {
+        pfxsfx_v2 = 1;
+        field_1 = "CQ";
+        return unpack_pfxsfx_v2(packed_callsign - v2_prefix_cq_shift, pfxsfx_str, 4);
+    }
+    else if (packed_callsign <  v2_prefix_de_shift)  // v.2 prefix QRZ range
+    {
+        pfxsfx_v2 = 1;
+        field_1 = "QRZ";
+        return unpack_pfxsfx_v2(packed_callsign - v2_prefix_qrz_shift, pfxsfx_str, 4);
+    }
+    else if (packed_callsign <  v2_suffix_cq_shift)  // v.2 prefix DE range
+    {
+        pfxsfx_v2 = 1;
+        field_1 = "DE";
+        return unpack_pfxsfx_v2(packed_callsign - v2_prefix_de_shift, pfxsfx_str, 4);
+    }
+    else if (packed_callsign <  v2_suffix_qrz_shift) // v.2 suffix CQ range
+    {
+        pfxsfx_v2 = 2;
+        field_1 = "CQ";
+        return unpack_pfxsfx_v2(packed_callsign - v2_suffix_cq_shift, pfxsfx_str, 3);
+    }
+    else if (packed_callsign <  v2_suffix_de_shift)  // v.2 suffix QRZ range
+    {
+        pfxsfx_v2 = 2;
+        field_1 = "QRZ";
+        return unpack_pfxsfx_v2(packed_callsign - v2_suffix_qrz_shift, pfxsfx_str, 3);
+    }
+    else if (packed_callsign <  call_DE)             // v.2 suffix DE range
+    {
+        pfxsfx_v2 = 2;
+        field_1 = "DE";
+        return unpack_pfxsfx_v2(packed_callsign - v2_suffix_de_shift, pfxsfx_str, 3);
+    }
+    else if (packed_callsign ==  call_DE) // plain DE
+    {
+        pfxsfx_v2 = 0;
+        field_1 = "DE";
+        return true;
+    }
+    else
+    {
+    	return false; // unregistered
+    }
+}
+
+//=================================================================================================
+bool SourceCodec_JT65::unpack_pfxsfx_v2(int pfxsfx_index, std::string& pfxsfx_str, unsigned int max_chars) const
+{
+    unsigned int alphabet_size = callsign_chars.size();
+    pfxsfx_str = std::string(max_chars, ' ');
+    
+    for (unsigned int i = max_chars; i > 0; i--)
+    {
+        unsigned int j = pfxsfx_index % alphabet_size;
+        pfxsfx_str[i-1] = callsign_chars[j];
+        pfxsfx_index /= alphabet_size;
+    }
+    
+    boost::algorithm::trim_right(pfxsfx_str); // trim blanks
+    return true;
+}
+
+//=================================================================================================
+bool SourceCodec_JT65::unpack_plain_callsign(unsigned int packed_callsign, std::string& callsign) const
+{
+    callsign = "      ";
+    unsigned int i;
+    unsigned int alphabet_size = callsign_chars.size();
+    
+    i = (packed_callsign % 27) + 10;
+    callsign[5] = callsign_chars[i];
+    packed_callsign /= 27;
+    
+    i = (packed_callsign % 27) + 10;
+    callsign[4] = callsign_chars[i];
+    packed_callsign /= 27;
+    
+    i = (packed_callsign % 27) + 10;
+    callsign[3] = callsign_chars[i];
+    packed_callsign /= 27;
+    
+    i = (packed_callsign % 10);
+    callsign[2] = callsign_chars[i];
+    packed_callsign /= 10;
+    
+    i = (packed_callsign % 36);
+    callsign[1] = callsign_chars[i];
+    packed_callsign /= 36;
+    
+    if (packed_callsign < alphabet_size)
+    {
+        callsign[0] = callsign_chars[packed_callsign];
+        boost::algorithm::trim(callsign); // trim blanks
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+//=================================================================================================
+bool SourceCodec_JT65::unpack_locator(unsigned int packed_locator, std::string& field_3, std::string& pfxsfx_str, unsigned int& pfxsfx_v1) const
+{
+    if (packed_locator <= locator_nbase) // true locator
+    {
+        float dlat = (packed_locator % 180) - 90.0;
+        float dlong = (packed_locator/180)*2.0 - 180.0 + 2.0;
+        bool pfx_found;
+        
+        
+        if (dlat < 85) // real locator
+        {
+            //std::cout << "dlat = " << dlat << ", dlong = " << dlong << std::endl;
+            Locator locator(dlat, -dlong);
+            field_3 = locator.toString().substr(0,4);
+            return true;
+        }
+        else // v.1 prefix or suffix
+        {
+            dlat += 90.0;
+            dlong -= 2.0;
+            //std::cout << "dlat = " << dlat << ", dlong = " << dlong << std::endl;
+            field_3 = "";
+            unsigned int nlong = dlong;
+            unsigned int nlat = dlat;
+            unsigned int pfxsfx_index = long_lat_to_pfxsfx_index(nlat, nlong);
+            unsigned int new_index;
+            //std::cout << "pfxsfx_index = " << pfxsfx_index << std::endl;
+            
+            if (pfxsfx_index < 450) // concerns first callsign
+            {
+                if (pfxsfx_index < 400) // prefix
+                {
+                	pfxsfx_v1 = 1;
+                    pfxsfx_str = std::string(standard_prefixes.get_prefix(pfxsfx_index, pfx_found));
+                    return pfx_found;
+                }
+                else // suffix
+                {
+                	pfxsfx_v1 = 3;
+                    pfxsfx_index -= 400;
+                    
+                    if (pfxsfx_index < suffix_chars.size())
+                    {
+                        pfxsfx_str = suffix_chars[pfxsfx_index];
+                        return true;
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                }
+            }
+            else // concerns second callsign
+            {
+                pfxsfx_index -= 450;
+                
+                if (pfxsfx_index < 400) // prefix
+                {
+                    pfxsfx_v1 = 2;
+                    pfxsfx_str = std::string(standard_prefixes.get_prefix(pfxsfx_index, pfx_found));
+                    return pfx_found;
+                }
+                else // suffix
+                {
+                    pfxsfx_v1 = 4;
+                    pfxsfx_index -= 400;
+                    
+                    if (pfxsfx_index < suffix_chars.size())
+                    {
+                        pfxsfx_str = suffix_chars[pfxsfx_index];
+                        return true;
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                }
+            }
+        }
+    }
+    else if (packed_locator < locator_nbase + 62) // report
+    {
+        unsigned int report = packed_locator - locator_nbase - 1;
+        std::ostringstream os;
+
+        if (report < 31)
+        {
+            os << report;
+        }
+        else
+        {
+            os << "R-" << report - 31;
+        }
+
+        field_3 = os.str();
+        pfxsfx_v1 = 0;
+        return true;
+    }
+    else if (packed_locator == locator_nbase + 62)
+    {
+    	field_3 = "RO";
+    	pfxsfx_v1 = 0;
+        return true;
+    }
+    else if (packed_locator == locator_nbase + 63)
+    {
+    	field_3 = "RRR";
+    	pfxsfx_v1 = 0;
+        return true;
+    }
+    else if (packed_locator == locator_nbase + 64)
+    {
+    	field_3 = "73";
+    	pfxsfx_v1 = 0;
+        return true;
+    }
+    else
+    {
+    	return false; // invalid still
+    }
+}
+
+//=================================================================================================
+unsigned int SourceCodec_JT65::long_lat_to_pfxsfx_index(unsigned int nlat, unsigned int nlong) const
+{
+    int pfxsfx_q, pfxsfx_r;
+    //int nlong = 2 * (((pfxsfx_index-1)/5) % 90) - 180;
+    //int nlat = ((pfxsfx_index-1)%5) + 85 + 90;
+    pfxsfx_q = (nlong + 180)/2;
+    pfxsfx_r = (nlat - 85 - 90);
+    //std::cout << "pfxsfx_q = " << pfxsfx_q << ", pfxsfx_r = " << pfxsfx_r << std::endl;
+    return pfxsfx_q*5 + pfxsfx_r;
+}
+
+//=================================================================================================
+void SourceCodec_JT65::compose_formatted_message(std::string& out_msg,
+        const std::string& field_1,
+        const std::string& field_2,
+        const std::string& field_3,
+        unsigned int pfxsfx_v1,
+        unsigned int pfxsfx_v2,
+        const std::string& pfxsfx_str_v1,
+        const std::string& pfxsfx_str_v2) const
+{
+    std::string new_field_1 = field_1;
+    std::string new_field_2 = field_2;
+    std::string new_field_3 = field_3;
+
+    // v.1 prefix/suffix:
+    if (pfxsfx_v1 == 1) // prefix on field 1
+    {
+        new_field_1 = pfxsfx_str_v1 + "/" + field_1;
+        new_field_3 = "";
+    }
+    else if (pfxsfx_v1 == 2) // prefix on field 2
+    {
+        new_field_2 = pfxsfx_str_v1 + "/" + field_2;
+        new_field_3 = "";
+    }
+    else if (pfxsfx_v1 == 3) // suffix on field 1
+    {
+        new_field_1 = field_1 + "/" + pfxsfx_str_v1;
+        new_field_3 = "";
+    }
+    else if (pfxsfx_v1 == 4) // suffix on field 2
+    {
+        new_field_2 = field_2 + "/" + pfxsfx_str_v1;
+        new_field_3 = "";
+    }
+    
+    // v.2 prefix/suffix:
+    if (pfxsfx_v2 == 1) // prefix
+    {
+        new_field_2 = pfxsfx_str_v2 + "/" + field_2;
+    }
+    else if (pfxsfx_v2 == 2) // suffix
+    {
+        new_field_2 = field_2 + "/" + pfxsfx_str_v2;
+    } 
+    
+    out_msg = new_field_1 + " " + new_field_2 + " " + new_field_3;
+    boost::algorithm::trim(out_msg);
+}
+
+//=================================================================================================
 bool SourceCodec_JT65::pack_message(unsigned int packed_callsign_1,
         unsigned int packed_callsign_2,
         unsigned int packed_locator,
@@ -795,4 +1235,42 @@ bool SourceCodec_JT65::pack_message(unsigned int packed_callsign_1,
     message.push_back(code_byte); // symbol 11
     
     return true;
+}
+
+//=================================================================================================
+bool SourceCodec_JT65::unpack_message(const std::vector<unsigned int>& message,
+        unsigned int& packed_callsign_1,
+        unsigned int& packed_callsign_2,
+        unsigned int& packed_locator,
+        bool& arbitrary_text) const
+{
+    packed_callsign_1 = 0;
+    packed_callsign_2 = 0;
+    packed_locator = 0;
+    
+    if (message.size() < 12)
+    {
+        return false;
+    }
+    else
+    {
+        packed_callsign_1 = message[0] << 22;
+        packed_callsign_1 += message[1] << 16;
+        packed_callsign_1 += message[2] << 10;
+        packed_callsign_1 += message[3] << 4;
+        packed_callsign_1 += (message[4] >> 2) & 0x0F;
+        
+        packed_callsign_2 = (message[4] & 0x03) << 26;
+        packed_callsign_2 += message[5] << 20;
+        packed_callsign_2 += message[6] << 14;
+        packed_callsign_2 += message[7] << 8;
+        packed_callsign_2 += message[8] << 2;
+        packed_callsign_2 += (message[9] >> 4) & 0x03;
+        
+        packed_locator = (message[9] & 0x0F) << 12;
+        packed_locator += message[10] << 6;
+        packed_locator += message[11];
+        
+        arbitrary_text = (packed_locator > 0x7FFF);
+    }
 }
