@@ -119,6 +119,11 @@ public:
      */
     virtual bool decode(const std::vector<unsigned int>& in_msg, std::string& out_msg) const;
 
+    /**
+     * Prints the codec data to an output stream
+     */
+    virtual void print_source_codec_data(std::ostringstream& os) const;
+
 protected:
     /**
      * Pack callsign into 28 bits and process possible prefix or suffix

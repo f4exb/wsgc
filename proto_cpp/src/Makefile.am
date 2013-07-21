@@ -1,12 +1,16 @@
 bin_PROGRAMS = wsgc_test wsgc_generator wsgc_jt65src
-wsgc_test_SOURCES =
-wsgc_test_LDADD = 
+wsgc_test_SOURCES = Options.cpp
+wsgc_generator_SOURCES = Options.cpp
+wsgc_test_LDADD =
+wsgc_generator_LDADD = 
 
 AM_CXXFLAGS = $(FFTW3F_CFLAGS) 
 
 if HAS_RSSOFT
 wsgc_test_SOURCES += RSSoft_Engine.cpp
 wsgc_test_LDADD += $(RSSOFT_LDFLAGS) -lboost_regex
+wsgc_generator_SOURCES += RSSoft_Engine.cpp
+wsgc_generator_LDADD += $(RSSOFT_LDFLAGS) -lboost_regex
 AM_CXXFLAGS += $(RSSOFT_CFLAGS)
 endif
 
@@ -52,7 +56,6 @@ wsgc_test_SOURCES += CodeModulator_BPSK.cpp \
     PilotedTrainingMessageCorrelator_Cuda.cu \
     PilotedTrainingMultiplePrnCorrelator.cpp \
     TrainingCorrelationRecord.cpp \
-    Options.cpp \
     MFSK_Options.cpp \
     Path.cpp \
     PilotCorrelationAnalyzer.cpp \
@@ -145,7 +148,6 @@ wsgc_test_SOURCES += CodeModulator_BPSK.cpp \
     PilotedTrainingMessageCorrelator_Host.cpp \
     PilotedTrainingMultiplePrnCorrelator.cpp \
     TrainingCorrelationRecord.cpp \
-    Options.cpp \
     MFSK_Options.cpp \
     Path.cpp \
     PilotCorrelationAnalyzer.cpp \
@@ -180,14 +182,13 @@ wsgc_test_SOURCES += CodeModulator_BPSK.cpp \
 
 endif
 
-wsgc_generator_SOURCES = wsgc_generator.cpp \
+wsgc_generator_SOURCES += wsgc_generator.cpp \
 	CodeModulator_BPSK.cpp \
 	CodeModulator_DBPSK.cpp \
 	ContinuousPhaseCarrier.cpp \
 	GoldCodeGenerator.cpp \
     LocalCodesFFT.cpp \
     WsgcUtils.cpp \
-    Options.cpp \
     MFSK_Options.cpp \
     DecisionBox_Thresholds.cpp \
     SimulatedSource.cpp \
@@ -207,14 +208,16 @@ wsgc_generator_SOURCES = wsgc_generator.cpp \
     FIRCoefGenerator_RCos.cpp \
     DemodulatorDifferential.cpp \
     DemodulatorSquaring.cpp \
-    CodeModulator_MFSK.cpp
+    CodeModulator_MFSK.cpp \
+    SourceCodec_JT65.cpp \
+    Locator.cpp
     
 wsgc_jt65src_SOURCES = wsgc_jt65src.cpp \
     SourceCodec_JT65.cpp \
     Locator.cpp
     
 wsgc_jt65src_LDADD = -lrt -lm
-wsgc_generator_LDADD = -lrt $(FFTW3F_LIBS)
+wsgc_generator_LDADD += -lrt $(FFTW3F_LIBS)
 wsgc_test_LDADD += -lrt $(FFTW3F_LIBS)
 
 .cu.o:

@@ -1274,3 +1274,9 @@ bool SourceCodec_JT65::unpack_message(const std::vector<unsigned int>& message,
         arbitrary_text = (packed_locator > 0x7FFF);
     }
 }
+
+//=================================================================================================
+void SourceCodec_JT65::print_source_codec_data(std::ostringstream& os) const
+{
+	os << "JT65 classic with 12 6-bits symbols";
+}

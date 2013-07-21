@@ -30,6 +30,8 @@
 
 #include <vector>
 #include <string>
+#include <sstream>
+
 
 class SourceCodec
 {
@@ -52,6 +54,11 @@ public:
      * \return true if successful
      */
     virtual bool decode(const std::vector<unsigned int>& in_msg, std::string& out_msg) const = 0;
+
+    /**
+     * Prints the codec data to an output stream
+     */
+    virtual void print_source_codec_data(std::ostringstream& os) const = 0;
 };
 
 #endif //__SOURCE_CODEC_H__

@@ -26,10 +26,15 @@
 */
 #include "Options.h"
 #include "WsgcUtils.h"
+#include "FadingModel.h"
 #include "FadingModelNone.h"
 #include "FadingModelClarke.h"
 #include "FadingModelWatterson.h"
+#include "FIRCoefGenerator.h"
 #include "FIRCoefGenerator_RCos.h"
+#include "SourceCodec.h"
+#include "SourceCodec_JT65.h"
+#include "RSSoft_Engine.h"
 #include <stdlib.h>
 #include <getopt.h>
 #include <cstring>
@@ -41,6 +46,7 @@
 #include <boost/lexical_cast.hpp>
 
 
+//=================================================================================================
 // template to extract information from getopt more easily
 template<typename TOpt, typename TField> bool extract_option(TField& field, char short_option)
 {
@@ -61,6 +67,7 @@ template<typename TOpt, typename TField> bool extract_option(TField& field, char
 }
 
 
+//=================================================================================================
 Options::Options(std::string& _binary_name) :
     binary_path(_binary_name),
     f_sampling(4096.0),
@@ -100,7 +107,11 @@ Options::Options(std::string& _binary_name) :
     gpu_affinity_specified(false),
 	_fir_coef_generator(0),
 	mfsk_options(4096.0),
-    decision_thresholds_specified(false)
+    decision_thresholds_specified(false),
+    _source_codec(0),
+    _rssoft_engine(0),
+    rs_logq(0),
+    rs_k(0)
 {
     srand(time(0));
 
@@ -112,15 +123,25 @@ Options::Options(std::string& _binary_name) :
 }
 
 
+//=================================================================================================
 Options::~Options()
 {
-    if (_fading_model == 0)
+    if (_fading_model != 0)
     {
         delete _fading_model;
+    }
+    if (_source_codec != 0)
+    {
+    	delete _source_codec;
+    }
+    if (_rssoft_engine != 0)
+    {
+    	delete _rssoft_engine;
     }
 }
 
 
+//=================================================================================================
 bool Options::get_options(int argc, char *argv[])
 {
     int c;
@@ -170,12 +191,14 @@ bool Options::get_options(int argc, char *argv[])
             {"samples-output-file", required_argument, 0, 'o'},
             {"fir-filter-model", required_argument, 0, 'L'},
             {"gpu-affinity", required_argument, 0, 'y'},
-            {"decision-thresholds", required_argument, 0, 'H'}
+            {"decision-thresholds", required_argument, 0, 'H'},
+            {"source-coding", required_argument, 0, 'j'},
+            {"reed-solomon", required_argument, 0, 'O'}
         };
         
         int option_index = 0;
         
-        c = getopt_long (argc, argv, "s:c:n:t:C:p:N:I:r:R:T:m:M:S:g:G:f:d:a:P:A:F:B:z:U:o:L:Y:y:H:", long_options, &option_index);
+        c = getopt_long (argc, argv, "s:c:n:t:C:p:N:I:r:R:T:m:M:S:g:G:f:d:a:P:A:F:B:z:U:o:L:Y:y:H:j:O:", long_options, &option_index);
         
         if (c == -1) // end of options
         {
@@ -307,6 +330,12 @@ bool Options::get_options(int argc, char *argv[])
             case 'H':
                 status = decision_thresholds.parse_options(std::string(optarg));
                 decision_thresholds_specified = true;
+                break;
+            case 'j':
+                status = parse_source_coding_data(std::string(optarg));
+                break;
+            case 'O':
+                status = parse_reed_solomon_data(std::string(optarg));
                 break;
             case '?':
                 std::ostringstream os;
@@ -520,6 +549,50 @@ bool Options::get_options(int argc, char *argv[])
 				analysis_window_size = prns.size();
 			}
 
+			// source coding (if any) adjustments
+			if (_source_codec)
+			{
+				if (!adjust_parameters_for_source_coding())
+				{
+					return false;
+				}
+				if (!source_codec_create_message_prns())
+				{
+					return false;
+				}
+			}
+
+			// Reed-Solomon
+			if (rs_k != 0)
+			{
+				if (1<<rs_logq != nb_message_symbols)
+				{
+					std::cout << "Invalid size of symbols alphabet for the Reed-Solomon parameters" << std::endl;
+					return false;
+				}
+
+				if (prns.size() != rs_k)
+				{
+					std::cout << "Invalid number of message symbols for the Reed-Solomon parameters" << std::endl;
+					return false;
+				}
+
+				if (rs_k > nb_message_symbols - 2)
+				{
+					std::cout << "Invalid k parameter for Reed-Solomon" << std::endl;
+					return false;
+				}
+
+				_rssoft_engine = new RSSoft_Engine(rs_logq, rs_k);
+				_rssoft_engine->set_initial_global_multiplicity(rs_M);
+				_rssoft_engine->set_nb_retries(rs_r);
+
+				if (!encode_reed_solomon())
+				{
+					std::cout << "Cannot encode message with Reed-Solomon" << std::endl;
+				}
+			}
+
 			// last validation: generator polynomials
             if ((g1_poly_powers.size() > 0) && (g2_poly_powers.size() > 0)) // basic checks on given generator polynomials
             {
@@ -607,6 +680,7 @@ bool Options::get_options(int argc, char *argv[])
     }
 }
 
+//=================================================================================================
 void Options::get_help(std::ostringstream& os)
 {
     struct help_struct
@@ -656,6 +730,8 @@ void Options::get_help(std::ostringstream& os)
         {"-L", "--fir-filter-model", "Lowpass FIR filter model (see short help below)", "string", "", "any"},
         {"-y", "--gpu-affinity", "Force CUDA execution on specified GPU ID", "int", "(none)", "wsgc_test"},
         {"-H", "--decision-thresholds", "Specify decision box thresholds (see decision thresholds below)", "string", "(none)", "wsgc_test"},
+        {"-f", "--source-codec", "Source codec data (see short help below)", "string", "null (no source codec)", "any"},
+        {"-O", "--reed-solomon", "Reed-Solomon encoding/decoding wtih RSSoft library (see short help below)", "string", "null (no RS)", "any"},
         {0,0,0,0,0,0}
     };
     
@@ -733,6 +809,19 @@ void Options::get_help(std::ostringstream& os)
     os << "   Rolloff factor must be between 0.0 and 1.0. Invalid values yield 1.0" << std::endl;
     os << " Cutoff frequency must be lower or equal to half the sampling frequency. Invalid values yield fs/2" << std::endl;
     os << std::endl;
+    os << "Source codecs:" << std::endl;
+    os << " - JT65 classical: -j \"JT65:|<source text message>\"" << std::endl;
+    os << std::endl;
+    os << "Reed Solomon encoding and soft-decision decoding using RSSoft library:" << std::endl;
+    os << "For a RS(n,k) code with n = 2^q-1 and 1<k<n," << std::endl;
+    os << "M is the initial multiplicity matrix global multiplicity, r is the maximum number of retries:" << std::endl;
+    os << "-O q,k,M,r:<decoding mode>(,<regular expression>)" << std::endl;
+    os << "Decoding modes:" << std::endl;
+    os << " - full: gives all results hence executes r retries" << std::endl;
+    os << " - best: only return the result with best probability or none" << std::endl;
+    os << " - first: returns the first result" << std::endl;
+    os << " - regex: retries until it finds a resulting textual message matching the given regular expression" << std::endl;
+    os << std::endl;
     mfsk_options.get_help(os);
     os << std::endl;
     decision_thresholds.get_help(os);
@@ -762,6 +851,7 @@ void Options::print_options(std::ostringstream& os)
 }
 
         
+//=================================================================================================
 void Options::print_standard_options(std::ostringstream& os)
 {
     // additional computations
@@ -815,6 +905,16 @@ void Options::print_standard_options(std::ostringstream& os)
         os << "Fading Model ..............: "; print_fading_model_data(os); os << std::endl;
     }
     
+    if (_source_codec != 0)
+    {
+    	os << "Source codec ..............: "; print_source_codec_data(os); os << std::endl;
+    }
+
+    if (rs_k != 0)
+    {
+    	os << "Reed Solomon (RSSoft lib) .: "; print_reed_solomon_data(os); os << std::endl;
+    }
+
     os << "Modulation ................: "; modulation.print_modulation_data(os); os << std::endl;
     //os << "Nb phase averaging cycles .: " << std::setw(6) << std::right << tracking_phase_average_cycles << std::endl;
     os << "Nb message symbols ........: " << std::setw(6) << std::right << nb_message_symbols << std::endl;
@@ -931,6 +1031,7 @@ void Options::print_standard_options(std::ostringstream& os)
 }
 
 
+//=================================================================================================
 void Options::print_mfsk_options(std::ostringstream& os)
 {
     os << "Using options:" << std::endl;
@@ -961,6 +1062,15 @@ void Options::print_mfsk_options(std::ostringstream& os)
         os << "Fading Model ..............: "; print_fading_model_data(os); os << std::endl;
     }
 
+    if (_source_codec != 0)
+    {
+    	os << "Source codec ..............: "; print_source_codec_data(os); os << std::endl;
+    }
+
+    if (rs_k != 0)
+    {
+    	os << "Reed Solomon (RSSoft lib) .: "; print_reed_solomon_data(os); os << std::endl;
+    }
 
 	if (binary_name == "wsgc_generator")
 	{
@@ -990,6 +1100,7 @@ void Options::print_mfsk_options(std::ostringstream& os)
 }
 
 
+//=================================================================================================
 void Options::print_fading_model_data(std::ostringstream& os)
 {
     if (_fading_model)
@@ -1003,6 +1114,54 @@ void Options::print_fading_model_data(std::ostringstream& os)
 }
 
 
+//=================================================================================================
+void Options::print_source_codec_data(std::ostringstream& os)
+{
+    if (_source_codec)
+    {
+        _source_codec->print_source_codec_data(os);
+        os << "; Message: \"" << _source_message_str << "\"";
+    }
+    else
+    {
+        os << "None";
+    }
+}
+
+
+//=================================================================================================
+void Options::print_reed_solomon_data(std::ostringstream& os)
+{
+    if (rs_k)
+    {
+        os << "RS(" << (1<<rs_logq)-1 << "," << rs_k << "), M = " << rs_M << ", r = " << rs_r << ", decoding mode = ";
+        switch (rs_decoding_mode)
+        {
+        case RSSoft_decoding_full:
+        	os << "full";
+        	break;
+        case RSSoft_decoding_best:
+        	os << "best";
+        	break;
+        case RSSoft_decoding_first:
+        	os << "first";
+        	break;
+        case RSSoft_decoding_regex:
+        	os << "regex: \"" << rs_decoding_regex << "\"";
+        	break;
+        default:
+        	os << "none";
+        	break;
+        }
+    }
+    else
+    {
+        os << "None";
+    }
+}
+
+
+//=================================================================================================
 bool Options::parse_fir_filter_model_data(std::string fir_data_str)
 {
     bool status = false;
@@ -1039,6 +1198,7 @@ bool Options::parse_fir_filter_model_data(std::string fir_data_str)
     return status;
 }
 
+//=================================================================================================
 bool Options::parse_fading_model_data(std::string fading_data_str)
 {
     bool status = false;
@@ -1122,6 +1282,7 @@ bool Options::parse_fading_model_data(std::string fading_data_str)
 }
 
 
+//=================================================================================================
 bool Options::parse_modulation_data(std::string modulation_data_str)
 {
 	std::transform(modulation_data_str.begin(), modulation_data_str.end(), modulation_data_str.begin(), ::toupper);
@@ -1180,10 +1341,9 @@ bool Options::parse_modulation_data(std::string modulation_data_str)
 
 
 
+//=================================================================================================
 bool Options::parse_pilot_prns_data(std::string pilot_data_str)
 {
-    bool status = false;
-
     size_t comma_pos = pilot_data_str.find(",");
 
     try
@@ -1208,7 +1368,162 @@ bool Options::parse_pilot_prns_data(std::string pilot_data_str)
     catch (boost::bad_lexical_cast &)
     {
         std::cout << "Invalid pilot PRN number(s) specification" << std::endl;
-        return false;
     }
 
+    return false;
 }
+
+//=================================================================================================
+bool Options::parse_source_coding_data(std::string source_coding_data_str)
+{
+    bool status = false;
+
+    size_t colon_pos = source_coding_data_str.find(":");
+    size_t bar_pos = source_coding_data_str.find("|");
+
+    if ((source_coding_data_str.length() > 3) && (colon_pos != std::string::npos) && (colon_pos > 0))
+    {
+    	if ((bar_pos != std::string::npos) && (bar_pos > colon_pos))
+    	{
+    		_source_codec_type_str = source_coding_data_str.substr(0,colon_pos);
+    		std::transform(_source_codec_type_str.begin(), _source_codec_type_str.end(), _source_codec_type_str.begin(), ::toupper);
+    		std::string source_coding_parameters_str = source_coding_data_str.substr(colon_pos+1, bar_pos-colon_pos-1);
+    		_source_message_str = source_coding_data_str.substr(bar_pos+1);
+
+    		if (_source_codec_type_str == "JT65")
+    		{
+    			// source_coding_data_str unused
+    			_source_codec = new SourceCodec_JT65();
+    			status = true;
+    		}
+    	}
+    }
+
+    if (!status)
+    {
+        std::cout << "Invalid source coding specification" << std::endl;
+    }
+
+    return status;
+}
+
+//=================================================================================================
+bool Options::parse_reed_solomon_data(std::string parameter_str)
+{
+    bool status = false;
+    std::vector<unsigned int> rs_num_parameters;
+    std::vector<std::string> rs_str_parameters;
+    size_t colon_pos = parameter_str.find(":");
+
+    if (colon_pos == std::string::npos)
+    {
+    	std::cout << "Invalid Reed-Solomon specification" << std::endl;
+    	return false;
+    }
+
+    std::string num_parameter_str = parameter_str.substr(0, colon_pos);
+    std::string str_parameter_str = parameter_str.substr(colon_pos+1);
+
+    status = extract_vector<unsigned int>(rs_num_parameters, num_parameter_str);
+
+    if (rs_num_parameters.size() < 4)
+    {
+    	std::cout << "Reed Solomon parameters take 4 values: q, k, M, r" << std::endl;
+    	return false;
+    }
+
+    rs_logq = rs_num_parameters[0];
+    rs_k = rs_num_parameters[1];
+    rs_M = rs_num_parameters[2];
+    rs_r = rs_num_parameters[3];
+
+    status = extract_vector<std::string>(rs_str_parameters, str_parameter_str);
+
+    if (rs_str_parameters.size() < 1)
+    {
+    	std::cout << "Invalid Reed-Solomon specification" << std::endl;
+    	return false;
+    }
+
+    if (rs_str_parameters[0] == "full")
+    {
+    	rs_decoding_mode = RSSoft_decoding_full;
+    }
+    else if (rs_str_parameters[0] == "best")
+    {
+    	rs_decoding_mode = RSSoft_decoding_best;
+    }
+    else if (rs_str_parameters[0] == "first")
+    {
+    	rs_decoding_mode = RSSoft_decoding_first;
+    }
+    else if (rs_str_parameters[0] == "regex")
+    {
+    	rs_decoding_mode = RSSoft_decoding_regex;
+    	if (rs_str_parameters.size() < 2)
+    	{
+    		std::cout << "Regular expression expected for RSSoft decoding mode with regular expression" << std::endl;
+    		return false;
+    	}
+    	rs_decoding_regex = rs_str_parameters[1];
+    }
+    else
+    {
+    	std::cout << "Unrecognized RSSoft decoding mode" << std::endl;
+    	return false;
+    }
+
+    return true;
+}
+
+//=================================================================================================
+bool Options::adjust_parameters_for_source_coding()
+{
+	bool status = false;
+
+	if (_source_codec_type_str == "JT65")
+	{
+		nb_message_symbols = 64;
+		//TODO: adjust RS parameters if any specified
+
+		if (gc_nb_stages < 7)
+		{
+			gc_nb_stages = 7;
+		}
+
+		if (rs_k != 0)
+		{
+			rs_k = 12;
+			rs_logq = 6;
+		}
+
+		status = true;
+	}
+
+	return status;
+}
+
+//=================================================================================================
+bool Options::source_codec_create_message_prns()
+{
+	prns.clear(); // clear anything constructed before
+	bool status = _source_codec->encode(_source_message_str, prns);
+
+	if (!status)
+	{
+		std::cout << "Cannot encode source message" << std::endl;
+	}
+
+	return status;
+}
+
+//=================================================================================================
+bool Options::encode_reed_solomon()
+{
+	std::vector<unsigned int> source_prns(prns);
+	prns.clear();
+	_rssoft_engine->encode(source_prns, prns);
+	return true;
+}
+
+
