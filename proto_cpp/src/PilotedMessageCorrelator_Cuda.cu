@@ -170,6 +170,7 @@ void PilotedMessageCorrelator_Cuda::execute(PilotCorrelationAnalyzer& pilot_corr
 
             // copy results to host
             thrust::copy(_d_corr_mag_avgsum.begin(), _d_corr_mag_avgsum.end(), _h_corr_mag_avgsum.begin());
+            // TODO: for soft-decision Reed Solomon decoding, fill device reliability matrix in RSSoft_ReliabilityMatrixCuda object here
 
             // search PRN index with largest magnitude and its magnitude symbol index for each PRN index in symbol
             // compute sum of all PRNs magnitudes for PRN index in symbol

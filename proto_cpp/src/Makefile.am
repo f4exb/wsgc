@@ -12,6 +12,7 @@ wsgc_test_LDADD += $(RSSOFT_LDFLAGS) -lboost_regex
 wsgc_generator_SOURCES += RSSoft_Engine.cpp
 wsgc_generator_LDADD += $(RSSOFT_LDFLAGS) -lboost_regex
 AM_CXXFLAGS += $(RSSOFT_CFLAGS)
+NVCCFLAGS += $(RSSOFT_CFLAGS)
 endif
 
 if HAS_CUDA
@@ -93,7 +94,8 @@ wsgc_test_SOURCES += CodeModulator_BPSK.cpp \
     PilotCorrelator_Cuda.cu \
     SinglePrnCorrelator_FreqDep_Cuda.cu \
     SourceFFT_Cuda.cu \
-    Cuda_Operators.cu 
+    Cuda_Operators.cu \
+    RSSoft_ReliabilityMatrixCuda.cu
 
 wsgc_cuda_SOURCES = CudaManager.cu \
 	CudaDeviceManager.cu \
