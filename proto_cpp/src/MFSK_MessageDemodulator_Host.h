@@ -69,7 +69,7 @@ protected:
     wsgc_fftw_plan _fft_plan; //!< FFTW plan for forward FFT.
     wsgc_complex *_samples; //!< Source samples for one symbol length
     wsgc_complex *_src_fft; //!< Result of FFT of source samples for one symbol length
-    wsgc_float *_magsum_fft; //!< magnitude sum of all FFTs in symbol
+    wsgc_float *_magsum_s; //!< magnitude sum all FFTs in symbol by symbol index
     unsigned int _symbol_i; //!< index of symbol in message sequence
     unsigned int _fft_i; //!< index of FFT in symbol
     

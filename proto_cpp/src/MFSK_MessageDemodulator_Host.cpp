@@ -45,7 +45,7 @@ MFSK_MessageDemodulator_Host::MFSK_MessageDemodulator_Host(
 {
     _samples = (wsgc_complex *) WSGC_FFTW_MALLOC(_nb_fft_per_symbol*_fft_N*sizeof(wsgc_fftw_complex));
     _src_fft = (wsgc_complex *) WSGC_FFTW_MALLOC(_nb_fft_per_symbol*_fft_N*sizeof(wsgc_fftw_complex));
-    _magsum_fft = new wsgc_float[_fft_N];
+    _magsum_s = new wsgc_float[_nb_message_symbols+_nb_service_symbols];
     
     // Do the multiple FFT of input samples for the length of one symbol
     int N = _fft_N;
@@ -62,7 +62,7 @@ MFSK_MessageDemodulator_Host::MFSK_MessageDemodulator_Host(
 //=================================================================================================
 MFSK_MessageDemodulator_Host::~MFSK_MessageDemodulator_Host()
 {
-    delete[] _magsum_fft;
+	delete[] _magsum_s;
     WSGC_FFTW_FREE(_src_fft);
     WSGC_FFTW_FREE(_samples);
 }
@@ -88,9 +88,9 @@ void MFSK_MessageDemodulator_Host::execute(wsgc_complex *symbol_samples)
 //=================================================================================================
 void MFSK_MessageDemodulator_Host::clean_magsum()
 {
-    for (unsigned int ffti = 0; ffti < _fft_N; ffti++)
+    for (unsigned int si = 0; si < _nb_message_symbols+_nb_service_symbols; si++)
     {
-        _magsum_fft[ffti] = 0.0;
+    	_magsum_s[si] = 0.0;
     }
 }
 
@@ -104,8 +104,13 @@ void MFSK_MessageDemodulator_Host::cumulate_magsum(unsigned int fft_index)
 
     for (unsigned int ffti = fft_index*_fft_N; mffti < _fft_N; ffti++, mffti++, _fft_i++)
     {
-        WsgcUtils::magnitude_estimation(&_src_fft[ffti], &magnitude);
-        _magsum_fft[mffti] += magnitude;
+        int si = get_symbol_ordinal(mffti);
+
+        if ((si >= 0) && (si < _nb_message_symbols+_nb_service_symbols))
+        {
+            WsgcUtils::magnitude_estimation(&_src_fft[ffti], &magnitude);
+        	_magsum_s[si] += magnitude;
+        }
     }
 }
 
@@ -118,22 +123,22 @@ void MFSK_MessageDemodulator_Host::estimate_magpeak()
     wsgc_float mag_sum = 0.0;
     wsgc_float nse_mag;
     unsigned int max_ffti;
+    unsigned int max_si;
 
     for (unsigned int si = 0; si < _nb_message_symbols+_nb_service_symbols; si++)
     {
-    	unsigned int mffti = get_fft_slot(si);
-        mag_sum += _magsum_fft[mffti];
+    	mag_sum += _magsum_s[si];
 
-    	if (_magsum_fft[mffti] > max_mag)
+    	if (_magsum_s[si] > max_mag)
         {
-            max_mag = _magsum_fft[mffti];
-            max_ffti = mffti;
+            max_mag = _magsum_s[si];
+            max_si = si;
         }
 
     	// noise symbol is second service symbol
     	if ((si > _nb_message_symbols) && (si - _nb_message_symbols == 1))
     	{
-    		nse_mag = _magsum_fft[mffti];
+    		nse_mag = _magsum_s[si];
     	}
     }
 
@@ -141,8 +146,8 @@ void MFSK_MessageDemodulator_Host::estimate_magpeak()
     MFSK_MessageDemodulationRecord& demodulation_record = _demodulation_records.back();
 
     demodulation_record._symbol_index = _symbol_i;
-    demodulation_record._fft_index = max_ffti;
-    demodulation_record._symbol_ordinal = get_symbol_ordinal(max_ffti);
+    demodulation_record._fft_index = get_fft_slot(max_si);
+    demodulation_record._symbol_ordinal = max_si;
     demodulation_record._max_magnitude = max_mag;
     demodulation_record._noise_magnitude = nse_mag;
     demodulation_record._avg_magnitude = mag_sum / (_nb_message_symbols+_nb_service_symbols);
