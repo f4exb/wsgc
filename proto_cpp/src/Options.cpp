@@ -34,7 +34,9 @@
 #include "FIRCoefGenerator_RCos.h"
 #include "SourceCodec.h"
 #include "SourceCodec_JT65.h"
+#ifdef _RSSOFT
 #include "RSSoft_Engine.h"
+#endif
 #include <stdlib.h>
 #include <getopt.h>
 #include <cstring>
@@ -335,7 +337,9 @@ bool Options::get_options(int argc, char *argv[])
                 status = parse_source_coding_data(std::string(optarg));
                 break;
             case 'O':
+#ifdef _RSSOFT            
                 status = parse_reed_solomon_data(std::string(optarg));
+#endif
                 break;
             case '?':
                 std::ostringstream os;
@@ -562,6 +566,7 @@ bool Options::get_options(int argc, char *argv[])
 				}
 			}
 
+#ifdef _RSSOFT
 			// Reed-Solomon
 			if (rs_k != 0)
 			{
@@ -592,7 +597,8 @@ bool Options::get_options(int argc, char *argv[])
 					std::cout << "Cannot encode message with Reed-Solomon" << std::endl;
 				}
 			}
-
+#endif
+            
 			// last validation: generator polynomials
             if ((g1_poly_powers.size() > 0) && (g2_poly_powers.size() > 0)) // basic checks on given generator polynomials
             {
@@ -731,7 +737,9 @@ void Options::get_help(std::ostringstream& os)
         {"-y", "--gpu-affinity", "Force CUDA execution on specified GPU ID", "int", "(none)", "wsgc_test"},
         {"-H", "--decision-thresholds", "Specify decision box thresholds (see decision thresholds below)", "string", "(none)", "wsgc_test"},
         {"-f", "--source-codec", "Source codec data (see short help below)", "string", "null (no source codec)", "any"},
+#ifdef _RSSOFT        
         {"-O", "--reed-solomon", "Reed-Solomon encoding/decoding wtih RSSoft library (see short help below)", "string", "null (no RS)", "any"},
+#endif
         {0,0,0,0,0,0}
     };
     
@@ -812,6 +820,7 @@ void Options::get_help(std::ostringstream& os)
     os << "Source codecs:" << std::endl;
     os << " - JT65 classical: -j \"JT65:|<source text message>\"" << std::endl;
     os << std::endl;
+#if _RSSOFT    
     os << "Reed Solomon encoding and soft-decision decoding using RSSoft library:" << std::endl;
     os << "For a RS(n,k) code with n = 2^q-1 and 1<k<n," << std::endl;
     os << "M is the initial multiplicity matrix global multiplicity, r is the maximum number of retries:" << std::endl;
@@ -822,6 +831,7 @@ void Options::get_help(std::ostringstream& os)
     os << " - first: returns the first result" << std::endl;
     os << " - regex: retries until it finds a resulting textual message matching the given regular expression" << std::endl;
     os << std::endl;
+#endif
     mfsk_options.get_help(os);
     os << std::endl;
     decision_thresholds.get_help(os);
@@ -910,10 +920,12 @@ void Options::print_standard_options(std::ostringstream& os)
     	os << "Source codec ..............: "; print_source_codec_data(os); os << std::endl;
     }
 
+#ifdef _RSSOFT
     if (rs_k != 0)
     {
     	os << "Reed Solomon (RSSoft lib) .: "; print_reed_solomon_data(os); os << std::endl;
     }
+#endif
 
     os << "Modulation ................: "; modulation.print_modulation_data(os); os << std::endl;
     //os << "Nb phase averaging cycles .: " << std::setw(6) << std::right << tracking_phase_average_cycles << std::endl;
@@ -1067,10 +1079,12 @@ void Options::print_mfsk_options(std::ostringstream& os)
     	os << "Source codec ..............: "; print_source_codec_data(os); os << std::endl;
     }
 
+#ifdef _RSSOFT
     if (rs_k != 0)
     {
     	os << "Reed Solomon (RSSoft lib) .: "; print_reed_solomon_data(os); os << std::endl;
     }
+#endif
 
 	if (binary_name == "wsgc_generator")
 	{
@@ -1128,7 +1142,7 @@ void Options::print_source_codec_data(std::ostringstream& os)
     }
 }
 
-
+#ifdef _RSSOFT
 //=================================================================================================
 void Options::print_reed_solomon_data(std::ostringstream& os)
 {
@@ -1159,7 +1173,7 @@ void Options::print_reed_solomon_data(std::ostringstream& os)
         os << "None";
     }
 }
-
+#endif
 
 //=================================================================================================
 bool Options::parse_fir_filter_model_data(std::string fir_data_str)
@@ -1407,6 +1421,7 @@ bool Options::parse_source_coding_data(std::string source_coding_data_str)
     return status;
 }
 
+#ifdef _RSSOFT
 //=================================================================================================
 bool Options::parse_reed_solomon_data(std::string parameter_str)
 {
@@ -1475,6 +1490,7 @@ bool Options::parse_reed_solomon_data(std::string parameter_str)
 
     return true;
 }
+#endif
 
 //=================================================================================================
 bool Options::adjust_parameters_for_source_coding()
@@ -1517,6 +1533,7 @@ bool Options::source_codec_create_message_prns()
 	return status;
 }
 
+#ifdef _RSSOFT
 //=================================================================================================
 bool Options::encode_reed_solomon()
 {
@@ -1525,5 +1542,5 @@ bool Options::encode_reed_solomon()
 	_rssoft_engine->encode(source_prns, prns);
 	return true;
 }
-
+#endif
 

@@ -14,6 +14,9 @@ do ./bootstrap.sh
 	- libboost-dev (>= 1.42)
 	- Cuda libraries and driver when using graphics card acceleration: see README.cuda
 	- g++-4.5 when compiling for Cuda
+4.a. If using soft-decision Reed-Solomon with RSSoft library (see 5.a):
+	- libboost-regex-dev (on some distributions it has to be installed explicitely)
+	
 
 5. Run configure that is in the source root, with above example paths, installing into /opt/install/wsgc_test:
 CXXFLAGS="-g -O2" /opt/code/wsgc/proto_cpp/configure --prefix=/opt/install/wsgc_test (release with optimization)

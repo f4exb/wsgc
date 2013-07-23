@@ -85,6 +85,11 @@ public:
 		reliability = _reliability;
 	}
     
+	unsigned int get_retry_nb() const
+    {
+        return retry_nb;
+    }
+
     void set_retry_nb(unsigned int _retry_nb)
     {
         retry_nb = _retry_nb;
@@ -145,6 +150,15 @@ public:
     }
     
     /**
+     * Get reference to the reliability matrix for direct update
+     * \return r/w reference to the reliability matrix
+     */
+    rssoft::ReliabilityMatrix& get_reliability_matrix()
+    {
+        return mat_Pi;
+    }
+    
+    /**
      * Encode message into codeword
      * \param in_msg Message
      * \param out_codeword Codeword
@@ -163,6 +177,13 @@ public:
      * \param candidate_messages Vector of candidate messages filled in in decreasing value of reliability
      */
     void decode(std::vector<RSSoft_generic_codeword>& candidate_messages);
+    
+    /**
+     * Decode one codeword based on given magnitudes for the length of one codeword. Returns only the first candidate
+     * message along with its reliability value. 
+     * \param first_message First message found
+     */
+    bool decode(RSSoft_generic_codeword& first_message);
     
     /**
      * Decode one codeword based on given magnitudes for the length of one codeword. Tries to find the message that was sent

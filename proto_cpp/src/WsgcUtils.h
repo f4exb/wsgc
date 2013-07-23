@@ -67,7 +67,7 @@ template<typename TElement> bool extract_vector(std::vector<TElement>& velements
 
 
 // template to print a vector of printable elements
-template<typename TElement, typename TDisplay> void print_vector(const std::vector<TElement>& v, unsigned int width, std::ostringstream& os)
+template<typename TElement, typename TDisplay, typename TStream> void print_vector(const std::vector<TElement>& v, unsigned int width, TStream& os)
 {
     os << "[";
     

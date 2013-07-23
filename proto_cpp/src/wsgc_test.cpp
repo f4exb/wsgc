@@ -81,6 +81,9 @@
 #include "MFSK_MessageDemodulator.h"
 #include "MFSK_MessageDemodulator_Host.h"
 #include "DecisionBox_MFSK.h"
+#ifdef _RSSOFT
+#include "RSSoft_DecisionBox.h"
+#endif
 
 #ifdef _CUDA
 #include "CudaManager.h"
@@ -920,61 +923,86 @@ void message_processing_MFSK(
 
     while (sample_sequencer.get_next_code_samples(&signal_samples)) // pseudo real time loop, one PRN length at a time
     {
-    	mfsk_message_demodulator->execute(signal_samples);
+    	mfsk_message_demodulator->execute(signal_samples, options._rssoft_engine);
     }
 
     clock_gettime(time_option, &time2);
     std::cout << "MFSK message sequence decoding time: " << std::setw(12) << std::setprecision(9) << WsgcUtils::get_time_difference(time2,time1) << " s" << std::endl << std::endl;
-
-    std::ostringstream demod_os;
-    demod_os << "--- demodulation records:" << std::endl;
-    mfsk_message_demodulator->dump_demodulation_records(demod_os);
-    std::cout << demod_os.str() << std::endl;
-
-    DecisionBox_MFSK decision_box(options.mfsk_options._fft_N, options.mfsk_options._nb_fft_per_symbol, options.decision_thresholds);
-    decision_box.estimate_symbols(mfsk_message_demodulator->get_demodulation_records());
-
-    options.prns.pop_back(); // pop padding symbol
-
-    std::vector<unsigned int> symbol_indices;
-    for (unsigned int i=0; i<options.prns.size(); i++)
+    
+#ifdef _RSSOFT    
+    if (options._rssoft_engine)
     {
-        symbol_indices.push_back(i);
-    }
-
-    std::ostringstream os_result;
-    options.decision_thresholds.print_options(os_result);
-    os_result << std::endl << "Decisions status:" << std::endl;
-    decision_box.dump_decision_status(os_result, options.prns, mfsk_message_demodulator->get_demodulation_records());
-    os_result << std::endl << "Index, original and decoded symbols (-1 denotes an erasure):";
-    os_result << std::endl << "-----------------------------------------------------------" << std::endl;
-    os_result << "_SIN "; print_vector<unsigned int, unsigned int>(symbol_indices, 4, os_result); os_result << std::endl;
-    os_result << "_SOR "; print_vector<unsigned int, unsigned int>(options.prns, 4, os_result); os_result << std::endl;
-    os_result << "_SRS "; print_vector<int, int>(decision_box.get_decoded_symbols(), 4, os_result); os_result << std::endl;
-    std::cout << os_result.str() << std::endl;
-
-    unsigned int erasure_counts = 0;
-    unsigned int error_counts = 0;
-
-    for (std::vector<int>::const_iterator it = decision_box.get_decoded_symbols().begin(); it != decision_box.get_decoded_symbols().end(); ++it)
-    {
-        if (*it < 0)
+        RSSoft_DecisionBox rssoft_decision_box(*options._rssoft_engine, options._source_codec);
+        
+        switch (options.rs_decoding_mode)
         {
-            erasure_counts++;
+            case Options::RSSoft_decoding_full:
+            case Options::RSSoft_decoding_best:
+            case Options::RSSoft_decoding_first:
+                rssoft_decision_box.run(options.rs_decoding_mode);
+                break;
+            case Options::RSSoft_decoding_regex:
+                rssoft_decision_box.run_regex(options.rs_decoding_regex);
+                break;
+            default:
+                std::cout << "Unknown RSSoft decoding options" << std::endl;
         }
-        else
+    }
+    else
+    {
+#endif
+        std::ostringstream demod_os;
+        demod_os << "--- demodulation records:" << std::endl;
+        mfsk_message_demodulator->dump_demodulation_records(demod_os);
+        std::cout << demod_os.str() << std::endl;
+
+        DecisionBox_MFSK decision_box(options.mfsk_options._fft_N, options.mfsk_options._nb_fft_per_symbol, options.decision_thresholds);
+        decision_box.estimate_symbols(mfsk_message_demodulator->get_demodulation_records());
+
+        options.prns.pop_back(); // pop padding symbol
+
+        std::vector<unsigned int> symbol_indices;
+        for (unsigned int i=0; i<options.prns.size(); i++)
         {
-            if (*it != options.prns[it-decision_box.get_decoded_symbols().begin()])
+            symbol_indices.push_back(i);
+        }
+
+        std::ostringstream os_result;
+        options.decision_thresholds.print_options(os_result);
+        os_result << std::endl << "Decisions status:" << std::endl;
+        decision_box.dump_decision_status(os_result, options.prns, mfsk_message_demodulator->get_demodulation_records());
+        os_result << std::endl << "Index, original and decoded symbols (-1 denotes an erasure):";
+        os_result << std::endl << "-----------------------------------------------------------" << std::endl;
+        os_result << "_SIN "; print_vector<unsigned int, unsigned int>(symbol_indices, 4, os_result); os_result << std::endl;
+        os_result << "_SOR "; print_vector<unsigned int, unsigned int>(options.prns, 4, os_result); os_result << std::endl;
+        os_result << "_SRS "; print_vector<int, int>(decision_box.get_decoded_symbols(), 4, os_result); os_result << std::endl;
+        std::cout << os_result.str() << std::endl;
+
+        unsigned int erasure_counts = 0;
+        unsigned int error_counts = 0;
+
+        for (std::vector<int>::const_iterator it = decision_box.get_decoded_symbols().begin(); it != decision_box.get_decoded_symbols().end(); ++it)
+        {
+            if (*it < 0)
             {
-                error_counts++;
+                erasure_counts++;
+            }
+            else
+            {
+                if (*it != options.prns[it-decision_box.get_decoded_symbols().begin()])
+                {
+                    error_counts++;
+                }
             }
         }
-    }
 
-    std::cout << erasure_counts << " erasures (" << ((float) erasure_counts)/decision_box.get_decoded_symbols().size() << ")" << std::endl;
-    std::cout << error_counts << " errors (" << ((float) error_counts)/decision_box.get_decoded_symbols().size() << ")" << std::endl;
-    std::cout << erasure_counts+error_counts << " total (" << ((float) erasure_counts+error_counts)/decision_box.get_decoded_symbols().size() << ")" << std::endl;
-    std::cout << "_SUM " << erasure_counts << "," << error_counts << "," << erasure_counts+error_counts << "," << erasure_counts+2*error_counts << std::endl;
+        std::cout << erasure_counts << " erasures (" << ((float) erasure_counts)/decision_box.get_decoded_symbols().size() << ")" << std::endl;
+        std::cout << error_counts << " errors (" << ((float) error_counts)/decision_box.get_decoded_symbols().size() << ")" << std::endl;
+        std::cout << erasure_counts+error_counts << " total (" << ((float) erasure_counts+error_counts)/decision_box.get_decoded_symbols().size() << ")" << std::endl;
+        std::cout << "_SUM " << erasure_counts << "," << error_counts << "," << erasure_counts+error_counts << "," << erasure_counts+2*error_counts << std::endl;
+#ifdef _RSSOFT        
+    }
+#endif
 }
 
 

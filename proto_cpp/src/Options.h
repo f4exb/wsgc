@@ -129,18 +129,20 @@ private:
 	void print_fading_model_data(std::ostringstream& os);
 	void print_modulation_data(std::ostringstream& os);
 	void print_source_codec_data(std::ostringstream& os);
-	void print_reed_solomon_data(std::ostringstream& os);
 	bool parse_fading_model_data(std::string fading_data_str);
 	bool parse_modulation_data(std::string modulation_data_str);
 	bool parse_pilot_prns_data(std::string pilot_data_str);
 	bool parse_fir_filter_model_data(std::string fir_data_str);
 	bool parse_source_coding_data(std::string coding_data_str);
-	bool parse_reed_solomon_data(std::string coding_data_str);
 	void print_standard_options(std::ostringstream& os);
 	void print_mfsk_options(std::ostringstream& os);
 	bool adjust_parameters_for_source_coding();
 	bool source_codec_create_message_prns();
+#ifdef _RSSOFT
+	bool parse_reed_solomon_data(std::string coding_data_str);
+	void print_reed_solomon_data(std::ostringstream& os);
 	bool encode_reed_solomon();
+#endif
 
 };
 

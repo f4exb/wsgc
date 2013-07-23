@@ -34,6 +34,9 @@
 #include <vector>
 
 class MFSK_MessageDemodulationRecord;
+#ifdef _RSSOFT
+class RSSoft_Engine;
+#endif
 
 /**
  * \brief Class to incoherently demodulate MFSK message. This is not using a correlation scheme
@@ -59,12 +62,23 @@ public:
 
 	virtual ~MFSK_MessageDemodulator();
 
+#ifdef _RSSOFT
+	/**
+	 * Execute demodulation on one symbol length of samples. Time and frequency synchronization is supposed to have taken place
+	 * Implementation (Host or CUDA) dependent
+	 * \param symbol_samples Pointer to the symbol samples. Number of samples is assumed to be FFT size times the number of FFTs per symbol
+	 * \param rssoft_engine Pointer to the RSSoft_Engine object if using Reed-Solomon soft-decision decoding with RSSoft library. Default is 0 (not used).
+	 */
+	virtual void execute(wsgc_complex *symbol_samples, RSSoft_Engine *rssoft_engine = 0) = 0;
+#else
 	/**
 	 * Execute demodulation on one symbol length of samples. Time and frequency synchronization is supposed to have taken place
 	 * Implementation (Host or CUDA) dependent
 	 * \param symbol_samples Pointer to the symbol samples. Number of samples is assumed to be FFT size times the number of FFTs per symbol
 	 */
-	virtual void execute(wsgc_complex *symbol_samples) = 0;
+    virtual void execute(wsgc_complex *symbol_samples) = 0;
+#endif
+
 
 	/**
 	 * Dumps the demodulation records data to output stream

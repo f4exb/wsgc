@@ -32,6 +32,10 @@
 #include "WsgcUtils.h"
 #include <cstring>
 
+#ifdef _RSSOFT
+#include "RSSoft_Engine.h"
+#endif
+
 //=================================================================================================
 MFSK_MessageDemodulator_Host::MFSK_MessageDemodulator_Host(
 			unsigned int fft_N,
@@ -69,7 +73,11 @@ MFSK_MessageDemodulator_Host::~MFSK_MessageDemodulator_Host()
 
 
 //=================================================================================================
+#ifdef _RSSOFT
+void MFSK_MessageDemodulator_Host::execute(wsgc_complex *symbol_samples, RSSoft_Engine *rssoft_engine)
+#else
 void MFSK_MessageDemodulator_Host::execute(wsgc_complex *symbol_samples)
+#endif
 {
     memcpy(_samples, symbol_samples, _nb_fft_per_symbol*_fft_N*sizeof(wsgc_fftw_complex));
     WSGC_FFTW_EXECUTE(_fft_plan);
@@ -80,7 +88,19 @@ void MFSK_MessageDemodulator_Host::execute(wsgc_complex *symbol_samples)
         cumulate_magsum(fft_i);
     }
 
+#ifdef _RSSOFT
+    if (rssoft_engine)
+    {
+        fill_rssoft_reliability_matrix(rssoft_engine);
+    }
+    else
+    {
+        estimate_magpeak();
+    }
+#else
     estimate_magpeak();
+#endif
+    
     _symbol_i++;
 }
 
@@ -153,3 +173,10 @@ void MFSK_MessageDemodulator_Host::estimate_magpeak()
     demodulation_record._avg_magnitude = mag_sum / (_nb_message_symbols+_nb_service_symbols);
 }
 
+#ifdef _RSSOFT
+//=================================================================================================
+void MFSK_MessageDemodulator_Host::fill_rssoft_reliability_matrix(RSSoft_Engine *rssoft_engine)
+{
+    rssoft_engine->record_magnitudes(_magsum_s);
+}
+#endif
