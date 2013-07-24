@@ -41,6 +41,11 @@
 #include "Cuda_StridedFoldedRange.h"
 #include "Cuda_StridedRange.h"
 #include "Cuda_ShiftedBySegmentsRange.h"
+
+#ifdef _RSSOFT
+#include "RSSoft_ReliabilityMatrixCuda.h"
+#endif
+
 #include <thrust/iterator/counting_iterator.h>
 #include <thrust/iterator/transform_iterator.h>
 #include <thrust/transform_reduce.h>
@@ -70,6 +75,9 @@ PilotedMessageCorrelator_Cuda::PilotedMessageCorrelator_Cuda(
     _d_corr_mag_avgsum(_nb_msg_prns*_prn_per_symbol),
     _h_corr_mag_avgsum(_nb_msg_prns*_prn_per_symbol),
 	_d_keys(_nb_msg_prns)
+#ifdef _RSSOFT
+    ,reliability_matrix_cuda(0)
+#endif
 {
 	thrust::fill(_d_corr_out.begin(), _d_corr_out.end(), _c_zero);
 	// Allocate memory areas
@@ -99,9 +107,10 @@ void PilotedMessageCorrelator_Cuda::execute(PilotCorrelationAnalyzer& pilot_corr
     	//CorrelationRecord& correlation_record = pilot_correlation_analyzer.new_message_correlation_record(pilot_correlation_records[pi].prn_index);
     	float delta_f = pilot_correlation_records[pi].delta_f;
     	unsigned int delta_t = pilot_correlation_records[pi].t_index_max;
+        unsigned int global_prn_i = pilot_correlation_records[pi].prn_index;
 
         _transient_corr_values[pai % _prn_per_symbol].selected = pilot_correlation_records[pi].selected;
-        _transient_corr_values[pai % _prn_per_symbol].global_prn_i = pilot_correlation_records[pi].prn_index;
+        _transient_corr_values[pai % _prn_per_symbol].global_prn_i = global_prn_i;
         _transient_corr_values[pai % _prn_per_symbol].delta_t = delta_t;
         _transient_corr_values[pai % _prn_per_symbol].delta_f = delta_f;
         _transient_corr_values[pai % _prn_per_symbol].pilot_phase_at_max = pilot_correlation_records[pi].phase_at_max;
@@ -168,45 +177,61 @@ void PilotedMessageCorrelator_Cuda::execute(PilotCorrelationAnalyzer& pilot_corr
 			repeat_values<thrust::counting_iterator<int> > key_counter_avg(thrust::make_counting_iterator(0), thrust::make_counting_iterator((int)_nb_msg_prns), _prn_per_symbol);
 			thrust::inclusive_scan_by_key(key_counter_avg.begin(), key_counter_avg.end(), _d_corr_mag.begin(), _d_corr_mag_avgsum.begin());
 
-            // copy results to host
-            thrust::copy(_d_corr_mag_avgsum.begin(), _d_corr_mag_avgsum.end(), _h_corr_mag_avgsum.begin());
-            // TODO: for soft-decision Reed Solomon decoding, fill device reliability matrix in RSSoft_ReliabilityMatrixCuda object here
-
-            // search PRN index with largest magnitude and its magnitude symbol index for each PRN index in symbol
-            // compute sum of all PRNs magnitudes for PRN index in symbol
-
-            _max_avg.assign(_prn_per_symbol, 0.0);
-            _mag_avgsum_sums.assign(_prn_per_symbol, 0.0);
-            _max_avg_index.assign(_prn_per_symbol, 0);
-
-            for (unsigned int i=0; i<_nb_msg_prns*_prn_per_symbol; i++)
+#ifdef _RSSOFT
+            if (reliability_matrix_cuda)
             {
-            	_mag_avgsum_sums[i%_prn_per_symbol] += _h_corr_mag_avgsum[i];
-
-            	if (_h_corr_mag_avgsum[i] > _max_avg[i%_prn_per_symbol])
-            	{
-            		_max_avg[i%_prn_per_symbol] = _h_corr_mag_avgsum[i];
-            		_max_avg_index[i%_prn_per_symbol] = (i/_prn_per_symbol)%_nb_msg_prns;
-            	}
+                // take the last average sum in the symbol since it is supposed to have the best accumulation (over the whole symbol)
+                strided_shifted_range<thrust::device_vector<float>::iterator> d_corr_mag_avgsum_src(_d_corr_mag_avgsum.begin(), _d_corr_mag_avgsum.end(), _prn_per_symbol, _prn_per_symbol-1);
+                // copy to device reliability matrix
+                // take only the effective message symbols i.e. _nb_msg_prns - 1 (-1 for the noise symbol)
+                thrust::copy(d_corr_mag_avgsum_src.begin(), d_corr_mag_avgsum_src.end() - 1, reliability_matrix_cuda->get_matrix.begin() + global_prn_i*(_nb_msg_prns - 1));
             }
-
-			// loop through PRNs in symbol data to fill correlation records for this symbol
-
-            for (unsigned int pci = 0; pci < _prn_per_symbol; pci++)
+            else
             {
-                CorrelationRecord& correlation_record = pilot_correlation_analyzer.new_message_correlation_record(_transient_corr_values[pci].global_prn_i);
-                
-                correlation_record.selected = _transient_corr_values[pci].selected;
-                correlation_record.prn_per_symbol_index = pci % _prn_per_symbol;
-                correlation_record.prn_index_max = _max_avg_index[pci];
-                correlation_record.magnitude_max = _max_avg[pci];
-                correlation_record.noise_avg = _h_corr_mag_avgsum[(_nb_msg_prns-1)*_prn_per_symbol + pci];
-                correlation_record.magnitude_avg = (_mag_avgsum_sums[pci] - correlation_record.noise_avg) / (_nb_msg_prns-1);
-                correlation_record.pilot_shift = _transient_corr_values[pci].delta_t;
-                correlation_record.shift_index_max = _transient_corr_values[pci].delta_t; // copy over
-                correlation_record.f_rx = -_transient_corr_values[pci].delta_f; // copy over
-                correlation_record.phase_at_max = _transient_corr_values[pci].pilot_phase_at_max; // copy over
+#endif            
+                // copy results to host
+                thrust::copy(_d_corr_mag_avgsum.begin(), _d_corr_mag_avgsum.end(), _h_corr_mag_avgsum.begin());
+                // TODO: for soft-decision Reed Solomon decoding, fill device reliability matrix for this symbol position in RSSoft_Engine object here with _h_corr_mag_avgsum data. 
+                // TODO: choose where to sample data in the prn_per_symbol range
+
+                // search PRN index with largest magnitude and its magnitude symbol index for each PRN index in symbol
+                // compute sum of all PRNs magnitudes for PRN index in symbol
+
+                _max_avg.assign(_prn_per_symbol, 0.0);
+                _mag_avgsum_sums.assign(_prn_per_symbol, 0.0);
+                _max_avg_index.assign(_prn_per_symbol, 0);
+
+                for (unsigned int i=0; i<_nb_msg_prns*_prn_per_symbol; i++)
+                {
+                    _mag_avgsum_sums[i%_prn_per_symbol] += _h_corr_mag_avgsum[i];
+
+                    if (_h_corr_mag_avgsum[i] > _max_avg[i%_prn_per_symbol])
+                    {
+                        _max_avg[i%_prn_per_symbol] = _h_corr_mag_avgsum[i];
+                        _max_avg_index[i%_prn_per_symbol] = (i/_prn_per_symbol)%_nb_msg_prns;
+                    }
+                }
+
+                // loop through PRNs in symbol data to fill correlation records for this symbol
+
+                for (unsigned int pci = 0; pci < _prn_per_symbol; pci++)
+                {
+                    CorrelationRecord& correlation_record = pilot_correlation_analyzer.new_message_correlation_record(_transient_corr_values[pci].global_prn_i);
+                    
+                    correlation_record.selected = _transient_corr_values[pci].selected;
+                    correlation_record.prn_per_symbol_index = pci % _prn_per_symbol;
+                    correlation_record.prn_index_max = _max_avg_index[pci];
+                    correlation_record.magnitude_max = _max_avg[pci];
+                    correlation_record.noise_avg = _h_corr_mag_avgsum[(_nb_msg_prns-1)*_prn_per_symbol + pci];
+                    correlation_record.magnitude_avg = (_mag_avgsum_sums[pci] - correlation_record.noise_avg) / (_nb_msg_prns-1);
+                    correlation_record.pilot_shift = _transient_corr_values[pci].delta_t;
+                    correlation_record.shift_index_max = _transient_corr_values[pci].delta_t; // copy over
+                    correlation_record.f_rx = -_transient_corr_values[pci].delta_f; // copy over
+                    correlation_record.phase_at_max = _transient_corr_values[pci].pilot_phase_at_max; // copy over
+                }
+#ifdef _RSSOFT
             }
+#endif            
     	}
     }
 }

@@ -90,13 +90,17 @@ RSSoft_Engine::RSSoft_Engine(unsigned int _m, unsigned int _k) :
 	k(_k),
 	nb_retries(5),
 	M(1<<m),
+	init_M(1<<m),
     gf(m, ppolys.get_ppoly(m)),
     evaluation_values(gf),
     rs_encoding(gf, k, evaluation_values),
     mat_Pi(m,n),
     gskv(gf, k, evaluation_values),
     rr(gf, k),
-    final_evaluation(gf, k, evaluation_values)
+    final_evaluation(gf, k, evaluation_values),
+    retry_base_increment(1),
+    retry_increment(0),
+    retry_mm_strategy(MMatrix_retry_arithmetic)
 {
 }
 
@@ -124,53 +128,67 @@ void RSSoft_Engine::record_magnitudes(wsgc_float *magnitudes)
 void RSSoft_Engine::decode(std::vector<RSSoft_generic_codeword>& candidate_messages)
 {
 	mat_Pi.normalize();
-	unsigned int global_multiplicity = M;
+	M = init_M;
 
     for (unsigned int ni=1; (ni<=nb_retries); ni++) // Retry loop
     {
-    	rssoft::MultiplicityMatrix mat_M(mat_Pi, global_multiplicity);
-    	const rssoft::gf::GFq_BivariatePolynomial& Q = gskv.run(mat_M);
-    	if (!Q.is_in_X()) // Interpolation successful
-    	{
-    		std::vector<rssoft::gf::GFq_Polynomial>& res_polys = rr.run(Q);
+    	rssoft::MultiplicityMatrix mat_M(mat_Pi, M);
+        unsigned int mm_cost = mat_M.cost();
+        std::cout << "MM = " << M << std::endl;
+        try
+        {
+            const rssoft::gf::GFq_BivariatePolynomial& Q = gskv.run(mat_M);
+            if (!Q.is_in_X()) // Interpolation successful
+            {
+                std::vector<rssoft::gf::GFq_Polynomial>& res_polys = rr.run(Q);
 
-    		if (res_polys.size() > 0) // Factorization successful
-    		{
-    			final_evaluation.run(res_polys, mat_Pi);
-    			const std::vector<rssoft::ProbabilityCodeword>& messages = final_evaluation.get_messages();
-    			std::vector<rssoft::ProbabilityCodeword>::const_iterator msg_it = messages.begin();
+                if (res_polys.size() > 0) // Factorization successful
+                {
+                    final_evaluation.run(res_polys, mat_Pi);
+                    const std::vector<rssoft::ProbabilityCodeword>& messages = final_evaluation.get_messages();
+                    std::vector<rssoft::ProbabilityCodeword>::const_iterator msg_it = messages.begin();
 
-    			for (; msg_it != messages.end(); ++ msg_it) // Explore results
-    			{
-    				std::vector<RSSoft_generic_codeword>::iterator candidates_it = candidate_messages.begin();
-    				bool msg_found = false;
+                    for (; msg_it != messages.end(); ++ msg_it) // Explore results
+                    {
+                        std::vector<RSSoft_generic_codeword>::iterator candidates_it = candidate_messages.begin();
+                        bool msg_found = false;
 
-    				for (; candidates_it != candidate_messages.end(); ++candidates_it)
-    				{
-    					if (candidates_it->get_symbols() == msg_it->get_codeword())
-    					{
-    						if (msg_it->get_probability_score() > candidates_it->get_reliability())
-    						{
-    							candidates_it->set_reliability(msg_it->get_probability_score());
-                                candidates_it->set_retry_nb(ni);
-    						}
+                        for (; candidates_it != candidate_messages.end(); ++candidates_it)
+                        {
+                            if (candidates_it->get_symbols() == msg_it->get_codeword())
+                            {
+                                if (msg_it->get_probability_score() > candidates_it->get_reliability())
+                                {
+                                    candidates_it->set_reliability(msg_it->get_probability_score());
+                                    candidates_it->set_retry_nb(ni);
+                                }
 
-    						msg_found = true;
-    						break;
-    					}
-    				}
+                                msg_found = true;
+                                break;
+                            }
+                        }
 
-    				if (!msg_found)
-    				{
-    					static RSSoft_generic_codeword tmp_codeword;
-    					candidate_messages.push_back(tmp_codeword);
-                        candidate_messages.back().set_retry_nb(ni);
-    					candidate_messages.back().set_reliability(msg_it->get_probability_score());
-    					candidate_messages.back().get_symbols() = msg_it->get_codeword();
-    				}
-    			} // Explore results
-    		} // Factorization successful
-    	} // Interpolation successful
+                        if (!msg_found)
+                        {
+                            static RSSoft_generic_codeword tmp_codeword;
+                            candidate_messages.push_back(tmp_codeword);
+                            candidate_messages.back().set_retry_nb(ni);
+                            candidate_messages.back().set_reliability(msg_it->get_probability_score());
+                            candidate_messages.back().get_symbols() = msg_it->get_codeword();
+                        }
+                    } // Explore results
+                } // Factorization successful
+            } // Interpolation successful
+        }
+        catch (rssoft::gf::GF_Exception& e)
+        {
+            std::cerr << e.what() << std::endl;
+        }
+
+        new_multiplicity();
+        gskv.init();
+        rr.init();
+        final_evaluation.init();
     } // Retry loop
 
     std::sort(candidate_messages.begin(), candidate_messages.end());
@@ -188,6 +206,7 @@ bool RSSoft_Engine::decode(RSSoft_generic_codeword& retrieved_message, RSSoft_ge
     for (unsigned int ni=1; (ni<=nb_retries) && !found; ni++) // Retry loop
     {
     	rssoft::MultiplicityMatrix mat_M(mat_Pi, global_multiplicity);
+        unsigned int mm_cost = mat_M.cost();
     	const rssoft::gf::GFq_BivariatePolynomial& Q = gskv.run(mat_M);
     	if (!Q.is_in_X()) // Interpolation successful
     	{
@@ -217,6 +236,10 @@ bool RSSoft_Engine::decode(RSSoft_generic_codeword& retrieved_message, RSSoft_ge
     			} // Explore results
     		} // Factorization successful
     	} // Interpolation successful
+        global_multiplicity = mm_cost;
+        gskv.init();
+        rr.init();
+        final_evaluation.init();
     } // Retry loop
     
     return found;
@@ -233,6 +256,7 @@ bool RSSoft_Engine::decode(RSSoft_generic_codeword& first_message)
     for (unsigned int ni=1; (ni<=nb_retries) && !found; ni++) // Retry loop
     {
     	rssoft::MultiplicityMatrix mat_M(mat_Pi, global_multiplicity);
+        unsigned int mm_cost = mat_M.cost();
     	const rssoft::gf::GFq_BivariatePolynomial& Q = gskv.run(mat_M);
     	if (!Q.is_in_X()) // Interpolation successful
     	{
@@ -248,6 +272,10 @@ bool RSSoft_Engine::decode(RSSoft_generic_codeword& first_message)
                 return true;
     		} // Factorization successful
     	} // Interpolation successful
+        global_multiplicity = mm_cost;
+        gskv.init();
+        rr.init();
+        final_evaluation.init();
     } // Retry loop
     
     return false;
@@ -267,6 +295,8 @@ bool RSSoft_Engine::decode(std::string& retrieved_text_msg,
     for (unsigned int ni=1; (ni<=nb_retries) && !found; ni++) // Retry loop
     {
     	rssoft::MultiplicityMatrix mat_M(mat_Pi, global_multiplicity);
+        unsigned int mm_cost = mat_M.cost();
+        std::cout << "MM cost = " << mm_cost << std::endl;
     	const rssoft::gf::GFq_BivariatePolynomial& Q = gskv.run(mat_M);
     	if (!Q.is_in_X()) // Interpolation successful
     	{
@@ -292,6 +322,10 @@ bool RSSoft_Engine::decode(std::string& retrieved_text_msg,
     			} // Explore results
     		} // Factorization successful
     	} // Interpolation successful
+        global_multiplicity = mm_cost;
+        gskv.init();
+        rr.init();
+        final_evaluation.init();
     } // Retry loop
     
     return found;
@@ -302,4 +336,28 @@ bool RSSoft_Engine::decode(std::string& retrieved_text_msg,
 bool RSSoft_Engine::regexp_match(const std::string& value, const std::string& regexp) const
 {
     return std::tr1::regex_match(value, std::tr1::regex(regexp));
+}
+
+//=================================================================================================
+void RSSoft_Engine::new_multiplicity()
+{
+	switch (retry_mm_strategy)
+	{
+	case MMatrix_retry_arithmetic:
+		M += retry_base_increment;
+		break;
+	case MMatrix_retry_arithmetic_increment:
+		retry_increment += retry_base_increment;
+		M += retry_increment;
+		break;
+	case MMatrix_retry_geometric:
+		M *= retry_base_increment;
+		break;
+	case MMatrix_retry_geometric_increment:
+		retry_increment *= retry_base_increment;
+		M *= retry_increment;
+		break;
+	default:
+		break;
+	}
 }

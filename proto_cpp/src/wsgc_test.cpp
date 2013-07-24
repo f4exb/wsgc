@@ -81,8 +81,12 @@
 #include "MFSK_MessageDemodulator.h"
 #include "MFSK_MessageDemodulator_Host.h"
 #include "DecisionBox_MFSK.h"
+
 #ifdef _RSSOFT
 #include "RSSoft_DecisionBox.h"
+#ifdef _CUDA
+#include "RSSoft_ReliabilityMatrixCuda.h"
+#endif
 #endif
 
 #ifdef _CUDA
@@ -127,6 +131,7 @@ void generate_training_prn_list_unpiloted(std::vector<unsigned int>& prn_list, G
 void generate_message_prn_list(std::vector<unsigned int>& prn_list, GoldCodeGenerator& gc_generator);
 void generate_pilot_prn_list(std::vector<unsigned int>& prn_list, GoldCodeGenerator& gc_generator, unsigned int pilot_prni);
 void apply_fir(wsgc_complex *inout, unsigned int& nb_samples, const std::vector<wsgc_float>& fir_coef);
+void run_rssoft_decoding(Options& options);
 
 //=================================================================================================
 int main(int argc, char *argv[])
@@ -432,6 +437,11 @@ void message_processing(
     const std::map<unsigned int, unsigned int> *prn_shift_occurences = 0;
     PilotCorrelator *pilot_correlator = 0;
     PilotedMessageCorrelator *message_correlator = 0;
+#ifdef _RSSOFT
+#ifdef _CUDA
+    RSSoft_ReliabilityMatrixCuda *rssoft_reliability_matrix_cuda = 0;
+#endif
+#endif    
     PrnAutocorrelator *prn_autocorrelator = 0;
     DecisionBox *decision_box = 0;
     std::vector<CorrelationRecord> correlation_records;
@@ -465,6 +475,14 @@ void message_processing(
                 local_codes = new LocalCodes_Cuda(*localCodeModulator, gc_generator, options.f_sampling, options.f_chip, message_prn_numbers, cuda_device); // make local codes time domain
                 pilot_correlator = new PilotCorrelator_Cuda(gc_generator, *localCodeModulator, options.f_sampling, options.f_chip, pilot_prn_numbers, cuda_device, options.nb_prns_per_symbol, options.df_steps, options.batch_size, options.f_step_division);
                 message_correlator = new PilotedMessageCorrelator_Cuda(*((LocalCodes_Cuda *) local_codes), options.f_sampling, options.f_chip, options.nb_prns_per_symbol, cuda_device);
+#ifdef _RSSOFT
+                // If Reed-Solomon is active, allocate and set RSSoft cuda reliability matrix 
+                if (options._rssoft_engine)
+                {
+                    rssoft_reliability_matrix_cuda = new RSSoft_ReliabilityMatrixCuda(options.rs_logq, (1<<options.rs_logq)-1);
+                    ((PilotedMessageCorrelator_Cuda *)message_correlator)->set_reliability_matrix_cuda(rssoft_reliability_matrix_cuda);
+                }
+#endif
             }
             else
             {
@@ -583,7 +601,24 @@ void message_processing(
         
         if (options.modulation.isCodeDivisionCapable() && (options.nb_pilot_prns > 0))
         {
+#ifdef _RSSOFT
+            if (options._rssoft_engine)
+            {
+#ifdef _CUDA
+                if (rssoft_reliability_matrix_cuda)
+                {
+                    rssoft_reliability_matrix_cuda->copy_to_host(options._rssoft_engine->get_reliability_matrix()); // move reliability data from device to host
+                }
+#endif         
+                run_rssoft_decoding(options); // Do RSSoft decoding with RSSoft decision box
+            }
+            else
+            {
+                decision_box = new DecisionBox_Piloted_And_Synced(options.nb_prns_per_symbol, fft_N, options.decision_thresholds, *pilot_correlation_analyzer);
+            }
+#else        
             decision_box = new DecisionBox_Piloted_And_Synced(options.nb_prns_per_symbol, fft_N, options.decision_thresholds, *pilot_correlation_analyzer);
+#endif
         }
     }
     else if (dm_correlator != 0)
@@ -673,6 +708,15 @@ void message_processing(
         delete decision_box;
     }
 
+    
+#if _RSSOFT
+#if _CUDA
+    if (rssoft_reliability_matrix_cuda)
+    {
+        delete rssoft_reliability_matrix_cuda;
+    }
+#endif
+#endif    
     if (piloted_mprn_correlator)
     {
         delete piloted_mprn_correlator;
@@ -932,21 +976,7 @@ void message_processing_MFSK(
 #ifdef _RSSOFT    
     if (options._rssoft_engine)
     {
-        RSSoft_DecisionBox rssoft_decision_box(*options._rssoft_engine, options._source_codec);
-        
-        switch (options.rs_decoding_mode)
-        {
-            case Options::RSSoft_decoding_full:
-            case Options::RSSoft_decoding_best:
-            case Options::RSSoft_decoding_first:
-                rssoft_decision_box.run(options.rs_decoding_mode);
-                break;
-            case Options::RSSoft_decoding_regex:
-                rssoft_decision_box.run_regex(options.rs_decoding_regex);
-                break;
-            default:
-                std::cout << "Unknown RSSoft decoding options" << std::endl;
-        }
+        run_rssoft_decoding(options);
     }
     else
     {
@@ -1065,4 +1095,24 @@ void apply_fir(wsgc_complex *inout, unsigned int& nb_samples, const std::vector<
 
 	nb_samples += nb_taps;
 	*/
+}
+
+//=================================================================================================
+void run_rssoft_decoding(Options& options)
+{
+    RSSoft_DecisionBox rssoft_decision_box(*options._rssoft_engine, options._source_codec);
+    
+    switch (options.rs_decoding_mode)
+    {
+        case Options::RSSoft_decoding_full:
+        case Options::RSSoft_decoding_best:
+        case Options::RSSoft_decoding_first:
+            rssoft_decision_box.run(options.rs_decoding_mode);
+            break;
+        case Options::RSSoft_decoding_regex:
+            rssoft_decision_box.run_regex(options.rs_decoding_regex);
+            break;
+        default:
+            std::cout << "Unknown RSSoft decoding options" << std::endl;
+    }
 }

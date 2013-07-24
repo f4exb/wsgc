@@ -31,6 +31,11 @@
 #include "Modulation.h"
 #include "MFSK_Options.h"
 #include "DecisionBox_Thresholds.h"
+
+#ifdef _RSSOFT
+#include "RSSoft_Engine.h"
+#endif
+
 #include <vector>
 #include <string>
 #include <sstream>
@@ -38,7 +43,6 @@
 class FadingModel;
 class FIRCoefGenerator;
 class SourceCodec;
-class RSSoft_Engine;
 
 class Options
 {
@@ -114,13 +118,17 @@ public:
 	SourceCodec *_source_codec;
 	std::string _source_codec_type_str;
 	std::string _source_message_str;
-	RSSoft_Engine *_rssoft_engine;
 	unsigned int rs_logq;
 	unsigned int rs_k;
-	unsigned int rs_M;
+#ifdef _RSSOFT
+	unsigned int rs_init_M;
 	unsigned int rs_r;
+	unsigned int rs_inc;
+	RSSoft_Engine::MultiplicityMatrix_RetryStrategy rs_inc_strategy;
+	RSSoft_Engine *_rssoft_engine;
 	RSSoft_decoding_mode rs_decoding_mode;
 	std::string rs_decoding_regex;
+#endif
 
 private:
 	int _indicator_int;

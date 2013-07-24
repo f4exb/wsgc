@@ -115,6 +115,15 @@ protected:
 class RSSoft_Engine
 {
 public:
+	typedef enum
+	{
+		MMatrix_retry_arithmetic,            //!< Mul(Mn+1) = Mul(Mn) + inc
+		MMatrix_retry_arithmetic_increment,  //!< Mul(Mn+1) = Mul(Mn) + (n+1)*inc
+		MMatrix_retry_geometric,             //!< Mul(Mn+1) = Mul(Mn) * inc
+		MMatrix_retry_geometric_increment    //!< Mul(Mn+1) = Mul(Mn) * (inc^(n+1))
+	} MultiplicityMatrix_RetryStrategy;
+
+
 	RSSoft_Engine(unsigned int _m, unsigned int _k);
 
 	~RSSoft_Engine();
@@ -139,9 +148,10 @@ public:
 		return k;
 	}
     
-    void set_initial_global_multiplicity(unsigned int _M)
+    void set_initial_global_multiplicity(unsigned int _init_M)
     {
-        M = _M;
+        M = _init_M;
+        init_M = _init_M;
     }
     
     void set_nb_retries(unsigned int _nb_retries)
@@ -149,6 +159,16 @@ public:
         nb_retries = _nb_retries;
     }
     
+    void set_retry_base_increment(unsigned int _retry_base_increment)
+    {
+    	retry_base_increment = _retry_base_increment;
+    }
+
+    void set_retry_mm_strategy(MultiplicityMatrix_RetryStrategy _retry_mm_strategy)
+    {
+    	retry_mm_strategy = _retry_mm_strategy;
+    }
+
     /**
      * Get reference to the reliability matrix for direct update
      * \return r/w reference to the reliability matrix
@@ -212,12 +232,17 @@ public:
 
 protected:
     bool regexp_match(const std::string& value, const std::string& regexp) const;
+    void new_multiplicity();
 	unsigned int m; //!< GF(2^m)
 	unsigned int n; //!< 2^m-1
 	unsigned int q; //!< 2^m
 	unsigned int k; //!< RS(n,k), n = 2^m-1
 	unsigned int nb_retries; //!< Number of soft decision retries
 	unsigned int M; //!< Global multiplicity for soft decision multiplicity matrix
+	unsigned int init_M; //!< Initial value for global multiplicity for soft decision multiplicity matrix at first try
+	unsigned int retry_base_increment; //!< multiplicity base increment for retry
+	unsigned int retry_increment; //!< current multiplicity increment for retry
+	MultiplicityMatrix_RetryStrategy retry_mm_strategy; //!< strategy for multiplicity increment
     RSSoft_PPolys ppolys; //!< Collection of pre-defined primitive polynomials
     rssoft::gf::GFq gf; //!< Galois Field being used
     rssoft::EvaluationValues evaluation_values; //!< Evaluation values for RS

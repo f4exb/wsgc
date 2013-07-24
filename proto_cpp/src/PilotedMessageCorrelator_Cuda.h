@@ -38,6 +38,7 @@
 #include "ContinuousPhaseCarrier.h"
 #include "PilotedMessageCorrelator.h"
 
+
 #include <thrust/device_vector.h>
 #include <cuComplex.h>
 
@@ -45,6 +46,11 @@
 
 class LocalCodes_Cuda;
 class PilotCorrelationAnalyzer;
+
+#ifdef _RSSOFT
+class RSSoft_ReliabilityMatrixCuda;
+#endif
+
 // TODO: make the CUDA and Host classes create their own flavour of local codes object. Pass Gold Code generator and modulator references to the super class.
 
 /**
@@ -75,7 +81,14 @@ public:
      * \param pilot_correlation_analyzer Reference to the pilot correlation analyzer
 	 */
 	virtual void execute(PilotCorrelationAnalyzer& pilot_correlation_analyzer);
-
+    
+#ifdef _RSSOFT
+    void set_reliability_matrix_cuda(RSSoft_ReliabilityMatrixCuda *_reliability_matrix_cuda)
+    {
+        reliability_matrix_cuda = _reliability_matrix_cuda;
+    }
+#endif
+    
 protected:
     typedef struct transient_corr_value_s
     {
@@ -105,6 +118,9 @@ protected:
     std::vector<transient_corr_value_t> _transient_corr_values; //!< Transient correlation values obtained at each PRN round and put in correlation records at each symbol round
     static const cuComplex _c_zero; //!< Complex zero for initializations
     static const transient_corr_value_t _init_transient_corr_value;
+#ifdef _RSSOFT
+    RSSoft_ReliabilityMatrixCuda *reliability_matrix_cuda;
+#endif    
 };
 
 #endif /* __PILOTED_MESSAGE_CORRELATOR_CUDA_H__ */

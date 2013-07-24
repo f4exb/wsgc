@@ -34,9 +34,6 @@
 #include "FIRCoefGenerator_RCos.h"
 #include "SourceCodec.h"
 #include "SourceCodec_JT65.h"
-#ifdef _RSSOFT
-#include "RSSoft_Engine.h"
-#endif
 #include <stdlib.h>
 #include <getopt.h>
 #include <cstring>
@@ -111,9 +108,11 @@ Options::Options(std::string& _binary_name) :
 	mfsk_options(4096.0),
     decision_thresholds_specified(false),
     _source_codec(0),
-    _rssoft_engine(0),
     rs_logq(0),
     rs_k(0)
+#ifdef _RSSOFT
+    ,_rssoft_engine(0)
+#endif
 {
     srand(time(0));
 
@@ -136,10 +135,12 @@ Options::~Options()
     {
     	delete _source_codec;
     }
+#ifdef _RSSOFT
     if (_rssoft_engine != 0)
     {
     	delete _rssoft_engine;
     }
+#endif
 }
 
 
@@ -589,8 +590,10 @@ bool Options::get_options(int argc, char *argv[])
 				}
 
 				_rssoft_engine = new RSSoft_Engine(rs_logq, rs_k);
-				_rssoft_engine->set_initial_global_multiplicity(rs_M);
+				_rssoft_engine->set_initial_global_multiplicity(rs_init_M);
 				_rssoft_engine->set_nb_retries(rs_r);
+				_rssoft_engine->set_retry_base_increment(rs_inc);
+				_rssoft_engine->set_retry_mm_strategy(rs_inc_strategy);
 
 				if (!encode_reed_solomon())
 				{
@@ -823,8 +826,15 @@ void Options::get_help(std::ostringstream& os)
 #if _RSSOFT    
     os << "Reed Solomon encoding and soft-decision decoding using RSSoft library:" << std::endl;
     os << "For a RS(n,k) code with n = 2^q-1 and 1<k<n," << std::endl;
-    os << "M is the initial multiplicity matrix global multiplicity, r is the maximum number of retries:" << std::endl;
-    os << "-O q,k,M,r:<decoding mode>(,<regular expression>)" << std::endl;
+    os << "M is the initial multiplicity matrix global multiplicity," << std::endl;
+    os << "r is the maximum number of retries," << std::endl;
+    os << "i is the base increment for next retry multiplicity calculation:" << std::endl;
+    os << "-O q,k,M,r,i:<multiplicity increment strategy>,<decoding mode>(,<regular expression>)" << std::endl;
+    os << "Multiplicity increment strategy:" << std::endl;
+    os << " - arith: arithmetic increment for multiplicity" << std::endl;
+    os << " - iarith: arithmetic increment for the additive multiplicity" << std::endl;
+    os << " - geom: geometric increment for multiplicity" << std::endl;
+    os << " - igeom: geometric increment for the multiplicative multiplicity" << std::endl;
     os << "Decoding modes:" << std::endl;
     os << " - full: gives all results hence executes r retries" << std::endl;
     os << " - best: only return the result with best probability or none" << std::endl;
@@ -1148,7 +1158,29 @@ void Options::print_reed_solomon_data(std::ostringstream& os)
 {
     if (rs_k)
     {
-        os << "RS(" << (1<<rs_logq)-1 << "," << rs_k << "), M = " << rs_M << ", r = " << rs_r << ", decoding mode = ";
+        os << "RS(" << (1<<rs_logq)-1 << "," << rs_k << "), M = " << rs_init_M << ", r = " << rs_r << ", i = " << rs_inc;
+
+        os << ", increment strategy = ";
+        switch (rs_inc_strategy)
+        {
+        case RSSoft_Engine::MMatrix_retry_arithmetic:
+        	os << "arithmetic";
+        	break;
+        case RSSoft_Engine::MMatrix_retry_arithmetic_increment:
+        	os << "arithmetic increment";
+        	break;
+        case RSSoft_Engine::MMatrix_retry_geometric:
+        	os << "geometric";
+        	break;
+        case RSSoft_Engine::MMatrix_retry_geometric_increment:
+        	os << "geometric increment";
+        	break;
+        default:
+        	os << "none";
+        	break;
+        }
+
+        os << ", decoding mode = ";
         switch (rs_decoding_mode)
         {
         case RSSoft_decoding_full:
@@ -1441,46 +1473,71 @@ bool Options::parse_reed_solomon_data(std::string parameter_str)
 
     status = extract_vector<unsigned int>(rs_num_parameters, num_parameter_str);
 
-    if (rs_num_parameters.size() < 4)
+    if (rs_num_parameters.size() < 5)
     {
-    	std::cout << "Reed Solomon parameters take 4 values: q, k, M, r" << std::endl;
+    	std::cout << "Reed Solomon parameters take 5 values: q, k, M, r, i" << std::endl;
     	return false;
     }
 
     rs_logq = rs_num_parameters[0];
     rs_k = rs_num_parameters[1];
-    rs_M = rs_num_parameters[2];
+    rs_init_M = rs_num_parameters[2];
     rs_r = rs_num_parameters[3];
+    rs_inc = rs_num_parameters[4];
 
     status = extract_vector<std::string>(rs_str_parameters, str_parameter_str);
 
-    if (rs_str_parameters.size() < 1)
+    if (rs_str_parameters.size() < 2)
     {
     	std::cout << "Invalid Reed-Solomon specification" << std::endl;
     	return false;
     }
 
-    if (rs_str_parameters[0] == "full")
+    std::cout << rs_str_parameters[0] << std::endl;
+
+    if (rs_str_parameters[0] == "arith")
+    {
+    	rs_inc_strategy = RSSoft_Engine::MMatrix_retry_arithmetic;
+    }
+    else if (rs_str_parameters[0] == "iarith")
+    {
+    	rs_inc_strategy = RSSoft_Engine::MMatrix_retry_arithmetic_increment;
+    }
+    else if (rs_str_parameters[0] == "geom")
+    {
+    	rs_inc_strategy = RSSoft_Engine::MMatrix_retry_geometric;
+    }
+    else if (rs_str_parameters[0] == "igeom")
+    {
+    	rs_inc_strategy = RSSoft_Engine::MMatrix_retry_geometric_increment;
+    }
+    else
+    {
+    	std::cout << "Unrecognized Multiplicity Matrix increment strategy" << std::endl;
+    	return false;
+    }
+
+    if (rs_str_parameters[1] == "full")
     {
     	rs_decoding_mode = RSSoft_decoding_full;
     }
-    else if (rs_str_parameters[0] == "best")
+    else if (rs_str_parameters[1] == "best")
     {
     	rs_decoding_mode = RSSoft_decoding_best;
     }
-    else if (rs_str_parameters[0] == "first")
+    else if (rs_str_parameters[1] == "first")
     {
     	rs_decoding_mode = RSSoft_decoding_first;
     }
-    else if (rs_str_parameters[0] == "regex")
+    else if (rs_str_parameters[1] == "regex")
     {
     	rs_decoding_mode = RSSoft_decoding_regex;
-    	if (rs_str_parameters.size() < 2)
+    	if (rs_str_parameters.size() < 3)
     	{
     		std::cout << "Regular expression expected for RSSoft decoding mode with regular expression" << std::endl;
     		return false;
     	}
-    	rs_decoding_regex = rs_str_parameters[1];
+    	rs_decoding_regex = rs_str_parameters[2];
     }
     else
     {
@@ -1500,7 +1557,6 @@ bool Options::adjust_parameters_for_source_coding()
 	if (_source_codec_type_str == "JT65")
 	{
 		nb_message_symbols = 64;
-		//TODO: adjust RS parameters if any specified
 
 		if (gc_nb_stages < 7)
 		{

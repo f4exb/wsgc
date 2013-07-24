@@ -49,6 +49,14 @@ public:
 	 */
 	~RSSoft_ReliabilityMatrixCuda();
 
+    /**
+     * Access internal matrix data directly
+     */
+    thrust::device_vector<float>& get_matrix()
+    {
+        return matrix;
+    }
+    
 	/**
 	 * Enter one more symbol position data
 	 * \param symbol_data Pointer to symbol data array. There must be nb_symbol values corresponding to the relative reliability of each symbol for the current symbol position in the message

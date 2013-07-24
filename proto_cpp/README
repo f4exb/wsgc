@@ -30,7 +30,28 @@ Hint: Use make -j<2*n> where n is the number of machine threads to speed up. For
 
 7. Run make install
 
-8. The programs are ready to use in /opt/install/wsgc_test/bin
+8. Set environment variables
+
+A typical setenv that contains all variables for use with Cuda and RSSoft is the following:
+______________________________________________________________________________________________________________
+export RSSOFT_INSTALL=/opt/install/rssoft
+export CUDA_SDK=/shared/softs/cuda-4.2_SDK
+export CUDA_INSTALL=/opt/install/cuda-5.0
+export PATH=$PATH:${CUDA_INSTALL}/bin
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${CUDA_INSTALL}/lib64:${CUDA_INSTALL}/lib:${RSSOFT_INSTALL}/lib
+
+arch=$(uname -m)
+
+if [ $arch = 'x86_64' ]
+then
+   export CUDA_LIB_SUFFIX="_x86_64"
+else
+   export CUDA_LIB_SUFFIX=""
+fi
+______________________________________________________________________________________________________________
+ 
+
+9. The programs are ready to use in /opt/install/wsgc_test/bin
 
 - wsgc_test: runs an execution on simulated samples
              run wsgc_test -h to list all options
