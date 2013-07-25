@@ -95,6 +95,16 @@ public:
         retry_nb = _retry_nb;
     }
 
+	unsigned int get_mm_cost() const
+    {
+        return mm_cost;
+    }
+
+    void set_mm_cost(unsigned int _mm_cost)
+    {
+        mm_cost = _mm_cost;
+    }
+    
 	/**
 	 * reliability increasing order
 	 */
@@ -107,6 +117,7 @@ protected:
 	std::vector<unsigned int> symbols;
 	float reliability;
     unsigned int retry_nb;
+    unsigned int mm_cost;
 };
 
 /**
@@ -192,11 +203,12 @@ public:
     void record_magnitudes(wsgc_float *magnitudes);
     
     /**
-     * Decode one codeword based on given magnitudes for the length of one codeword. Return all unique candidate
-     * messages along with their best value of reliability. It will systematically loop the given number of retries.
+     * Decode one codeword based on given magnitudes for the length of one codeword. Return candidate
+     * messages (only unique messages with best reliability if unique is true) along with their best value of reliability. 
+     * It will systematically loop the given number of retries.
      * \param candidate_messages Vector of candidate messages filled in in decreasing value of reliability
      */
-    void decode(std::vector<RSSoft_generic_codeword>& candidate_messages);
+    void decode(std::vector<RSSoft_generic_codeword>& candidate_messages, bool unique=true);
     
     /**
      * Decode one codeword based on given magnitudes for the length of one codeword. Returns only the first candidate
@@ -230,6 +242,23 @@ public:
         const SourceCodec& src_codec,
         const std::string& regexp);
 
+    /**
+     * Decode one codeword based on given magnitudes for the length of one codeword. Returns the first candidate showing a reliability figure above a given threshold
+     * \param retrieved_message Retrieved message symbols and associated reliability data
+     * \param src_codec Source codec being used
+     * \param regexp Regular expression to match with the textual message
+     * \return true if a matching message is found
+     */
+    bool decode(RSSoft_generic_codeword& retrieved_message, float reliability_threshold);
+
+    /**
+     * Calculate the reliability of a codeword once the reliability matrix has been normalized
+     * i.e. after decode
+     * \codeword codeword for which to calculate the reliability
+     * \return codeword reliability with respect to current reliability matrix
+     */
+    float calculate_reliability(std::vector<unsigned int> codeword);
+        
 protected:
     bool regexp_match(const std::string& value, const std::string& regexp) const;
     void new_multiplicity();

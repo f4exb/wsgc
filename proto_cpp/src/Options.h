@@ -49,10 +49,12 @@ class Options
 public:
 	typedef enum
 	{
+		RSSoft_decoding_all,
 		RSSoft_decoding_full,
 		RSSoft_decoding_best,
 		RSSoft_decoding_first,
-		RSSoft_decoding_regex
+		RSSoft_decoding_regex,
+		RSSoft_decoding_relthr
 	} RSSoft_decoding_mode;
 
 	Options(std::string& _binary_name);
@@ -128,6 +130,7 @@ public:
 	RSSoft_Engine *_rssoft_engine;
 	RSSoft_decoding_mode rs_decoding_mode;
 	std::string rs_decoding_regex;
+    float rs_reliability_threshold;
 #endif
 
 private:

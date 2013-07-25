@@ -1097,13 +1097,16 @@ void apply_fir(wsgc_complex *inout, unsigned int& nb_samples, const std::vector<
 	*/
 }
 
+
+#ifdef _RSSOFT
 //=================================================================================================
 void run_rssoft_decoding(Options& options)
 {
     RSSoft_DecisionBox rssoft_decision_box(*options._rssoft_engine, options._source_codec);
-    
+
     switch (options.rs_decoding_mode)
     {
+        case Options::RSSoft_decoding_all:
         case Options::RSSoft_decoding_full:
         case Options::RSSoft_decoding_best:
         case Options::RSSoft_decoding_first:
@@ -1112,7 +1115,13 @@ void run_rssoft_decoding(Options& options)
         case Options::RSSoft_decoding_regex:
             rssoft_decision_box.run_regex(options.rs_decoding_regex);
             break;
+        case Options::RSSoft_decoding_relthr:
+            rssoft_decision_box.run_reliability_threshold(options.rs_reliability_threshold);
+            break;
         default:
             std::cout << "Unknown RSSoft decoding options" << std::endl;
     }
+
+    std::cout << "Sent codeword score:  " << options._rssoft_engine->calculate_reliability(options.prns) << " dB/Symbol" << std::endl;
 }
+#endif

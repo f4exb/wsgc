@@ -840,6 +840,7 @@ void Options::get_help(std::ostringstream& os)
     os << " - best: only return the result with best probability or none" << std::endl;
     os << " - first: returns the first result" << std::endl;
     os << " - regex: retries until it finds a resulting textual message matching the given regular expression" << std::endl;
+    os << " - relthr: retries until it finds a candidate message with a reliability figure above the given threshold" << std::endl;
     os << std::endl;
 #endif
     mfsk_options.get_help(os);
@@ -1183,6 +1184,9 @@ void Options::print_reed_solomon_data(std::ostringstream& os)
         os << ", decoding mode = ";
         switch (rs_decoding_mode)
         {
+        case RSSoft_decoding_all:
+        	os << "all";
+        	break;
         case RSSoft_decoding_full:
         	os << "full";
         	break;
@@ -1194,6 +1198,9 @@ void Options::print_reed_solomon_data(std::ostringstream& os)
         	break;
         case RSSoft_decoding_regex:
         	os << "regex: \"" << rs_decoding_regex << "\"";
+        	break;
+        case RSSoft_decoding_relthr:
+        	os << "relthr: " << rs_reliability_threshold << " dB/Symbol";
         	break;
         default:
         	os << "none";
@@ -1517,7 +1524,11 @@ bool Options::parse_reed_solomon_data(std::string parameter_str)
     	return false;
     }
 
-    if (rs_str_parameters[1] == "full")
+    if (rs_str_parameters[1] == "all")
+    {
+    	rs_decoding_mode = RSSoft_decoding_all;
+    }
+    else if (rs_str_parameters[1] == "full")
     {
     	rs_decoding_mode = RSSoft_decoding_full;
     }
@@ -1538,6 +1549,27 @@ bool Options::parse_reed_solomon_data(std::string parameter_str)
     		return false;
     	}
     	rs_decoding_regex = rs_str_parameters[2];
+    }
+    else if (rs_str_parameters[1] == "relthr")
+    {
+    	rs_decoding_mode = RSSoft_decoding_relthr;
+    	if (rs_str_parameters.size() < 3)
+    	{
+    		std::cout << "Regular expression expected for RSSoft decoding mode with regular expression" << std::endl;
+    		return false;
+    	}
+        else
+        {
+            try
+            {
+                rs_reliability_threshold = boost::lexical_cast<float>(rs_str_parameters[2]);
+            }
+            catch (boost::bad_lexical_cast &)
+            {
+                std::cout << "Invalid format for reliability threshold (decimal number expected)" << std::endl;
+                return false;
+            }
+        }
     }
     else
     {
