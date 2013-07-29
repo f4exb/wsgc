@@ -40,23 +40,20 @@ RSSoft_DecisionBox::~RSSoft_DecisionBox()
 //=================================================================================================
 void RSSoft_DecisionBox::run(Options::RSSoft_decoding_mode rs_decoding_mode)
 {
-    std::vector<RSSoft_generic_codeword> candidate_messages;
-    RSSoft_generic_codeword unique_message, unique_codeword;
-
     switch (rs_decoding_mode)
     {
         case Options::RSSoft_decoding_all:
-            full_scan_all(candidate_messages);
-            list_messages(candidate_messages, std::cout);
+            full_scan_all();
+            list_messages(std::cout);
             break;
             
         case Options::RSSoft_decoding_full:
-            full_scan_unique(candidate_messages);
-            list_messages(candidate_messages, std::cout);
+            full_scan_unique();
+            list_messages(std::cout);
             break;
             
         case Options::RSSoft_decoding_best:
-            full_scan_unique(candidate_messages);
+            full_scan_unique();
             
             if (candidate_messages.size() > 0)
             {
@@ -69,9 +66,9 @@ void RSSoft_DecisionBox::run(Options::RSSoft_decoding_mode rs_decoding_mode)
             break;
             
         case Options::RSSoft_decoding_first:
-            if (find_first(unique_message))
+            if (find_first())
             {
-                show_message(unique_message, std::cout);
+                show_message(candidate_messages[0], std::cout);
             }
             else
             {
@@ -88,14 +85,13 @@ void RSSoft_DecisionBox::run(Options::RSSoft_decoding_mode rs_decoding_mode)
 //=================================================================================================
 void RSSoft_DecisionBox::run_regex(const std::string& rs_decoding_regex)
 {
-    RSSoft_generic_codeword unique_message;
     std::string text_message;
 
     if (source_codec)
     {
-        if (regex_scan(text_message, unique_message, rs_decoding_regex))
+        if (regex_scan(text_message, rs_decoding_regex))
         {
-            show_message(unique_message, std::cout);
+            show_message(candidate_messages[0], std::cout);
         }
         else
         {
@@ -111,11 +107,9 @@ void RSSoft_DecisionBox::run_regex(const std::string& rs_decoding_regex)
 //=================================================================================================
 void RSSoft_DecisionBox::run_reliability_threshold(float reliability_threshold)
 {
-    RSSoft_generic_codeword unique_message;
-    
-    if (find_first_above_reliability_threshold(unique_message, reliability_threshold))
+    if (find_first_above_reliability_threshold(reliability_threshold))
     {
-        show_message(unique_message, std::cout);
+        show_message(candidate_messages[0], std::cout);
     }
     else
     {
@@ -124,37 +118,74 @@ void RSSoft_DecisionBox::run_reliability_threshold(float reliability_threshold)
 }
 
 //=================================================================================================
-void RSSoft_DecisionBox::full_scan_unique(std::vector<RSSoft_generic_codeword>& candidate_messages)
+void RSSoft_DecisionBox::full_scan_unique()
 {
+    candidate_messages.clear();
+    
     rssoft_engine.decode(candidate_messages, true);
 }
 
 //=================================================================================================
-void RSSoft_DecisionBox::full_scan_all(std::vector<RSSoft_generic_codeword>& candidate_messages)
+void RSSoft_DecisionBox::full_scan_all()
 {
+    candidate_messages.clear();
+    
     rssoft_engine.decode(candidate_messages, false);
 }
 
 //=================================================================================================
-bool RSSoft_DecisionBox::find_first(RSSoft_generic_codeword& unique_message)
+bool RSSoft_DecisionBox::find_first()
 {
-    return rssoft_engine.decode(unique_message);
+    RSSoft_generic_codeword unique_message;
+    candidate_messages.clear();
+    
+    if (rssoft_engine.decode(unique_message))
+    {
+        candidate_messages.push_back(unique_message);
+        return true;
+    }
+    else
+    {
+        return false;
+    }
 }
 
 //=================================================================================================
-bool RSSoft_DecisionBox::find_first_above_reliability_threshold(RSSoft_generic_codeword& unique_message, float reliability_threshold)
+bool RSSoft_DecisionBox::find_first_above_reliability_threshold(float reliability_threshold)
 {
-    return rssoft_engine.decode(unique_message, reliability_threshold);
+    RSSoft_generic_codeword unique_message;
+    candidate_messages.clear();
+    
+    if (rssoft_engine.decode(unique_message, reliability_threshold))
+    {
+        candidate_messages.push_back(unique_message);
+        return true;
+    }
+    else
+    {
+        return false;
+    }
 }
 
 //=================================================================================================
-bool RSSoft_DecisionBox::regex_scan(std::string& decoded_text, RSSoft_generic_codeword& unique_message, const std::string& rs_decoding_regex)
+bool RSSoft_DecisionBox::regex_scan(std::string& decoded_text, const std::string& rs_decoding_regex)
 {
-    return rssoft_engine.decode(decoded_text, unique_message, *source_codec, rs_decoding_regex);
+    RSSoft_generic_codeword unique_message;
+    candidate_messages.clear();
+    
+    if (rssoft_engine.decode(decoded_text, unique_message, *source_codec, rs_decoding_regex))
+    {
+        candidate_messages.push_back(unique_message);
+        return true;
+    }
+    else
+    {
+        return false;
+    }
 }
 
 //=================================================================================================
-void RSSoft_DecisionBox::list_messages(const std::vector<RSSoft_generic_codeword>& candidate_messages, std::ostream& os)
+void RSSoft_DecisionBox::list_messages(std::ostream& os)
 {
     std::vector<RSSoft_generic_codeword>::const_iterator msg_it = candidate_messages.begin();
     const std::vector<RSSoft_generic_codeword>::const_iterator msg_end = candidate_messages.end();
@@ -197,4 +228,29 @@ void RSSoft_DecisionBox::show_message(const RSSoft_generic_codeword& message, st
 	}
 
     std::cout << std::endl;
+}
+
+//=================================================================================================
+void RSSoft_DecisionBox::print_stats(RSSoft_Engine& rssoft_engine, const std::vector<unsigned int>& sent_message, const std::vector<unsigned int>& sent_codeword, std::ostream& os)
+{
+    float source_codeword_score = rssoft_engine.calculate_reliability(sent_codeword);
+    
+    if (candidate_messages.size() == 0) // no result found
+    {
+        os << "_RES " << "0,0," << source_codeword_score << ",0,0" << std::endl;
+    }
+    else
+    {
+        std::vector<RSSoft_generic_codeword>::const_iterator msg_it = candidate_messages.begin();
+        const std::vector<RSSoft_generic_codeword>::const_iterator msg_end = candidate_messages.end();
+        
+        for (; msg_it != msg_end; ++msg_it)
+        {
+            unsigned int found = (msg_it->get_symbols() == sent_message ? 1 : 0);
+            float score = msg_it->get_reliability();
+            unsigned int try_nb = msg_it->get_retry_nb();
+            unsigned int mm_cost = msg_it->get_mm_cost();
+            os << "_RES 1," << found << "," << score << "," << try_nb << "," << mm_cost << std::endl;
+        }
+    }
 }

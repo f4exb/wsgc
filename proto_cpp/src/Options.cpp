@@ -67,7 +67,8 @@ template<typename TOpt, typename TField> bool extract_option(TField& field, char
 
 
 //=================================================================================================
-Options::Options(std::string& _binary_name) :
+Options::Options(std::string& _binary_name, Options_Executable _options_executable) :
+	options_executable(_options_executable),
     binary_path(_binary_name),
     f_sampling(4096.0),
     f_chip(1023.0),
@@ -338,8 +339,20 @@ bool Options::get_options(int argc, char *argv[])
                 status = parse_source_coding_data(std::string(optarg));
                 break;
             case 'O':
-#ifdef _RSSOFT            
-                status = parse_reed_solomon_data(std::string(optarg));
+#ifdef _RSSOFT
+            	if (options_executable == Options_wsgc_test)
+            	{
+            		status = parse_reed_solomon_data(std::string(optarg));
+            	}
+            	else if (options_executable == Options_wsgc_generator)
+            	{
+            		status = parse_reed_solomon_data_generator(std::string(optarg));
+            	}
+            	else
+            	{
+            		std::cout << "Unrecognized options executable" << std::endl;
+            		status = false;
+            	}
 #endif
                 break;
             case '?':
@@ -1159,52 +1172,59 @@ void Options::print_reed_solomon_data(std::ostringstream& os)
 {
     if (rs_k)
     {
-        os << "RS(" << (1<<rs_logq)-1 << "," << rs_k << "), M = " << rs_init_M << ", r = " << rs_r << ", i = " << rs_inc;
+    	if (options_executable == Options_wsgc_generator)
+    	{
+    		os << "RS(" << (1<<rs_logq)-1 << "," << rs_k << ")";
+    	}
+    	else if (options_executable == Options_wsgc_test)
+    	{
+			os << "RS(" << (1<<rs_logq)-1 << "," << rs_k << "), M = " << rs_init_M << ", r = " << rs_r << ", i = " << rs_inc;
 
-        os << ", increment strategy = ";
-        switch (rs_inc_strategy)
-        {
-        case RSSoft_Engine::MMatrix_retry_arithmetic:
-        	os << "arithmetic";
-        	break;
-        case RSSoft_Engine::MMatrix_retry_arithmetic_increment:
-        	os << "arithmetic increment";
-        	break;
-        case RSSoft_Engine::MMatrix_retry_geometric:
-        	os << "geometric";
-        	break;
-        case RSSoft_Engine::MMatrix_retry_geometric_increment:
-        	os << "geometric increment";
-        	break;
-        default:
-        	os << "none";
-        	break;
-        }
+			os << ", increment strategy = ";
+			switch (rs_inc_strategy)
+			{
+			case RSSoft_Engine::MMatrix_retry_arithmetic:
+				os << "arithmetic";
+				break;
+			case RSSoft_Engine::MMatrix_retry_arithmetic_increment:
+				os << "arithmetic increment";
+				break;
+			case RSSoft_Engine::MMatrix_retry_geometric:
+				os << "geometric";
+				break;
+			case RSSoft_Engine::MMatrix_retry_geometric_increment:
+				os << "geometric increment";
+				break;
+			default:
+				os << "none";
+				break;
+			}
 
-        os << ", decoding mode = ";
-        switch (rs_decoding_mode)
-        {
-        case RSSoft_decoding_all:
-        	os << "all";
-        	break;
-        case RSSoft_decoding_full:
-        	os << "full";
-        	break;
-        case RSSoft_decoding_best:
-        	os << "best";
-        	break;
-        case RSSoft_decoding_first:
-        	os << "first";
-        	break;
-        case RSSoft_decoding_regex:
-        	os << "regex: \"" << rs_decoding_regex << "\"";
-        	break;
-        case RSSoft_decoding_relthr:
-        	os << "relthr: " << rs_reliability_threshold << " dB/Symbol";
-        	break;
-        default:
-        	os << "none";
-        	break;
+			os << ", decoding mode = ";
+			switch (rs_decoding_mode)
+			{
+			case RSSoft_decoding_all:
+				os << "all";
+				break;
+			case RSSoft_decoding_full:
+				os << "full";
+				break;
+			case RSSoft_decoding_best:
+				os << "best";
+				break;
+			case RSSoft_decoding_first:
+				os << "first";
+				break;
+			case RSSoft_decoding_regex:
+				os << "regex: \"" << rs_decoding_regex << "\"";
+				break;
+			case RSSoft_decoding_relthr:
+				os << "relthr: " << rs_reliability_threshold << " dB/Symbol";
+				break;
+			default:
+				os << "none";
+				break;
+			}
         }
     }
     else
@@ -1462,6 +1482,24 @@ bool Options::parse_source_coding_data(std::string source_coding_data_str)
 
 #ifdef _RSSOFT
 //=================================================================================================
+bool Options::parse_reed_solomon_data_generator(std::string parameter_str)
+{
+	std::vector<unsigned int> rs_num_parameters;
+	bool status = extract_vector<unsigned int>(rs_num_parameters, parameter_str);
+
+	if (rs_num_parameters.size() < 2)
+	{
+		std::cout << "Reed Solomon parameters take 2 values: q, k" << std::endl;
+		return false;
+	}
+
+    rs_logq = rs_num_parameters[0];
+    rs_k = rs_num_parameters[1];
+
+    return true;
+}
+
+//=================================================================================================
 bool Options::parse_reed_solomon_data(std::string parameter_str)
 {
     bool status = false;
@@ -1625,7 +1663,7 @@ bool Options::source_codec_create_message_prns()
 //=================================================================================================
 bool Options::encode_reed_solomon()
 {
-	std::vector<unsigned int> source_prns(prns);
+	source_prns = prns;
 	prns.clear();
 	_rssoft_engine->encode(source_prns, prns);
 	return true;

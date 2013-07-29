@@ -49,6 +49,12 @@ class Options
 public:
 	typedef enum
 	{
+		Options_wsgc_test,
+		Options_wsgc_generator
+	} Options_Executable;
+
+	typedef enum
+	{
 		RSSoft_decoding_all,
 		RSSoft_decoding_full,
 		RSSoft_decoding_best,
@@ -57,7 +63,7 @@ public:
 		RSSoft_decoding_relthr
 	} RSSoft_decoding_mode;
 
-	Options(std::string& _binary_name);
+	Options(std::string& _binary_name, Options_Executable _options_executable = Options_wsgc_test);
 	~Options();
 
 	bool get_options(int argc, char *argv[]);
@@ -73,6 +79,7 @@ public:
 		return _fading_model;
 	}
 
+	Options_Executable options_executable;
 	std::string binary_path;
 	std::string binary_name;
 	wsgc_float f_sampling;
@@ -82,6 +89,7 @@ public:
 	wsgc_float f_tx;
 	unsigned int code_shift;
 	std::vector<unsigned int> prns;
+    std::vector<unsigned int> source_prns;
 	bool noise_test;
 	unsigned int nb_prns_per_symbol;
 	unsigned int prn_shift;
@@ -151,6 +159,7 @@ private:
 	bool source_codec_create_message_prns();
 #ifdef _RSSOFT
 	bool parse_reed_solomon_data(std::string coding_data_str);
+	bool parse_reed_solomon_data_generator(std::string coding_data_str);
 	void print_reed_solomon_data(std::ostringstream& os);
 	bool encode_reed_solomon();
 #endif

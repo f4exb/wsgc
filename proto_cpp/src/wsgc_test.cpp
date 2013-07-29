@@ -1122,6 +1122,6 @@ void run_rssoft_decoding(Options& options)
             std::cout << "Unknown RSSoft decoding options" << std::endl;
     }
 
-    std::cout << "Sent codeword score:  " << options._rssoft_engine->calculate_reliability(options.prns) << " dB/Symbol" << std::endl;
+    rssoft_decision_box.print_stats(*options._rssoft_engine, options.source_prns, options.prns, std::cout);
 }
 #endif

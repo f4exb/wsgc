@@ -30,7 +30,7 @@
 #include "RSSoft_Engine.h"
 #include "WsgcException.h"
 #include <algorithm>
-#include <boost/tr1/regex.hpp>
+#include <regex>
 
 //=================================================================================================
 RSSoft_PPolys::RSSoft_PPolys()
@@ -388,7 +388,7 @@ bool RSSoft_Engine::decode(RSSoft_generic_codeword& retrieved_message, float rel
 //=================================================================================================
 bool RSSoft_Engine::regexp_match(const std::string& value, const std::string& regexp) const
 {
-    return std::tr1::regex_match(value, std::tr1::regex(regexp));
+    return std::regex_match(value, std::regex(regexp));
 }
 
 //=================================================================================================

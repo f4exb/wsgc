@@ -33,7 +33,7 @@ int main(int argc, char *argv[])
     timespec time1, time2;
     int time_option = CLOCK_REALTIME;
     std::string binary_name(argv[0]);
-    Options options(binary_name);
+    Options options(binary_name, Options::Options_wsgc_generator);
 
     if (options.get_options(argc,argv))
     {

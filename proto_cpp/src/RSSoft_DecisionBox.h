@@ -39,18 +39,20 @@ public:
     void run(Options::RSSoft_decoding_mode rs_decoding_mode);
     void run_regex(const std::string& rs_decoding_regex);
     void run_reliability_threshold(float reliability_threshold);
+    void print_stats(RSSoft_Engine& rssoft_engine, const std::vector<unsigned int>& sent_message, const std::vector<unsigned int>& sent_codeword, std::ostream& os);
     
 protected:
-    void full_scan_all(std::vector<RSSoft_generic_codeword>& candidate_messages);
-    void full_scan_unique(std::vector<RSSoft_generic_codeword>& candidate_messages);
-    bool find_first(RSSoft_generic_codeword& unique_message);
-    bool find_first_above_reliability_threshold(RSSoft_generic_codeword& unique_message, float reliability_threshold);
-    bool regex_scan(std::string& decoded_text, RSSoft_generic_codeword& unique_message, const std::string& rs_decoding_regex);
-    void list_messages(const std::vector<RSSoft_generic_codeword>& candidate_messages, std::ostream& os);
+    void full_scan_all();
+    void full_scan_unique();
+    bool find_first();
+    bool find_first_above_reliability_threshold(float reliability_threshold);
+    bool regex_scan(std::string& decoded_text, const std::string& rs_decoding_regex);
+    void list_messages(std::ostream& os);
     void show_message(const RSSoft_generic_codeword& message, std::ostream& os);
 
     RSSoft_Engine& rssoft_engine;
     const SourceCodec *source_codec;
+    std::vector<RSSoft_generic_codeword> candidate_messages;
 };
 
 

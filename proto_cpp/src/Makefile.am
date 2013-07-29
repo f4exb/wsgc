@@ -2,16 +2,17 @@ bin_PROGRAMS = wsgc_test wsgc_generator wsgc_jt65src
 wsgc_test_SOURCES = Options.cpp
 wsgc_generator_SOURCES = Options.cpp
 wsgc_test_LDADD =
-wsgc_generator_LDADD = 
+wsgc_generator_LDADD =
 
-AM_CXXFLAGS = $(FFTW3F_CFLAGS) 
+AM_CXXFLAGS = $(FFTW3F_CFLAGS) $(BOOST_CPPFLAGS)
+RSSoft_Engine.$(OBJEXT) : CXXFLAGS += -std=c++0x 
 
 if HAS_RSSOFT
 wsgc_test_SOURCES += RSSoft_Engine.cpp \
     RSSoft_DecisionBox.cpp
-wsgc_test_LDADD += $(RSSOFT_LDFLAGS) -lboost_regex
+wsgc_test_LDADD += $(RSSOFT_LDFLAGS)
 wsgc_generator_SOURCES += RSSoft_Engine.cpp
-wsgc_generator_LDADD += $(RSSOFT_LDFLAGS) -lboost_regex
+wsgc_generator_LDADD += $(RSSOFT_LDFLAGS)
 AM_CXXFLAGS += $(RSSOFT_CFLAGS)
 NVCCFLAGS += $(RSSOFT_CFLAGS)
 endif
