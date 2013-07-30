@@ -100,7 +100,13 @@ protected:
 class SourceCodec_JT65 : public SourceCodec
 {
 public:
-    SourceCodec_JT65();
+    typedef enum
+    {
+        JT65_Classical,  //!< Original
+        JT65_256,        //!< uses 9 8-bit symbols to pack the 72 bits, otherwise classical
+    } JT65_Variants;
+
+    SourceCodec_JT65(JT65_Variants _variant = JT65_Classical);
     virtual ~SourceCodec_JT65();
     
     /**
@@ -270,6 +276,34 @@ protected:
         bool& arbitrary_text) const;
         
     /**
+     * Pack 2 packed callsigns and a packed locator into 9 8-bit symbols message
+     * \param packed_callsign_1 Input first packed callsign
+     * \param packed_callsign_2 Input second packed callsign
+     * \param packed_locator Input packed locator
+     * \param message Output 9 8-bit symbols message
+     * \return true if successful
+     */
+    bool pack_message_256(unsigned int packed_callsign_1,
+        unsigned int packed_callsign_2,
+        unsigned int packed_locator,
+        std::vector<unsigned int>& message) const;
+        
+    /**
+     * Unpack 9 8-bit symbols message into 2 packed callsigns and a packed locator
+     * \param message Input 8-bit symbols message
+     * \param packed_callsign_1 Output first packed callsign
+     * \param packed_callsign_2 Output second packed callsign
+     * \param packed_locator Output packed locator
+     * \param arbitrary_text true if this is arbitrary text
+     * \return true if successful
+     */
+    bool unpack_message_256(const std::vector<unsigned int>& message,
+        unsigned int& packed_callsign_1,
+        unsigned int& packed_callsign_2,
+        unsigned int& packed_locator,
+        bool& arbitrary_text) const;
+        
+    /**
      * Compose the decoded formatted message from its decoded elements
      * \param out_msg formatted message
      * \param field_1 Field 1 string
@@ -291,7 +325,8 @@ protected:
         
         
     unsigned int long_lat_to_pfxsfx_index(unsigned int nlat, unsigned int nlong) const;
-
+    
+    JT65_Variants variant;
     static const unsigned int call_nbase;
     static const unsigned int locator_nbase;
     static const unsigned int call_DE;
