@@ -1451,17 +1451,17 @@ bool Options::parse_source_coding_data(std::string source_coding_data_str)
 {
     bool status = false;
 
-    size_t colon_pos = source_coding_data_str.find(":");
-    size_t bar_pos = source_coding_data_str.find("|");
+    size_t colon1_pos = source_coding_data_str.find(":");
+    size_t colon2_pos = source_coding_data_str.find(":", colon1_pos+1);
 
-    if ((source_coding_data_str.length() > 3) && (colon_pos != std::string::npos) && (colon_pos > 0))
+    if ((source_coding_data_str.length() > 3) && (colon1_pos != std::string::npos) && (colon1_pos > 0))
     {
-    	if ((bar_pos != std::string::npos) && (bar_pos > colon_pos))
+    	if ((colon2_pos != std::string::npos) && (colon2_pos > colon1_pos))
     	{
-    		_source_codec_type_str = source_coding_data_str.substr(0,colon_pos);
+    		_source_codec_type_str = source_coding_data_str.substr(0,colon1_pos);
     		std::transform(_source_codec_type_str.begin(), _source_codec_type_str.end(), _source_codec_type_str.begin(), ::toupper);
-    		std::string source_coding_parameters_str = source_coding_data_str.substr(colon_pos+1, bar_pos-colon_pos-1);
-    		_source_message_str = source_coding_data_str.substr(bar_pos+1);
+    		std::string source_coding_parameters_str = source_coding_data_str.substr(colon1_pos+1, colon2_pos-colon1_pos-1);
+    		_source_message_str = source_coding_data_str.substr(colon2_pos+1);
 
     		if (_source_codec_type_str == "JT65")
     		{
@@ -1542,8 +1542,6 @@ bool Options::parse_reed_solomon_data(std::string parameter_str)
     	std::cout << "Invalid Reed-Solomon specification" << std::endl;
     	return false;
     }
-
-    std::cout << rs_str_parameters[0] << std::endl;
 
     if (rs_str_parameters[0] == "arith")
     {
