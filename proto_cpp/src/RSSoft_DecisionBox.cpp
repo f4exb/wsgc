@@ -105,6 +105,28 @@ void RSSoft_DecisionBox::run_regex(const std::string& rs_decoding_regex)
 }
 
 //=================================================================================================
+void RSSoft_DecisionBox::run_match(const std::string& rs_decoding_match)
+{
+    std::string text_message;
+
+    if (source_codec)
+    {
+        if (match_scan(text_message, rs_decoding_match))
+        {
+            show_message(candidate_messages[0], std::cout);
+        }
+        else
+        {
+            std::cout << "No solution found" << std::endl;
+        }
+    }
+    else
+    {
+    	std::cout << "Cannot use RS soft decision decoding with match string without source codec" << std::endl;
+    }
+}
+
+//=================================================================================================
 void RSSoft_DecisionBox::run_reliability_threshold(float reliability_threshold)
 {
     if (find_first_above_reliability_threshold(reliability_threshold))
@@ -173,7 +195,24 @@ bool RSSoft_DecisionBox::regex_scan(std::string& decoded_text, const std::string
     RSSoft_generic_codeword unique_message;
     candidate_messages.clear();
     
-    if (rssoft_engine.decode(decoded_text, unique_message, *source_codec, rs_decoding_regex))
+    if (rssoft_engine.decode_regex(decoded_text, unique_message, *source_codec, rs_decoding_regex))
+    {
+        candidate_messages.push_back(unique_message);
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+//=================================================================================================
+bool RSSoft_DecisionBox::match_scan(std::string& decoded_text, const std::string& rs_decoding_match)
+{
+    RSSoft_generic_codeword unique_message;
+    candidate_messages.clear();
+
+    if (rssoft_engine.decode_match(decoded_text, unique_message, *source_codec, rs_decoding_match))
     {
         candidate_messages.push_back(unique_message);
         return true;

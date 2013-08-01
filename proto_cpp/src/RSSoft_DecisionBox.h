@@ -38,6 +38,7 @@ public:
     
     void run(Options::RSSoft_decoding_mode rs_decoding_mode);
     void run_regex(const std::string& rs_decoding_regex);
+    void run_match(const std::string& rs_decoding_match);
     void run_reliability_threshold(float reliability_threshold);
     void print_stats(RSSoft_Engine& rssoft_engine, const std::vector<unsigned int>& sent_message, const std::vector<unsigned int>& sent_codeword, std::ostream& os);
     
@@ -47,6 +48,7 @@ protected:
     bool find_first();
     bool find_first_above_reliability_threshold(float reliability_threshold);
     bool regex_scan(std::string& decoded_text, const std::string& rs_decoding_regex);
+    bool match_scan(std::string& decoded_text, const std::string& rs_decoding_match);
     void list_messages(std::ostream& os);
     void show_message(const RSSoft_generic_codeword& message, std::ostream& os);
 

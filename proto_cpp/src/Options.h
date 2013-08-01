@@ -60,6 +60,7 @@ public:
 		RSSoft_decoding_best,
 		RSSoft_decoding_first,
 		RSSoft_decoding_regex,
+		RSSoft_decoding_match,
 		RSSoft_decoding_relthr
 	} RSSoft_decoding_mode;
 
@@ -137,7 +138,7 @@ public:
 	RSSoft_Engine::MultiplicityMatrix_RetryStrategy rs_inc_strategy;
 	RSSoft_Engine *_rssoft_engine;
 	RSSoft_decoding_mode rs_decoding_mode;
-	std::string rs_decoding_regex;
+	std::string rs_decoding_match_str;
     float rs_reliability_threshold;
 #endif
 

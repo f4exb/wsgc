@@ -237,10 +237,24 @@ public:
      * \param regexp Regular expression to match with the textual message
      * \return true if a matching message is found
      */
-    bool decode(std::string& retrieved_text_msg,
+    bool decode_regex(std::string& retrieved_text_msg,
         RSSoft_generic_codeword& retrieved_message, 
         const SourceCodec& src_codec,
         const std::string& regexp);
+
+    /**
+     * Decode one codeword based on given magnitudes for the length of one codeword. Tries to match found textual messages exactly
+     * with the given match string and returns the first match
+     * \param retrieved_text_msg Retrieved textual message
+     * \param retrieved_message Retrieved message symbols and associated reliability data
+     * \param src_codec Source codec being used
+     * \param regexp Regular expression to match with the textual message
+     * \return true if a matching message is found
+     */
+    bool decode_match(std::string& retrieved_text_msg,
+        RSSoft_generic_codeword& retrieved_message,
+        const SourceCodec& src_codec,
+        const std::string& match_str);
 
     /**
      * Decode one codeword based on given magnitudes for the length of one codeword. Returns the first candidate showing a reliability figure above a given threshold

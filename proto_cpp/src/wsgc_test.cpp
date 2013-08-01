@@ -1113,7 +1113,10 @@ void run_rssoft_decoding(Options& options)
             rssoft_decision_box.run(options.rs_decoding_mode);
             break;
         case Options::RSSoft_decoding_regex:
-            rssoft_decision_box.run_regex(options.rs_decoding_regex);
+            rssoft_decision_box.run_regex(options.rs_decoding_match_str);
+            break;
+        case Options::RSSoft_decoding_match:
+            rssoft_decision_box.run_match(options.rs_decoding_match_str);
             break;
         case Options::RSSoft_decoding_relthr:
             rssoft_decision_box.run_reliability_threshold(options.rs_reliability_threshold);

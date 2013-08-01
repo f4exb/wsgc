@@ -834,7 +834,8 @@ void Options::get_help(std::ostringstream& os)
     os << " Cutoff frequency must be lower or equal to half the sampling frequency. Invalid values yield fs/2" << std::endl;
     os << std::endl;
     os << "Source codecs:" << std::endl;
-    os << " - JT65 classical: -j \"JT65:|<source text message>\"" << std::endl;
+    os << " - JT65 classical. Uses RS(63,12): -j \"JT65::<source text message>\"" << std::endl;
+    os << " - JT65_256 packing the 72 bytes in 9 8-byte symbols. Otherwise classical. Uses RS(255,9): -j \"JT65_256::<source text message>\"" << std::endl;
     os << std::endl;
 #if _RSSOFT    
     os << "Reed Solomon encoding and soft-decision decoding using RSSoft library:" << std::endl;
@@ -1216,7 +1217,10 @@ void Options::print_reed_solomon_data(std::ostringstream& os)
 				os << "first";
 				break;
 			case RSSoft_decoding_regex:
-				os << "regex: \"" << rs_decoding_regex << "\"";
+				os << "regex: \"" << rs_decoding_match_str << "\"";
+				break;
+			case RSSoft_decoding_match:
+				os << "match: \"" << rs_decoding_match_str << "\"";
 				break;
 			case RSSoft_decoding_relthr:
 				os << "relthr: " << rs_reliability_threshold << " dB/Symbol";
@@ -1479,7 +1483,7 @@ bool Options::parse_source_coding_data(std::string source_coding_data_str)
 
     if (!status)
     {
-        std::cout << "Invalid source coding specification" << std::endl;
+        std::cout << "Invalid source coding specification : " << source_coding_data_str << std::endl;
     }
 
     return status;
@@ -1589,7 +1593,17 @@ bool Options::parse_reed_solomon_data(std::string parameter_str)
     		std::cout << "Regular expression expected for RSSoft decoding mode with regular expression" << std::endl;
     		return false;
     	}
-    	rs_decoding_regex = rs_str_parameters[2];
+    	rs_decoding_match_str = rs_str_parameters[2];
+    }
+    else if (rs_str_parameters[1] == "match")
+    {
+    	rs_decoding_mode = RSSoft_decoding_match;
+    	if (rs_str_parameters.size() < 3)
+    	{
+    		std::cout << "Exact match string expected for RSSoft decoding mode with exact match" << std::endl;
+    		return false;
+    	}
+    	rs_decoding_match_str = rs_str_parameters[2];
     }
     else if (rs_str_parameters[1] == "relthr")
     {
