@@ -1118,6 +1118,9 @@ void run_rssoft_decoding(Options& options)
         case Options::RSSoft_decoding_match:
             rssoft_decision_box.run_match(options.rs_decoding_match_str);
             break;
+        case Options::RSSoft_decoding_binmatch:
+            rssoft_decision_box.run_match(options.source_prns);
+            break;
         case Options::RSSoft_decoding_relthr:
             rssoft_decision_box.run_reliability_threshold(options.rs_reliability_threshold);
             break;

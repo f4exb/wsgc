@@ -586,7 +586,7 @@ bool Options::get_options(int argc, char *argv[])
 			{
 				if (1<<rs_logq != nb_message_symbols)
 				{
-					std::cout << "Invalid size of symbols alphabet for the Reed-Solomon parameters" << std::endl;
+					std::cout << "Invalid size of symbols alphabet (" << nb_message_symbols << ") for the Reed-Solomon parameters RS(" << (1<<rs_logq) - 1 << "," << rs_k << ")" << std::endl;
 					return false;
 				}
 
@@ -1222,6 +1222,9 @@ void Options::print_reed_solomon_data(std::ostringstream& os)
 			case RSSoft_decoding_match:
 				os << "match: \"" << rs_decoding_match_str << "\"";
 				break;
+			case RSSoft_decoding_binmatch:
+				os << "binmatch";
+				break;
 			case RSSoft_decoding_relthr:
 				os << "relthr: " << rs_reliability_threshold << " dB/Symbol";
 				break;
@@ -1533,11 +1536,23 @@ bool Options::parse_reed_solomon_data(std::string parameter_str)
     	return false;
     }
 
-    rs_logq = rs_num_parameters[0];
+    unsigned int rs_n;
+    rs_n = rs_num_parameters[0];
     rs_k = rs_num_parameters[1];
     rs_init_M = rs_num_parameters[2];
     rs_r = rs_num_parameters[3];
     rs_inc = rs_num_parameters[4];
+    
+    if (!is_power_of_2(rs_n+1, rs_logq))
+    {
+        std::cout << "Invalid Reed-Solomon size " << rs_n << std::endl;
+        return false;
+    }
+    
+    if (gc_nb_stages < rs_logq+1)
+    {
+        gc_nb_stages = rs_logq+1;
+    }
 
     status = extract_vector<std::string>(rs_str_parameters, str_parameter_str);
 
@@ -1604,6 +1619,10 @@ bool Options::parse_reed_solomon_data(std::string parameter_str)
     		return false;
     	}
     	rs_decoding_match_str = rs_str_parameters[2];
+    }
+    else if (rs_str_parameters[1] == "binmatch")
+    {
+    	rs_decoding_mode = RSSoft_decoding_binmatch;
     }
     else if (rs_str_parameters[1] == "relthr")
     {
@@ -1691,6 +1710,21 @@ bool Options::source_codec_create_message_prns()
 	}
 
 	return status;
+}
+
+//=================================================================================================
+bool Options::is_power_of_2(unsigned int x, unsigned int& log2)
+{
+    unsigned int i = 0;
+
+    while (((x & 1) == 0) && x > 1) /* While x is even and > 1 */
+    {
+        x >>= 1;
+        i++;
+    }
+    
+    log2 = i;
+    return (x == 1);
 }
 
 #ifdef _RSSOFT

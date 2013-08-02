@@ -105,13 +105,13 @@ void RSSoft_DecisionBox::run_regex(const std::string& rs_decoding_regex)
 }
 
 //=================================================================================================
-void RSSoft_DecisionBox::run_match(const std::string& rs_decoding_match)
+void RSSoft_DecisionBox::run_match(const std::string& rs_decoding_matching_source_message)
 {
     std::string text_message;
 
     if (source_codec)
     {
-        if (match_scan(text_message, rs_decoding_match))
+        if (match_scan(text_message, rs_decoding_matching_source_message))
         {
             show_message(candidate_messages[0], std::cout);
         }
@@ -123,6 +123,19 @@ void RSSoft_DecisionBox::run_match(const std::string& rs_decoding_match)
     else
     {
     	std::cout << "Cannot use RS soft decision decoding with match string without source codec" << std::endl;
+    }
+}
+
+//=================================================================================================
+void RSSoft_DecisionBox::run_match(const std::vector<unsigned int>& matching_codeword)
+{
+    if (match_scan(matching_codeword))
+    {
+        show_message(candidate_messages[0], std::cout);
+    }
+    else
+    {
+        std::cout << "No solution found" << std::endl;
     }
 }
 
@@ -207,12 +220,29 @@ bool RSSoft_DecisionBox::regex_scan(std::string& decoded_text, const std::string
 }
 
 //=================================================================================================
-bool RSSoft_DecisionBox::match_scan(std::string& decoded_text, const std::string& rs_decoding_match)
+bool RSSoft_DecisionBox::match_scan(std::string& decoded_text, const std::string& rs_decoding_matching_source_message)
 {
     RSSoft_generic_codeword unique_message;
     candidate_messages.clear();
 
-    if (rssoft_engine.decode_match(decoded_text, unique_message, *source_codec, rs_decoding_match))
+    if (rssoft_engine.decode_match(decoded_text, unique_message, *source_codec, rs_decoding_matching_source_message))
+    {
+        candidate_messages.push_back(unique_message);
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+//=================================================================================================
+bool RSSoft_DecisionBox::match_scan(const std::vector<unsigned int>& matching_codeword)
+{
+    RSSoft_generic_codeword unique_message;
+    candidate_messages.clear();
+
+    if (rssoft_engine.decode_match(unique_message, matching_codeword))
     {
         candidate_messages.push_back(unique_message);
         return true;
@@ -257,14 +287,17 @@ void RSSoft_DecisionBox::show_message(const RSSoft_generic_codeword& message, st
     print_vector<unsigned int, unsigned int, std::ostream>(message.get_symbols(), 3u, os);
     std::string decoded_text;
 
-    if (source_codec->decode(message.get_symbols(), decoded_text))
-	{
-		os << " \"" << decoded_text << "\"";
-	}
-	else
-	{
-		os << " <cannot decode source message>" << std::endl;
-	}
+    if (source_codec)
+    {
+        if (source_codec->decode(message.get_symbols(), decoded_text))
+        {
+            os << " \"" << decoded_text << "\"";
+        }
+        else
+        {
+            os << " <cannot decode source message>" << std::endl;
+        }
+    }
 
     std::cout << std::endl;
 }

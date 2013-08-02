@@ -391,6 +391,52 @@ bool RSSoft_Engine::decode_match(std::string& retrieved_text_msg,
 
 
 //=================================================================================================
+bool RSSoft_Engine::decode_match(RSSoft_generic_codeword& retrieved_message,
+        const std::vector<unsigned int>& match_message)
+{
+	mat_Pi.normalize();
+    M = init_M;
+    bool found = false;
+
+    for (unsigned int ni=1; (ni<=nb_retries) && !found; ni++) // Retry loop
+    {
+    	rssoft::MultiplicityMatrix mat_M(mat_Pi, M);
+    	const rssoft::gf::GFq_BivariatePolynomial& Q = gskv.run(mat_M);
+    	if (!Q.is_in_X()) // Interpolation successful
+    	{
+    		std::vector<rssoft::gf::GFq_Polynomial>& res_polys = rr.run(Q);
+
+    		if (res_polys.size() > 0) // Factorization successful
+    		{
+    			final_evaluation.run(res_polys, mat_Pi);
+    			const std::vector<rssoft::ProbabilityCodeword>& messages = final_evaluation.get_messages();
+    			std::vector<rssoft::ProbabilityCodeword>::const_iterator msg_it = messages.begin();
+
+    			for (; msg_it != messages.end(); ++ msg_it) // Explore results
+    			{
+                    if (msg_it->get_codeword() == match_message)
+                    {
+                        retrieved_message.get_symbols() = msg_it->get_codeword();
+                        retrieved_message.set_retry_nb(ni);
+                        retrieved_message.set_mm_cost(mat_M.cost());
+                        retrieved_message.set_reliability(msg_it->get_probability_score());
+                        found = true;
+                        break;
+                    }
+    			} // Explore results
+    		} // Factorization successful
+    	} // Interpolation successful
+        new_multiplicity();
+        gskv.init();
+        rr.init();
+        final_evaluation.init();
+    } // Retry loop
+
+    return found;
+}
+
+
+//=================================================================================================
 bool RSSoft_Engine::decode(RSSoft_generic_codeword& retrieved_message, float reliability_threshold)
 {
 	mat_Pi.normalize();
@@ -474,7 +520,7 @@ void RSSoft_Engine::new_multiplicity()
 }
 
 //=================================================================================================
-float RSSoft_Engine::calculate_reliability(std::vector<unsigned int> codeword)
+float RSSoft_Engine::calculate_reliability(const std::vector<unsigned int>& codeword)
 {
 	if (codeword.size() < n)
 	{

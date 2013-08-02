@@ -61,6 +61,7 @@ public:
 		RSSoft_decoding_first,
 		RSSoft_decoding_regex,
 		RSSoft_decoding_match,
+        RSSoft_decoding_binmatch,
 		RSSoft_decoding_relthr
 	} RSSoft_decoding_mode;
 
@@ -158,6 +159,7 @@ private:
 	void print_mfsk_options(std::ostringstream& os);
 	bool adjust_parameters_for_source_coding();
 	bool source_codec_create_message_prns();
+    bool is_power_of_2(unsigned int x, unsigned int& log2);
 #ifdef _RSSOFT
 	bool parse_reed_solomon_data(std::string coding_data_str);
 	bool parse_reed_solomon_data_generator(std::string coding_data_str);
