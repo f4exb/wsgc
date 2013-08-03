@@ -341,7 +341,7 @@ bool SourceCodec_JT65::encode(const std::string& in_msg, std::vector<unsigned in
     {
         pack_message(packed_callsign_1, packed_callsign_2, packed_locator, out_msg);
     }
-    else if (variant == JT65_256)
+    else if (variant == JT257)
     {
         pack_message_256(packed_callsign_1, packed_callsign_2, packed_locator, out_msg);
     }
@@ -368,7 +368,7 @@ bool SourceCodec_JT65::decode(const std::vector<unsigned int>& in_msg, std::stri
     {
         unpack_message(in_msg, packed_callsign_1, packed_callsign_2, packed_locator, is_arbitrary_text);
     }
-    else if (variant == JT65_256)
+    else if (variant == JT257)
     {
         unpack_message_256(in_msg, packed_callsign_1, packed_callsign_2, packed_locator, is_arbitrary_text);
     }
@@ -1364,7 +1364,7 @@ void SourceCodec_JT65::print_source_codec_data(std::ostringstream& os) const
         case JT65_Classical:
             os << "JT65 classic with 12 6-bits symbols";
             break;
-        case JT65_256:
+        case JT257:
             os << "JT65 classic with 9 8-bits symbols";
             break;
         default:

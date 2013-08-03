@@ -103,7 +103,7 @@ public:
     typedef enum
     {
         JT65_Classical,  //!< Original
-        JT65_256,        //!< uses 9 8-bit symbols to pack the 72 bits, otherwise classical
+        JT257,           //!< uses 9 8-bit symbols to pack the 72 bits, otherwise classical
     } JT65_Variants;
 
     SourceCodec_JT65(JT65_Variants _variant = JT65_Classical);

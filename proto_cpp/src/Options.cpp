@@ -1476,9 +1476,9 @@ bool Options::parse_source_coding_data(std::string source_coding_data_str)
     			_source_codec = new SourceCodec_JT65();
     			status = true;
     		}
-            else if (_source_codec_type_str == "JT65_256")
+            else if (_source_codec_type_str == "JT257")
             {
-    			_source_codec = new SourceCodec_JT65(SourceCodec_JT65::JT65_256);
+    			_source_codec = new SourceCodec_JT65(SourceCodec_JT65::JT257);
     			status = true;
             }
     	}
@@ -1677,7 +1677,7 @@ bool Options::adjust_parameters_for_source_coding()
 
 		status = true;
 	}
-	else if (_source_codec_type_str == "JT65_256")
+	else if (_source_codec_type_str == "JT257")
 	{
 		nb_message_symbols = 256;
 
