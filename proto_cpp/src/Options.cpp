@@ -394,9 +394,9 @@ bool Options::get_options(int argc, char *argv[])
                 _fading_model->set_random_seed(random_seed);
             }
             
-            if (nb_prns_per_symbol < 4)
+            if (nb_prns_per_symbol < 2)
             {
-                std::cout << "Need at least 4 PRN codes per symbol (-N option)" << std::endl;
+                std::cout << "Need at least 2 PRN codes per symbol (-N option)" << std::endl;
                 return false;
             }
             

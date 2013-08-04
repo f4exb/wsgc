@@ -49,6 +49,25 @@ struct avgsum_functor_complex
 };
 
 /**
+ * \brief average sum (depth 2) functor Complex
+ */
+template <>
+struct avgsum_functor_complex<2>
+{
+    template <typename Tuple>
+    __host__ __device__
+    void operator()(Tuple t)
+    {
+        // Tuple is (A, B, C)
+        // C0[i] = C0[i] + C1[i] + C2[i] + C3[i];
+        //thrust::get<0>(t).x = thrust::get<0>(t).x + thrust::get<1>(t).x + thrust::get<2>(t).x + thrust::get<3>(t).x;
+        //thrust::get<0>(t).y = thrust::get<0>(t).y + thrust::get<1>(t).y + thrust::get<2>(t).y + thrust::get<3>(t).y;
+        thrust::get<0>(t).x += thrust::get<1>(t).x;
+        thrust::get<0>(t).y += thrust::get<1>(t).y;
+    }
+};
+
+/**
  * \brief average sum (depth 4) functor Complex
  */
 template <>

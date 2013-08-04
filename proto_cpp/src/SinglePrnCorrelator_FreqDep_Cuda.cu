@@ -210,7 +210,12 @@ void SinglePrnCorrelator_FreqDep_Cuda::execute_averaging(bool first_half)
     clock_gettime(PilotCorrelationAnalyzer::_time_option, &_pilot_correlation_analyzer->_pilot_cuda_avg_times.back()._beg);
 
     // process using for_each and index transforms
-	if (_prn_per_block == 4) // supported size
+	if (_prn_per_block == 2) // supported size
+	{
+		Averager<2> averager;
+		averager.run(_d_ifft_out, ad, b_shift);
+	}
+	else if (_prn_per_block == 4) // supported size
 	{
 		Averager<4> averager;
 		averager.run(_d_ifft_out, ad, b_shift);

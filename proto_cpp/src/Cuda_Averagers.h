@@ -79,6 +79,38 @@ public:
 };
 */
 
+/*
+ * \brief Averager on 2 values
+ */
+template <>
+class Averager<2>
+{
+public:
+	void run(thrust::device_vector<cuComplex>& mP, AveragingDimensions_t& a, size_t b_shift)
+	{
+		thrust::for_each(
+			thrust::make_zip_iterator(
+				thrust::make_tuple(
+					thrust::make_permutation_iterator(mP.begin(), thrust::make_transform_iterator(thrust::make_counting_iterator(0), transpose_index_skipping_stride(a._B, b_shift))),
+					thrust::make_permutation_iterator(mP.begin(), thrust::make_transform_iterator(thrust::make_counting_iterator(0), transpose_index_skipping_stride(a._B, 1+b_shift)))
+				)
+			),
+			thrust::make_zip_iterator(
+				thrust::make_tuple(
+					thrust::make_permutation_iterator(mP.begin(), thrust::make_transform_iterator(thrust::make_counting_iterator(0)+(a._T*a._Ifs*a._Ifh*a._B), transpose_index_skipping_stride(a._B, b_shift))),
+					thrust::make_permutation_iterator(mP.begin(), thrust::make_transform_iterator(thrust::make_counting_iterator(0)+(a._T*a._Ifs*a._Ifh*a._B), transpose_index_skipping_stride(a._B, 1+b_shift)))
+				)
+			),
+			avgsum_functor_complex<2>()
+			//null_operator()
+		);
+	}
+};
+
+
+/*
+ * \brief Averager on 4 values
+ */
 template <>
 class Averager<4>
 {
