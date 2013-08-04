@@ -193,6 +193,9 @@ if test  "x$cudaval" == "xyes"; then
     NVCCFLAGS="$NVCCFLAGS $CUDA_CFLAGS"
     NVLDFLAGS="$CUDA_LDFLAGS $CUDA_LIBS"
     NVCC="$CUDA_INSTALL_PATH/bin/nvcc"
+	if test  "x$rssoftval" == "xyes"; then
+		NVCCFLAGS="$NVCCFLAGS -D_RSSOFT"
+	fi
     AC_SUBST(CUDA_CFLAGS)
     AC_SUBST(NVCC)
     AC_SUBST(NVCCFLAGS)
@@ -201,6 +204,7 @@ if test  "x$cudaval" == "xyes"; then
     eval "ARRAY${N}='-D_CUDA'"
     N=`expr $N + 1`
 fi
+
 
 # construct compiler flags
 N=`expr $N - 1`

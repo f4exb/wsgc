@@ -101,6 +101,7 @@ void PilotedMessageCorrelator_Cuda::execute(PilotCorrelationAnalyzer& pilot_corr
     unsigned int pi = pilot_correlation_analyzer.get_start_analysis_pilot_correlation_records_index();
     const std::vector<PilotCorrelationRecord> pilot_correlation_records = pilot_correlation_analyzer.get_pilot_correlation_records();
     //int cuda_nb_msg_prns = _nb_msg_prns;
+    int last_prn_selected_in_symbol;
 
     for (unsigned int pai=0; pai < pilot_correlation_analyzer.get_analysis_window_size()*_prn_per_symbol; pi++, pai++) // scan PRNs in the window
     {
@@ -109,20 +110,26 @@ void PilotedMessageCorrelator_Cuda::execute(PilotCorrelationAnalyzer& pilot_corr
     	unsigned int delta_t = pilot_correlation_records[pi].t_index_max;
         unsigned int global_prn_i = pilot_correlation_records[pi].prn_index;
 
+        // zero out _d_corr_out array at each start of symbol
+        if (pai % _prn_per_symbol == 0)
+        {
+            thrust::fill(_d_corr_out.begin(), _d_corr_out.end(), _c_zero);
+            last_prn_selected_in_symbol = -1;
+        }
+
         _transient_corr_values[pai % _prn_per_symbol].selected = pilot_correlation_records[pi].selected;
         _transient_corr_values[pai % _prn_per_symbol].global_prn_i = global_prn_i;
         _transient_corr_values[pai % _prn_per_symbol].delta_t = delta_t;
         _transient_corr_values[pai % _prn_per_symbol].delta_f = delta_f;
         _transient_corr_values[pai % _prn_per_symbol].pilot_phase_at_max = pilot_correlation_records[pi].phase_at_max;
 
+        if (pilot_correlation_records[pi].selected)
+        {
+        	last_prn_selected_in_symbol = pai % _prn_per_symbol;
+        }
+
     	std::complex<float> *prn_src = pilot_correlation_analyzer.get_samples(pilot_correlation_records[pi].prn_index);
 
-        // zero out _d_corr_out array at each start of symbol
-        if (pai % _prn_per_symbol == 0)
-        {
-            thrust::fill(_d_corr_out.begin(), _d_corr_out.end(), _c_zero);
-        }
-        
     	// make input samples if necessary
     	if (pilot_correlation_records[pi].selected)
     	{
@@ -180,11 +187,19 @@ void PilotedMessageCorrelator_Cuda::execute(PilotCorrelationAnalyzer& pilot_corr
 #ifdef _RSSOFT
             if (reliability_matrix_cuda)
             {
-                // take the last average sum in the symbol since it is supposed to have the best accumulation (over the whole symbol)
-                strided_shifted_range<thrust::device_vector<float>::iterator> d_corr_mag_avgsum_src(_d_corr_mag_avgsum.begin(), _d_corr_mag_avgsum.end(), _prn_per_symbol, _prn_per_symbol-1);
-                // copy to device reliability matrix
-                // take only the effective message symbols i.e. _nb_msg_prns - 1 (-1 for the noise symbol)
-                thrust::copy(d_corr_mag_avgsum_src.begin(), d_corr_mag_avgsum_src.end() - 1, reliability_matrix_cuda->get_matrix.begin() + global_prn_i*(_nb_msg_prns - 1));
+            	if (last_prn_selected_in_symbol < 0) // no valid PRN = erasure
+            	{
+            		reliability_matrix_cuda->enter_erasure();
+            	}
+            	else
+            	{
+					// take the last average sum in the symbol since it is supposed to have the best accumulation (over the whole symbol)
+					strided_shifted_range<thrust::device_vector<float>::iterator> d_corr_mag_avgsum_src(_d_corr_mag_avgsum.begin(), _d_corr_mag_avgsum.end(), _prn_per_symbol, last_prn_selected_in_symbol);
+					//strided_shifted_range<thrust::device_vector<float>::iterator> d_corr_mag_avgsum_src(_d_corr_mag_avgsum.begin(), _d_corr_mag_avgsum.end(), _prn_per_symbol, _prn_per_symbol-1);
+					// copy to device reliability matrix
+					// take only the effective message symbols i.e. _nb_msg_prns - 1 (-1 for the noise symbol)
+					thrust::copy(d_corr_mag_avgsum_src.begin(), d_corr_mag_avgsum_src.end() - 1, reliability_matrix_cuda->get_matrix().begin() + (global_prn_i/_prn_per_symbol)*(_nb_msg_prns - 1));
+            	}
             }
             else
             {
