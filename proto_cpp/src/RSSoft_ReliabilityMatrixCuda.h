@@ -30,7 +30,7 @@
 
 namespace rssoft
 {
-	class ReliabilityMatrix;
+	class RS_ReliabilityMatrix;
 }
 
 
@@ -71,7 +71,7 @@ public:
     /**
      * Copy to a RSSoft library's reliability matrix internal storage on host
      */
-    void copy_to_host(rssoft::ReliabilityMatrix& reliability_matrix);
+    void copy_to_host(rssoft::RS_ReliabilityMatrix& reliability_matrix);
 
 	/**
 	 * Resets the message symbol counter

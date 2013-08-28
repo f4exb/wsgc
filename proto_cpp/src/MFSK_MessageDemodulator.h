@@ -34,9 +34,21 @@
 #include <vector>
 
 class MFSK_MessageDemodulationRecord;
+
 #ifdef _RSSOFT
-class RSSoft_Engine;
+namespace rssoft
+{
+    class RS_ReliabilityMatrix;
+}
 #endif
+
+#ifdef _CCSOFT
+namespace ccsoft
+{
+    class CC_ReliabilityMatrix;
+}
+#endif
+
 
 /**
  * \brief Class to incoherently demodulate MFSK message. This is not using a correlation scheme
@@ -62,22 +74,32 @@ public:
 
 	virtual ~MFSK_MessageDemodulator();
 
-#ifdef _RSSOFT
 	/**
 	 * Execute demodulation on one symbol length of samples. Time and frequency synchronization is supposed to have taken place
 	 * Implementation (Host or CUDA) dependent
 	 * \param symbol_samples Pointer to the symbol samples. Number of samples is assumed to be FFT size times the number of FFTs per symbol
-	 * \param rssoft_engine Pointer to the RSSoft_Engine object if using Reed-Solomon soft-decision decoding with RSSoft library. Default is 0 (not used).
+     * \param relmat Reference of a RSSoft library reliability matrix.
 	 */
-	virtual void execute(wsgc_complex *symbol_samples, RSSoft_Engine *rssoft_engine = 0) = 0;
-#else
+#ifdef _RSSOFT
+	virtual void execute(wsgc_complex *symbol_samples, rssoft::RS_ReliabilityMatrix& relmat) = 0;
+#endif
+
+    /**
+     * Execute demodulation on one symbol length of samples. Time and frequency synchronization is supposed to have taken place
+     * Implementation (Host or CUDA) dependent
+     * \param symbol_samples Pointer to the symbol samples. Number of samples is assumed to be FFT size times the number of FFTs per symbol
+     * \param relmat Reference of a CCSoft library reliability matrix.
+     */
+#ifdef _CCSOFT
+    virtual void execute(wsgc_complex *symbol_samples, ccsoft::CC_ReliabilityMatrix& relmat) = 0;
+#endif
+
 	/**
 	 * Execute demodulation on one symbol length of samples. Time and frequency synchronization is supposed to have taken place
 	 * Implementation (Host or CUDA) dependent
 	 * \param symbol_samples Pointer to the symbol samples. Number of samples is assumed to be FFT size times the number of FFTs per symbol
 	 */
     virtual void execute(wsgc_complex *symbol_samples) = 0;
-#endif
 
 
 	/**

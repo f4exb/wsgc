@@ -24,7 +24,7 @@
      Cuda implementation of a reliability matrix in device memory
 */
 #include "RSSoft_ReliabilityMatrixCuda.h"
-#include "ReliabilityMatrix.h"
+#include "RS_ReliabilityMatrix.h"
 
 //=================================================================================================
 RSSoft_ReliabilityMatrixCuda::RSSoft_ReliabilityMatrixCuda(unsigned int _nb_symbols_log2, unsigned int _message_length) :
@@ -59,7 +59,7 @@ void RSSoft_ReliabilityMatrixCuda::enter_erasure()
 }
 
 //=================================================================================================
-void RSSoft_ReliabilityMatrixCuda::copy_to_host(rssoft::ReliabilityMatrix& reliability_matrix)
+void RSSoft_ReliabilityMatrixCuda::copy_to_host(rssoft::RS_ReliabilityMatrix& reliability_matrix)
 {
 	float *host_matrix = (float *) reliability_matrix.get_raw_matrix();
     thrust::copy(matrix.begin(), matrix.end(), host_matrix);

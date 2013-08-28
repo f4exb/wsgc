@@ -83,6 +83,56 @@ fi
 
 
 # ------------------------------------------------------------------------------
+# CCSOFT
+# ------------------------------------------------------------------------------
+
+# Setup defaut CCSoft paths
+RSSOFT_INSTALL_PATH="/usr/local/ccsoft"
+
+# Check: enable CCSoft?
+AC_MSG_CHECKING([whether to use CCSoft library])
+AC_ARG_ENABLE(ccsoft,
+    [AS_HELP_STRING(--enable-ccsoft,enable CCSoft support)],
+    ccsoftval="yes",
+    ccsoftval="no")
+AC_MSG_RESULT([$ccsoftval])
+
+# check to see if CCSoft been selected
+if test "x$ccsoftval" == "xno"; then
+    AC_MSG_WARN([Not using CCSoft!])
+fi
+
+# Setup custom RSSoft paths
+AC_ARG_WITH([ccsoft],
+   [AS_HELP_STRING(
+        [--with-ccsoft=PATH],
+        [prefix where CCSoft is installed @<:@default=auto@:>@])],
+   [CCSOFT_INSTALL_PATH=$withval],
+   [with_ccsoft=auto])
+
+# Verify CCSoft paths
+if test  "x$ccsoftval" == "xyes"; then
+    AC_CHECK_FILE([${CCSOFT_INSTALL_PATH}/include/CC_SequentialDecoding.h],[hasccsoft="yes"],[hasccsoft="no"])
+    if test "x$hasccsoft" == "xno"; then
+       AC_MSG_WARN([CCSoft library not found - will not have CCSoft support])
+       ccsoftval="no"
+    fi
+    AM_CONDITIONAL([HAS_CCSOFT],[test "x$ccsoftval" == "xyes"]) 
+else
+    AM_CONDITIONAL([HAS_CCSOFT],[false])     
+fi
+
+# Setup RSSoft flags
+if test  "x$ccsoftval" == "xyes"; then
+    CCSOFT_CFLAGS="-I$CCSOFT_INSTALL_PATH/include"
+    CCSOFT_LDFLAGS="-L$CCSOFT_INSTALL_PATH/lib -lccsoft"
+    AC_SUBST(CCSOFT_CFLAGS)
+    AC_SUBST(CCSOFT_LDFLAGS)
+    AC_DEFINE([_CCSOFT],[1],[Defined if CCSoft should be used])
+fi
+
+
+# ------------------------------------------------------------------------------
 # CUDA
 # ------------------------------------------------------------------------------
 

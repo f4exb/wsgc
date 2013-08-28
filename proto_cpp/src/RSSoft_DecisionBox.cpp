@@ -22,7 +22,6 @@
      Decision box specialized in Reed-Solomon soft decision decoding with RSSoft library
 
 */
-#include "Options.h"
 #include "RSSoft_DecisionBox.h"
 #include "SourceCodec.h"
 #include "WsgcUtils.h"
@@ -38,21 +37,21 @@ RSSoft_DecisionBox::~RSSoft_DecisionBox()
 
     
 //=================================================================================================
-void RSSoft_DecisionBox::run(Options::RSSoft_decoding_mode rs_decoding_mode)
+void RSSoft_DecisionBox::run(RSSoft_Engine::RSSoft_decoding_mode rs_decoding_mode)
 {
     switch (rs_decoding_mode)
     {
-        case Options::RSSoft_decoding_all:
+        case RSSoft_Engine::RSSoft_decoding_all:
             full_scan_all();
             list_messages(std::cout);
             break;
             
-        case Options::RSSoft_decoding_full:
+        case RSSoft_Engine::RSSoft_decoding_full:
             full_scan_unique();
             list_messages(std::cout);
             break;
             
-        case Options::RSSoft_decoding_best:
+        case RSSoft_Engine::RSSoft_decoding_best:
             full_scan_unique();
             
             if (candidate_messages.size() > 0)
@@ -65,7 +64,7 @@ void RSSoft_DecisionBox::run(Options::RSSoft_decoding_mode rs_decoding_mode)
             }
             break;
             
-        case Options::RSSoft_decoding_first:
+        case RSSoft_Engine::RSSoft_decoding_first:
             if (find_first())
             {
                 show_message(candidate_messages[0], std::cout);

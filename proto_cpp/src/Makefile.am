@@ -17,6 +17,16 @@ AM_CXXFLAGS += $(RSSOFT_CFLAGS)
 NVCCFLAGS += $(RSSOFT_CFLAGS)
 endif
 
+if HAS_CCSOFT
+wsgc_test_SOURCES += CCSoft_Engine.cpp \
+	CCSoft_DecisionBox.cpp
+wsgc_test_LDADD += $(CCSOFT_LDFLAGS)
+wsgc_generator_SOURCES += CCSoft_Engine.cpp
+wsgc_generator_LDADD += $(CCSOFT_LDFLAGS)
+AM_CXXFLAGS += $(CCSOFT_CFLAGS)
+NVCCFLAGS += $(CCSSOFT_CFLAGS)
+endif
+
 if HAS_CUDA
 
 bin_PROGRAMS += wsgc_cuda

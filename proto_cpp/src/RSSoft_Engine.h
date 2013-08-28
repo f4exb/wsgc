@@ -33,7 +33,7 @@
 #include "GF2_Polynomial.h"
 #include "GF_Utils.h"
 #include "EvaluationValues.h"
-#include "ReliabilityMatrix.h"
+#include "RS_ReliabilityMatrix.h"
 #include "MultiplicityMatrix.h"
 #include "GSKV_Interpolation.h"
 #include "RR_Factorization.h"
@@ -134,6 +134,17 @@ public:
 		MMatrix_retry_geometric_increment    //!< Mul(Mn+1) = Mul(Mn) * (inc^(n+1))
 	} MultiplicityMatrix_RetryStrategy;
 
+    typedef enum
+    {
+        RSSoft_decoding_all,
+        RSSoft_decoding_full,
+        RSSoft_decoding_best,
+        RSSoft_decoding_first,
+        RSSoft_decoding_regex,
+        RSSoft_decoding_match,
+        RSSoft_decoding_binmatch,
+        RSSoft_decoding_relthr
+    } RSSoft_decoding_mode;
 
 	RSSoft_Engine(unsigned int _m, unsigned int _k);
 
@@ -184,7 +195,7 @@ public:
      * Get reference to the reliability matrix for direct update
      * \return r/w reference to the reliability matrix
      */
-    rssoft::ReliabilityMatrix& get_reliability_matrix()
+    rssoft::RS_ReliabilityMatrix& get_reliability_matrix()
     {
         return mat_Pi;
     }
@@ -195,12 +206,6 @@ public:
      * \param out_codeword Codeword
      */
     void encode(const std::vector<unsigned int>& in_msg, std::vector<unsigned int>& out_codeword);
-    
-    /**
-     * Record symbol magnitudes for one symbol position
-     * \param magnitudes Pointer to magnitudes array. It is assumed to be of 2^m size.
-     */
-    void record_magnitudes(wsgc_float *magnitudes);
     
     /**
      * Decode one codeword based on given magnitudes for the length of one codeword. Return candidate
@@ -300,7 +305,7 @@ protected:
     rssoft::gf::GFq gf; //!< Galois Field being used
     rssoft::EvaluationValues evaluation_values; //!< Evaluation values for RS
     rssoft::RS_Encoding rs_encoding; //!< Encoder
-    rssoft::ReliabilityMatrix mat_Pi; //!< Reliability matrix
+    rssoft::RS_ReliabilityMatrix mat_Pi; //!< Reliability matrix
     rssoft::GSKV_Interpolation gskv; //!< Guruswami-Sudan-Koetter-Vardy interpolation engine
     rssoft::RR_Factorization rr; //!< Roth-Ruckensteil factorization engine
     rssoft::FinalEvaluation final_evaluation; //!< Evaluation engine

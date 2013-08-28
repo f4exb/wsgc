@@ -114,6 +114,19 @@ Options::Options(std::string& _binary_name, Options_Executable _options_executab
 #ifdef _RSSOFT
     ,_rssoft_engine(0)
 #endif
+#ifdef _CCSOFT
+    ,ccsoft_engine(0),
+    cc_algorithm_type(CCSoft_Engine::Algorithm_Fano),
+    cc_edge_bias(0.0),
+    cc_node_limit(0),
+    cc_use_node_limit(false),
+    cc_metric_limit(0.0),
+    cc_use_metric_limit(false),
+    cc_fano_init_metric(0.0),
+    cc_fano_delta_metric(1.0),
+    cc_fano_tree_cache_size(0),
+    cc_fano_delta_init_threshold(0.0)
+#endif
 {
     srand(time(0));
 
@@ -197,7 +210,7 @@ bool Options::get_options(int argc, char *argv[])
             {"gpu-affinity", required_argument, 0, 'y'},
             {"decision-thresholds", required_argument, 0, 'H'},
             {"source-coding", required_argument, 0, 'j'},
-            {"reed-solomon", required_argument, 0, 'O'}
+            {"fec-option", required_argument, 0, 'O'}
         };
         
         int option_index = 0;
@@ -339,21 +352,7 @@ bool Options::get_options(int argc, char *argv[])
                 status = parse_source_coding_data(std::string(optarg));
                 break;
             case 'O':
-#ifdef _RSSOFT
-            	if (options_executable == Options_wsgc_test)
-            	{
-            		status = parse_reed_solomon_data(std::string(optarg));
-            	}
-            	else if (options_executable == Options_wsgc_generator)
-            	{
-            		status = parse_reed_solomon_data_generator(std::string(optarg));
-            	}
-            	else
-            	{
-            		std::cout << "Unrecognized options executable" << std::endl;
-            		status = false;
-            	}
-#endif
+                status = parse_fec_option(std::string(optarg));
                 break;
             case '?':
                 std::ostringstream os;
@@ -584,6 +583,11 @@ bool Options::get_options(int argc, char *argv[])
 			// Reed-Solomon
 			if (rs_k != 0)
 			{
+                if (!init_and_encode_msg_rssoft())
+                {
+                    return false;
+                }
+                /*
 				if (1<<rs_logq != nb_message_symbols)
 				{
 					std::cout << "Invalid size of symbols alphabet (" << nb_message_symbols << ") for the Reed-Solomon parameters RS(" << (1<<rs_logq) - 1 << "," << rs_k << ")" << std::endl;
@@ -612,7 +616,19 @@ bool Options::get_options(int argc, char *argv[])
 				{
 					std::cout << "Cannot encode message with Reed-Solomon" << std::endl;
 				}
+                */
 			}
+#endif
+
+#ifdef _CCSOFT
+            // Convolutional Coding
+            if (cc_k_constraints.size() > 0)
+            {
+                if (!init_and_encode_msg_ccsoft())
+                {
+                    return false;
+                }
+            }
 #endif
             
 			// last validation: generator polynomials
@@ -753,9 +769,7 @@ void Options::get_help(std::ostringstream& os)
         {"-y", "--gpu-affinity", "Force CUDA execution on specified GPU ID", "int", "(none)", "wsgc_test"},
         {"-H", "--decision-thresholds", "Specify decision box thresholds (see decision thresholds below)", "string", "(none)", "wsgc_test"},
         {"-f", "--source-codec", "Source codec data (see short help below)", "string", "null (no source codec)", "any"},
-#ifdef _RSSOFT        
-        {"-O", "--reed-solomon", "Reed-Solomon encoding/decoding wtih RSSoft library (see short help below)", "string", "null (no RS)", "any"},
-#endif
+        {"-O", "--fec-option", "Forward Error Correction using external libraries (see short help below)", "string", "null (no FEC)", "any"},
         {0,0,0,0,0,0}
     };
     
@@ -834,27 +848,46 @@ void Options::get_help(std::ostringstream& os)
     os << " Cutoff frequency must be lower or equal to half the sampling frequency. Invalid values yield fs/2" << std::endl;
     os << std::endl;
     os << "Source codecs:" << std::endl;
-    os << " - JT65 classical. Uses RS(63,12): -j \"JT65::<source text message>\"" << std::endl;
-    os << " - JT65_256 packing the 72 bytes in 9 8-byte symbols. Otherwise classical. Uses RS(255,9): -j \"JT65_256::<source text message>\"" << std::endl;
+    os << " - JT65: classical. Uses RS(63,12): -j \"JT65::<source text message>\"" << std::endl;
+    os << " - JT257: packing the 72 bytes in 9 8-byte symbols. Otherwise classical. Uses RS(255,9): -j \"JT257::<source text message>\"" << std::endl;
     os << std::endl;
-#if _RSSOFT    
-    os << "Reed Solomon encoding and soft-decision decoding using RSSoft library:" << std::endl;
-    os << "For a RS(n,k) code with n = 2^q-1 and 1<k<n," << std::endl;
-    os << "M is the initial multiplicity matrix global multiplicity," << std::endl;
-    os << "r is the maximum number of retries," << std::endl;
-    os << "i is the base increment for next retry multiplicity calculation:" << std::endl;
-    os << "-O q,k,M,r,i:<multiplicity increment strategy>,<decoding mode>(,<regular expression>)" << std::endl;
-    os << "Multiplicity increment strategy:" << std::endl;
-    os << " - arith: arithmetic increment for multiplicity" << std::endl;
-    os << " - iarith: arithmetic increment for the additive multiplicity" << std::endl;
-    os << " - geom: geometric increment for multiplicity" << std::endl;
-    os << " - igeom: geometric increment for the multiplicative multiplicity" << std::endl;
-    os << "Decoding modes:" << std::endl;
-    os << " - full: gives all results hence executes r retries" << std::endl;
-    os << " - best: only return the result with best probability or none" << std::endl;
-    os << " - first: returns the first result" << std::endl;
-    os << " - regex: retries until it finds a resulting textual message matching the given regular expression" << std::endl;
-    os << " - relthr: retries until it finds a candidate message with a reliability figure above the given threshold" << std::endl;
+    os << "Forward Error Correction using external libraries -O <FEC scheme>/<FEC options...>:" << std::endl;
+    os << std::endl;
+#ifdef _RSSOFT
+    os << "  Reed Solomon encoding and soft-decision decoding using RSSoft library:" << std::endl;
+    os << "  -O RS/q,k,M,r,i:<multiplicity increment strategy>,<decoding mode>(,<regular expression>)" << std::endl;
+    os << "    For a RS(n,k) code with n = 2^q-1 and 1<k<n," << std::endl;
+    os << "    M is the initial multiplicity matrix global multiplicity," << std::endl;
+    os << "    r is the maximum number of retries," << std::endl;
+    os << "    i is the base increment for next retry multiplicity calculation:" << std::endl;
+    os << "    Multiplicity increment strategy:" << std::endl;
+    os << "     - arith: arithmetic increment for multiplicity" << std::endl;
+    os << "     - iarith: arithmetic increment for the additive multiplicity" << std::endl;
+    os << "     - geom: geometric increment for multiplicity" << std::endl;
+    os << "     - igeom: geometric increment for the multiplicative multiplicity" << std::endl;
+    os << "    Decoding modes:" << std::endl;
+    os << "     - full: gives all results hence executes r retries" << std::endl;
+    os << "     - best: only return the result with best probability or none" << std::endl;
+    os << "     - first: returns the first result" << std::endl;
+    os << "     - regex: retries until it finds a resulting textual message matching the given regular expression" << std::endl;
+    os << "     - match: retries until it finds a resulting textual message matching exactly the given string" << std::endl;
+    os << "     - binmatch: retries until it finds a resulting message matching exactly the sent message (test context)" << std::endl;
+    os << "     - relthr: retries until it finds a candidate message with a reliability figure above the given threshold" << std::endl;
+    os << std::endl;
+#endif
+#ifdef _CCSOFT
+    os << "  Convolutional Code encoding and soft-decision decoding using CCSoft library:" << std::endl;
+    os << "  -O CC/<constraint lengths>/<generator polynomials>/<decoding algorithm>" << std::endl;
+    os << "    Constraint lengths: comma separated list of constraint (actually register) lengths" << std::endl;
+    os << "      - there is one constraint per input symbol bit (k)" << std::endl;
+    os << "    Generator polynomials: colon separated list of lists of binary representation of generator polynomials" << std::endl;
+    os << "      - there is one list per input symbol bit (k)" << std::endl;
+    os << "      - each list has one polynomial per output symbol bit (n)" << std::endl;
+    os << "    Decoding algorithm: <algorithm code>:<algorithm arguments comma separated>" << std::endl;
+    os << "      - Fano algorithm (code = fano):" << std::endl;
+    os << "         Arguments: <bias>,<init threshold>,<delta threshold>,<cache size>,<delta init threshold>,<node limit>(,<threshold limit>)" << std::endl;
+    os << "      - Stack algorithm (code = stack):" << std::endl;
+    os << "         Arguments: <bias>,<node limit>(,<metric limit>)" << std::endl;
     os << std::endl;
 #endif
     mfsk_options.get_help(os);
@@ -949,6 +982,13 @@ void Options::print_standard_options(std::ostringstream& os)
     if (rs_k != 0)
     {
     	os << "Reed Solomon (RSSoft lib) .: "; print_reed_solomon_data(os); os << std::endl;
+    }
+#endif
+
+#ifdef _CCSOFT
+    if (cc_k_constraints.size() > 0)
+    {
+        os << "Conv. Code (CCSoft lib) ...: "; print_convolutional_code_data(os); os << std::endl;
     }
 #endif
 
@@ -1111,6 +1151,13 @@ void Options::print_mfsk_options(std::ostringstream& os)
     }
 #endif
 
+#ifdef _CCSOFT
+    if (cc_k_constraints.size() > 0)
+    {
+        os << "Conv. Code (CCSoft lib) ...: "; print_convolutional_code_data(os); os << std::endl;
+    }
+#endif
+
 	if (binary_name == "wsgc_generator")
 	{
 		os << "Samples output file .......: " << samples_output_file << std::endl;
@@ -1204,28 +1251,28 @@ void Options::print_reed_solomon_data(std::ostringstream& os)
 			os << ", decoding mode = ";
 			switch (rs_decoding_mode)
 			{
-			case RSSoft_decoding_all:
+			case RSSoft_Engine::RSSoft_decoding_all:
 				os << "all";
 				break;
-			case RSSoft_decoding_full:
+			case RSSoft_Engine::RSSoft_decoding_full:
 				os << "full";
 				break;
-			case RSSoft_decoding_best:
+			case RSSoft_Engine::RSSoft_decoding_best:
 				os << "best";
 				break;
-			case RSSoft_decoding_first:
+			case RSSoft_Engine::RSSoft_decoding_first:
 				os << "first";
 				break;
-			case RSSoft_decoding_regex:
+			case RSSoft_Engine::RSSoft_decoding_regex:
 				os << "regex: \"" << rs_decoding_match_str << "\"";
 				break;
-			case RSSoft_decoding_match:
+			case RSSoft_Engine::RSSoft_decoding_match:
 				os << "match: \"" << rs_decoding_match_str << "\"";
 				break;
-			case RSSoft_decoding_binmatch:
+			case RSSoft_Engine::RSSoft_decoding_binmatch:
 				os << "binmatch";
 				break;
-			case RSSoft_decoding_relthr:
+			case RSSoft_Engine::RSSoft_decoding_relthr:
 				os << "relthr: " << rs_reliability_threshold << " dB/Symbol";
 				break;
 			default:
@@ -1237,6 +1284,46 @@ void Options::print_reed_solomon_data(std::ostringstream& os)
     else
     {
         os << "None";
+    }
+}
+#endif
+
+#ifdef _CCSOFT
+//=================================================================================================
+void Options::print_convolutional_code_data(std::ostringstream& os)
+{
+    if (ccsoft_engine)
+    {
+        ccsoft_engine->print_convolutional_code_data(os);
+        
+        os << "Edge metric bias ...................: " << cc_edge_bias << std::endl;
+        
+        if (cc_use_node_limit)
+        {
+            os << "Node number limit ..................: " << cc_node_limit << std::endl;
+        }
+
+        if (cc_use_metric_limit)
+        {
+            os << "Path metric number limit ...........: " << cc_metric_limit << std::endl;
+        }
+
+        switch (cc_algorithm_type)
+        {
+        case CCSoft_Engine::Algorithm_Stack:
+            os << "Using stack algorithm" << std::endl;
+            break;
+        case CCSoft_Engine::Algorithm_Fano:
+            os << "Using Fano algorithm" << std::endl;
+            os << "  Initial metric threshold .........: " << cc_fano_init_metric << std::endl;
+            os << "  Metric threshold delta ...........: " << cc_fano_delta_metric << std::endl;
+            os << "  Nb nodes cached ..................: " << cc_fano_tree_cache_size << std::endl;
+            os << "  Initial metric threshold delta ...: " << cc_fano_delta_init_threshold << std::endl;
+            break;
+        default:
+            os << "Unknown algorithm" << std::endl;
+            break;
+        }
     }
 }
 #endif
@@ -1586,23 +1673,23 @@ bool Options::parse_reed_solomon_data(std::string parameter_str)
 
     if (rs_str_parameters[1] == "all")
     {
-    	rs_decoding_mode = RSSoft_decoding_all;
+    	rs_decoding_mode = RSSoft_Engine::RSSoft_decoding_all;
     }
     else if (rs_str_parameters[1] == "full")
     {
-    	rs_decoding_mode = RSSoft_decoding_full;
+    	rs_decoding_mode = RSSoft_Engine::RSSoft_decoding_full;
     }
     else if (rs_str_parameters[1] == "best")
     {
-    	rs_decoding_mode = RSSoft_decoding_best;
+    	rs_decoding_mode = RSSoft_Engine::RSSoft_decoding_best;
     }
     else if (rs_str_parameters[1] == "first")
     {
-    	rs_decoding_mode = RSSoft_decoding_first;
+    	rs_decoding_mode = RSSoft_Engine::RSSoft_decoding_first;
     }
     else if (rs_str_parameters[1] == "regex")
     {
-    	rs_decoding_mode = RSSoft_decoding_regex;
+    	rs_decoding_mode = RSSoft_Engine::RSSoft_decoding_regex;
     	if (rs_str_parameters.size() < 3)
     	{
     		std::cout << "Regular expression expected for RSSoft decoding mode with regular expression" << std::endl;
@@ -1612,7 +1699,7 @@ bool Options::parse_reed_solomon_data(std::string parameter_str)
     }
     else if (rs_str_parameters[1] == "match")
     {
-    	rs_decoding_mode = RSSoft_decoding_match;
+    	rs_decoding_mode = RSSoft_Engine::RSSoft_decoding_match;
     	if (rs_str_parameters.size() < 3)
     	{
     		std::cout << "Exact match string expected for RSSoft decoding mode with exact match" << std::endl;
@@ -1622,11 +1709,11 @@ bool Options::parse_reed_solomon_data(std::string parameter_str)
     }
     else if (rs_str_parameters[1] == "binmatch")
     {
-    	rs_decoding_mode = RSSoft_decoding_binmatch;
+    	rs_decoding_mode = RSSoft_Engine::RSSoft_decoding_binmatch;
     }
     else if (rs_str_parameters[1] == "relthr")
     {
-    	rs_decoding_mode = RSSoft_decoding_relthr;
+    	rs_decoding_mode = RSSoft_Engine::RSSoft_decoding_relthr;
     	if (rs_str_parameters.size() < 3)
     	{
     		std::cout << "Regular expression expected for RSSoft decoding mode with regular expression" << std::endl;
@@ -1647,12 +1734,197 @@ bool Options::parse_reed_solomon_data(std::string parameter_str)
     }
     else
     {
-    	std::cout << "Unrecognized RSSoft decoding mode" << std::endl;
+    	std::cout << "Unrecognised RSSoft decoding mode" << std::endl;
     	return false;
     }
 
     return true;
 }
+#endif
+
+#ifdef _CCSOFT
+//=================================================================================================
+bool Options::parse_convolutional_code_data_generator(std::vector<std::string> coding_data_strings)
+{
+    bool status = false;
+    
+    if (coding_data_strings.size() < 3)
+    {
+        std::cout << "Invalid specification for convolutional code" << std::endl;
+        status = false;
+    }
+    else
+    {
+        status = parse_convolutional_code_constraints(coding_data_strings[1]);
+        
+        if (status)
+        {
+            status = parse_convolutional_code_genpolys(coding_data_strings[2]);
+        }
+    }
+    
+    return status;
+}
+
+//=================================================================================================
+bool Options::parse_convolutional_code_data(std::vector<std::string> coding_data_strings)
+{
+    bool status = false;
+    
+    if (coding_data_strings.size() < 4)
+    {
+        std::cout << "Invalid specification for convolutional code" << std::endl;
+        status = false;
+    }
+    else
+    {
+        status = parse_convolutional_code_constraints(coding_data_strings[1]);
+        
+        if (status)
+        {
+            status = parse_convolutional_code_genpolys(coding_data_strings[2]);
+        }
+        else
+        {
+            std::cout << "Invalid convolutional code constraints specification" << std::endl;
+        }
+        
+        if (status)
+        {
+            std::vector<std::string> algo_specs;
+            
+            if (extract_vector(algo_specs, ":", coding_data_strings[3])) 
+            {
+                if (algo_specs.size() < 2)
+                {
+                    std::cout << "Invalid convolutional code decoding algorithm specification" << std::endl;
+                    status = false;
+                }
+                else
+                {
+                    std::transform(algo_specs[0].begin(), algo_specs[0].end(), algo_specs[0].begin(), ::toupper);
+                    std::vector<float> algo_parms;
+                    
+                    if (!extract_vector<float>(algo_parms, ",", algo_specs[1]))
+                    {
+                        std::cout << "Invalid convolutional code decoding algorithm parameters specification" << std::endl;
+                        status = false;
+                    }
+                    else
+                    {
+                        if (algo_specs[0] == "STACK")
+                        {
+                            if (algo_parms.size() > 0)
+                            {
+                                cc_edge_bias = algo_parms[0];
+                            }
+                            if (algo_parms.size() > 1)
+                            {
+                                cc_use_node_limit = true;
+                                cc_node_limit = algo_parms[1];
+                            }
+                            if (algo_parms.size() > 2)
+                            {
+                                cc_metric_limit = algo_parms[1];
+                                cc_use_metric_limit = true;
+                            }
+                            status = true;
+                        }
+                        else if (algo_specs[0] == "FANO")
+                        {
+                            if (algo_parms.size() > 0)
+                            {
+                                cc_edge_bias = algo_parms[0];
+                            }
+                            if (algo_parms.size() > 1)
+                            {
+                                cc_fano_init_metric = algo_parms[1];
+                            }
+                            if (algo_parms.size() > 2)
+                            {
+                                cc_fano_delta_metric = algo_parms[2];
+                            }
+                            if (algo_parms.size() > 3)
+                            {
+                                cc_fano_tree_cache_size = algo_parms[3];
+                            }
+                            if (algo_parms.size() > 4)
+                            {
+                                cc_fano_delta_init_threshold = algo_parms[4];
+                            }
+                            if (algo_parms.size() > 5)
+                            {
+                                cc_use_node_limit = true;
+                                cc_node_limit = algo_parms[5];
+                            }
+                            if (algo_parms.size() > 6)
+                            {
+                                cc_use_metric_limit = true;
+                                cc_metric_limit = algo_parms[6];
+                            }
+                            status = true;
+                        }
+                        else
+                        {
+                            std::cout << "Unrecognised convolutional code decoding algorithm code " << algo_specs[0] << std::endl;
+                            status = false;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                std::cout << "Invalid convolutional code decoding algorithm specification" << std::endl;
+                status = false;
+            }
+        }
+        else
+        {
+            std::cout << "Invalid convolutional code generator polynomials specification" << std::endl;
+        }
+    }
+    
+    return status;
+}
+
+//=================================================================================================
+bool Options::parse_convolutional_code_constraints(std::string constraints_str)
+{
+    bool status = extract_vector<unsigned int>(cc_k_constraints, ",", constraints_str);
+    return status;
+}
+
+//=================================================================================================
+bool Options::parse_convolutional_code_genpolys(std::string genpolys_str)
+{
+    std::vector<std::string> g_strings;
+
+    if (!extract_vector(g_strings, ":", genpolys_str))
+    {
+    	std::cout << "Invalid generator polynomials specification" << std::endl;
+        return false;
+    }
+
+    std::vector<std::string>::const_iterator gs_it = g_strings.begin();
+
+    for (; gs_it != g_strings.end(); ++gs_it)
+    {
+        std::vector<unsigned int> g;
+
+        if (extract_vector<unsigned int>(g, ",", *gs_it))
+        {
+            cc_generator_polys.push_back(g);
+        }
+        else
+        {
+            std::cout << "Invalid generator polynomial specification" << std::endl;
+            return false;
+        }
+    }
+
+    return true;
+}
+
 #endif
 
 //=================================================================================================
@@ -1738,3 +2010,169 @@ bool Options::encode_reed_solomon()
 }
 #endif
 
+#ifdef _CCSOFT
+//=================================================================================================
+bool Options::encode_convolutional_code()
+{
+	source_prns = prns;
+	ccsoft_engine->zero_pad(source_prns);
+	prns.clear();
+	ccsoft_engine->encode(source_prns, prns);
+	return true;
+}
+#endif
+
+//=================================================================================================
+bool Options::parse_fec_option(std::string fec_option_str)
+{
+    std::vector<std::string> fec_elements;
+    bool status = extract_vector(fec_elements, "/", fec_option_str);
+
+    if (status)
+    {
+        if (fec_elements.size() > 1)
+        {
+            if (fec_elements[0] == "RS")
+            {
+#ifdef _RSSOFT
+                if (options_executable == Options_wsgc_test)
+                {
+                    status = parse_reed_solomon_data(fec_elements[1]);
+                }
+                else if (options_executable == Options_wsgc_generator)
+                {
+                    status = parse_reed_solomon_data_generator(fec_elements[1]);
+                }
+                else
+                {
+                    std::cout << "Unrecognised options executable" << std::endl;
+                    status = false;
+                }
+#else
+                std::cout << "RSSoft library not supported" << std::endl;
+                status = false;
+#endif
+            }
+            else if (fec_elements[0] == "CC")
+            {
+#ifdef _CCSOFT
+                if (options_executable == Options_wsgc_test)
+                {
+                    status = parse_convolutional_code_data(fec_elements);
+                }
+                else if (options_executable == Options_wsgc_generator)
+                {
+                    status = parse_convolutional_code_data_generator(fec_elements);
+                }
+                else
+                {
+                    std::cout << "Unrecognised options executable" << std::endl;
+                    status = false;
+                }
+#else
+                std::cout << "CCSoft library not supported" << std::endl;
+                status = false;
+#endif            
+            }
+            else
+            {
+                std::cout << "unrecognised FEC scheme" << std::endl;
+                status = false;
+            }
+        }
+        else
+        {
+            std::cout << "invalid FEC option" << std::endl;
+            status = false;
+        }
+    }
+
+    return status;
+}
+
+#ifdef _RSSOFT
+//=================================================================================================
+bool Options::init_and_encode_msg_rssoft()
+{
+    if (1<<rs_logq != nb_message_symbols)
+    {
+        std::cout << "Invalid size of symbols alphabet (" << nb_message_symbols << ") for the Reed-Solomon parameters RS(" << (1<<rs_logq) - 1 << "," << rs_k << ")" << std::endl;
+        return false;
+    }
+
+    if (prns.size() != rs_k)
+    {
+        std::cout << "Invalid number of message symbols for the Reed-Solomon parameters" << std::endl;
+        return false;
+    }
+
+    if (rs_k > nb_message_symbols - 2)
+    {
+        std::cout << "Invalid k parameter for Reed-Solomon" << std::endl;
+        return false;
+    }
+
+    _rssoft_engine = new RSSoft_Engine(rs_logq, rs_k);
+    _rssoft_engine->set_initial_global_multiplicity(rs_init_M);
+    _rssoft_engine->set_nb_retries(rs_r);
+    _rssoft_engine->set_retry_base_increment(rs_inc);
+    _rssoft_engine->set_retry_mm_strategy(rs_inc_strategy);
+
+    if (encode_reed_solomon())
+    {
+        return true;
+    }
+    else
+    {
+        std::cout << "Cannot encode message with Reed-Solomon" << std::endl;
+        return false;
+    }
+}
+#endif
+
+#ifdef _CCSOFT
+//=================================================================================================
+bool Options::init_and_encode_msg_ccsoft()
+{
+    ccsoft_engine = new CCSoft_Engine(cc_k_constraints, cc_generator_polys);
+    
+    switch (cc_algorithm_type)
+    {
+    case CCSoft_Engine::Algorithm_Stack:
+        ccsoft_engine->init_decoding_stack(cc_edge_bias);
+        break;
+    case CCSoft_Engine::Algorithm_Fano:
+        ccsoft_engine->init_decoding_fano(cc_edge_bias, cc_fano_init_metric, cc_fano_delta_metric, cc_fano_tree_cache_size, cc_fano_delta_init_threshold);
+        break;
+    default:
+        std::cout << "Unrecognised convolutional coding decoding algorithm" << std::endl;
+        return false;
+    }
+    
+    if (cc_use_node_limit)
+    {
+        ccsoft_engine->set_node_limit(cc_node_limit);
+    }
+    
+    if (cc_use_metric_limit)
+    {   
+        ccsoft_engine->set_metric_limit(cc_metric_limit);
+    }
+    
+    if (1<<(ccsoft_engine->get_k()) != nb_message_symbols)
+    {
+        std::cout << "Invalid size of symbols alphabet (" << nb_message_symbols << ") for a (n,k,m) CC code with k = " << ccsoft_engine->get_k() << std::endl;
+        return false;
+    }
+    
+    if (encode_convolutional_code())
+    {
+        return true;
+    }
+    else
+    {
+        std::cout << "Cannot encode message with Convolutional Coding" << std::endl;
+        return false;
+    }
+}
+#endif

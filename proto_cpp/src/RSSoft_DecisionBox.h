@@ -36,7 +36,7 @@ public:
     RSSoft_DecisionBox(RSSoft_Engine& _rssoft_engine, const SourceCodec *_source_codec);
     ~RSSoft_DecisionBox();
     
-    void run(Options::RSSoft_decoding_mode rs_decoding_mode);
+    void run(RSSoft_Engine::RSSoft_decoding_mode rs_decoding_mode);
     void run_regex(const std::string& rs_decoding_regex);
     void run_match(const std::string& rs_decoding_matching_source_message);
     void run_match(const std::vector<unsigned int>& matching_codeword);

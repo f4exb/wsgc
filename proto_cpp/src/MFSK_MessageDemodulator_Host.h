@@ -35,7 +35,17 @@
 class MFSK_MessageDemodulationRecord;
 
 #ifdef _RSSOFT
-class RSSoft_Engine;
+namespace rssoft
+{
+    class RS_ReliabilityMatrix;
+}
+#endif
+
+#ifdef _CCSOFT
+namespace ccsoft
+{
+    class CC_ReliabilityMatrix;
+}
 #endif
 
 /**
@@ -66,13 +76,23 @@ public:
 	 * Execute demodulation on one symbol length of samples. Time and frequency synchronization is supposed to have taken place
 	 * Implementation (Host or CUDA) dependent
 	 * \param symbol_samples Pointer to the symbol samples. Number of samples is assumed to be FFT size times the number of FFTs per symbol
-     * \param rssoft_engine Pointer to the RSSoft_Engine object if using Reed-Solomon soft-decision decoding with RSSoft library. Default is 0 (not used).
+     * \param relmat Reference of a RSSoft library reliability matrix.
 	 */
 #ifdef _RSSOFT
-	virtual void execute(wsgc_complex *symbol_samples, RSSoft_Engine *rssoft_engine = 0);
-#else
-	virtual void execute(wsgc_complex *symbol_samples);
+	virtual void execute(wsgc_complex *symbol_samples, rssoft::RS_ReliabilityMatrix& relmat);
 #endif
+
+    /**
+     * Execute demodulation on one symbol length of samples. Time and frequency synchronization is supposed to have taken place
+     * Implementation (Host or CUDA) dependent
+     * \param symbol_samples Pointer to the symbol samples. Number of samples is assumed to be FFT size times the number of FFTs per symbol
+     * \param relmat Reference of a CCSoft library reliability matrix.
+     */
+#ifdef _CCSOFT
+    virtual void execute(wsgc_complex *symbol_samples, ccsoft::CC_ReliabilityMatrix& relmat);
+#endif
+
+	virtual void execute(wsgc_complex *symbol_samples);
 
 protected:
     wsgc_fftw_plan _fft_plan; //!< FFTW plan for forward FFT.
@@ -85,9 +105,7 @@ protected:
     void clean_magsum();
     void cumulate_magsum(unsigned int fft_index);
     void estimate_magpeak();
-#ifdef _RSSOFT
-    void fill_rssoft_reliability_matrix(RSSoft_Engine *rssoft_engine);
-#endif
+    void calculate_magnitudes(wsgc_complex *symbol_samples);
 };
 
 #endif // __MFSK_MESSAGE_DEMODULATOR_HOST__

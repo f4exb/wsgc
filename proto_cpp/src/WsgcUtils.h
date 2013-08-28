@@ -36,7 +36,7 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/tokenizer.hpp>
 
-
+//=================================================================================================
 // template to extract a vector of elements from a comma separated string
 template<typename TElement> bool extract_vector(std::vector<TElement>& velements, std::string cs_string)
 {
@@ -65,7 +65,36 @@ template<typename TElement> bool extract_vector(std::vector<TElement>& velements
     }
 }
 
+// ================================================================================================
+// template to extract a vector of elements from a delimiter separated string
+template<typename TElement> bool extract_vector(std::vector<TElement>& velements, const char *separator, std::string cs_string)
+{
+    std::string element_str;
+    TElement element;
 
+    boost::char_separator<char> sep(separator);
+    boost::tokenizer<boost::char_separator<char> > tokens(cs_string, sep);
+
+    boost::tokenizer<boost::char_separator<char> >::iterator tok_iter = tokens.begin();
+    boost::tokenizer<boost::char_separator<char> >::iterator toks_end = tokens.end();
+
+    try
+    {
+        for (; tok_iter != toks_end; ++tok_iter)
+        {
+            element = boost::lexical_cast<TElement>(*tok_iter);
+            velements.push_back(element);
+        }
+        return true;
+    }
+    catch (boost::bad_lexical_cast &)
+    {
+        std::cout << "wrong element in delimiter separated string argument: " << *tok_iter << std::endl;
+        return false;
+    }
+}
+
+//=================================================================================================
 // template to print a vector of printable elements
 template<typename TElement, typename TDisplay, typename TStream> void print_vector(const std::vector<TElement>& v, unsigned int width, TStream& os)
 {
@@ -97,6 +126,7 @@ template<typename TElement, typename TDisplay, typename TStream> void print_vect
 }
 
 
+//=================================================================================================
 template<typename TElement> void print_array_x(unsigned int lx, TElement *a, std::ostringstream& os, unsigned int precision=6)
 {
     for (unsigned int xi=0; xi<lx; xi++)
@@ -106,6 +136,7 @@ template<typename TElement> void print_array_x(unsigned int lx, TElement *a, std
 }
 
 
+//=================================================================================================
 template<typename TElement> void print_array_xy(unsigned int lx, unsigned int ly, TElement *a, std::ostringstream& os, unsigned int precision=6)
 {
     for (unsigned int xi=0; xi<lx; xi++)
@@ -117,6 +148,7 @@ template<typename TElement> void print_array_xy(unsigned int lx, unsigned int ly
     }
 }
 
+//=================================================================================================
 template<typename TElement> void print_array_xzy(unsigned int lx, unsigned int ly, unsigned int lz, TElement *a, std::ostringstream& os, unsigned int precision=6)
 {
     for (unsigned int xi=0; xi<lx; xi++)
@@ -135,6 +167,7 @@ template<typename TElement> void print_array_xzy(unsigned int lx, unsigned int l
 //void print_array_xy(unsigned int lx, unsigned int ly, wsgc_complex *a, std::ostringstream& os, unsigned int width=6);
 
 
+//=================================================================================================
 class WsgcUtils
 {
     public:

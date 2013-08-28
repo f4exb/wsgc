@@ -33,7 +33,11 @@
 #include <cstring>
 
 #ifdef _RSSOFT
-#include "RSSoft_Engine.h"
+#include "RS_ReliabilityMatrix.h"
+#endif
+
+#ifdef _CCSOFT
+#include "CC_ReliabilityMatrix.h"
 #endif
 
 //=================================================================================================
@@ -74,33 +78,27 @@ MFSK_MessageDemodulator_Host::~MFSK_MessageDemodulator_Host()
 
 //=================================================================================================
 #ifdef _RSSOFT
-void MFSK_MessageDemodulator_Host::execute(wsgc_complex *symbol_samples, RSSoft_Engine *rssoft_engine)
-#else
-void MFSK_MessageDemodulator_Host::execute(wsgc_complex *symbol_samples)
-#endif
+void MFSK_MessageDemodulator_Host::execute(wsgc_complex *symbol_samples, rssoft::RS_ReliabilityMatrix& relmat)
 {
-    memcpy(_samples, symbol_samples, _nb_fft_per_symbol*_fft_N*sizeof(wsgc_fftw_complex));
-    WSGC_FFTW_EXECUTE(_fft_plan);
-    clean_magsum();
-    
-    for (unsigned int fft_i = 0; fft_i < _nb_fft_per_symbol; fft_i++)
-    {
-        cumulate_magsum(fft_i);
-    }
-
-#ifdef _RSSOFT
-    if (rssoft_engine)
-    {
-        fill_rssoft_reliability_matrix(rssoft_engine);
-    }
-    else
-    {
-        estimate_magpeak();
-    }
-#else
-    estimate_magpeak();
+    calculate_magnitudes(symbol_samples);
+    relmat.enter_symbol_data(_magsum_s);
+}
 #endif
-    
+
+//=================================================================================================
+#ifdef _CCSOFT
+void MFSK_MessageDemodulator_Host::execute(wsgc_complex *symbol_samples, ccsoft::CC_ReliabilityMatrix& relmat)
+{
+    calculate_magnitudes(symbol_samples);
+    relmat.enter_symbol_data(_magsum_s);
+}
+#endif
+
+//=================================================================================================
+void MFSK_MessageDemodulator_Host::execute(wsgc_complex *symbol_samples)
+{
+    calculate_magnitudes(symbol_samples);
+    estimate_magpeak();
     _symbol_i++;
 }
 
@@ -173,10 +171,18 @@ void MFSK_MessageDemodulator_Host::estimate_magpeak()
     demodulation_record._avg_magnitude = mag_sum / (_nb_message_symbols+_nb_service_symbols);
 }
 
-#ifdef _RSSOFT
+
 //=================================================================================================
-void MFSK_MessageDemodulator_Host::fill_rssoft_reliability_matrix(RSSoft_Engine *rssoft_engine)
+void MFSK_MessageDemodulator_Host::calculate_magnitudes(wsgc_complex *symbol_samples)
 {
-    rssoft_engine->record_magnitudes(_magsum_s);
+    memcpy(_samples, symbol_samples, _nb_fft_per_symbol*_fft_N*sizeof(wsgc_fftw_complex));
+    WSGC_FFTW_EXECUTE(_fft_plan);
+    clean_magsum();
+
+    for (unsigned int fft_i = 0; fft_i < _nb_fft_per_symbol; fft_i++)
+    {
+        cumulate_magsum(fft_i);
+    }
 }
-#endif
+
+

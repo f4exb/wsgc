@@ -36,6 +36,10 @@
 #include "RSSoft_Engine.h"
 #endif
 
+#ifdef _CCSOFT
+#include "CCSoft_Engine.h"
+#endif
+
 #include <vector>
 #include <string>
 #include <sstream>
@@ -52,18 +56,6 @@ public:
 		Options_wsgc_test,
 		Options_wsgc_generator
 	} Options_Executable;
-
-	typedef enum
-	{
-		RSSoft_decoding_all,
-		RSSoft_decoding_full,
-		RSSoft_decoding_best,
-		RSSoft_decoding_first,
-		RSSoft_decoding_regex,
-		RSSoft_decoding_match,
-        RSSoft_decoding_binmatch,
-		RSSoft_decoding_relthr
-	} RSSoft_decoding_mode;
 
 	Options(std::string& _binary_name, Options_Executable _options_executable = Options_wsgc_test);
 	~Options();
@@ -138,9 +130,24 @@ public:
 	unsigned int rs_inc;
 	RSSoft_Engine::MultiplicityMatrix_RetryStrategy rs_inc_strategy;
 	RSSoft_Engine *_rssoft_engine;
-	RSSoft_decoding_mode rs_decoding_mode;
+	RSSoft_Engine::RSSoft_decoding_mode rs_decoding_mode;
 	std::string rs_decoding_match_str;
     float rs_reliability_threshold;
+#endif
+    std::vector<unsigned int> cc_k_constraints;
+    std::vector<std::vector<unsigned int> > cc_generator_polys;
+#ifdef _CCSOFT
+    CCSoft_Engine *ccsoft_engine;
+    CCSoft_Engine::AlgoritmType cc_algorithm_type;
+    float cc_edge_bias;
+    unsigned int cc_node_limit;
+    bool cc_use_node_limit;
+    float cc_metric_limit;
+    bool cc_use_metric_limit;
+    float cc_fano_init_metric;
+    float cc_fano_delta_metric;
+    unsigned int cc_fano_tree_cache_size;
+    float cc_fano_delta_init_threshold;
 #endif
 
 private:
@@ -160,13 +167,23 @@ private:
 	bool adjust_parameters_for_source_coding();
 	bool source_codec_create_message_prns();
     bool is_power_of_2(unsigned int x, unsigned int& log2);
+    bool parse_fec_option(std::string fec_option_str);
 #ifdef _RSSOFT
 	bool parse_reed_solomon_data(std::string coding_data_str);
 	bool parse_reed_solomon_data_generator(std::string coding_data_str);
 	void print_reed_solomon_data(std::ostringstream& os);
 	bool encode_reed_solomon();
+    bool init_and_encode_msg_rssoft();
 #endif
-
+#ifdef _CCSOFT
+    bool parse_convolutional_code_data(std::vector<std::string> coding_data_strings);
+    bool parse_convolutional_code_data_generator(std::vector<std::string> coding_data_strings);
+    bool parse_convolutional_code_constraints(std::string constraints_str);
+    bool parse_convolutional_code_genpolys(std::string genpolys_str);
+    void print_convolutional_code_data(std::ostringstream& os);
+    bool encode_convolutional_code();
+    bool init_and_encode_msg_ccsoft();
+#endif
 };
 
 #endif // __OPTIONS_H__

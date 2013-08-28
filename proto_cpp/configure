@@ -574,6 +574,10 @@ CUDA_CFLAGS
 HAS_CUDA_FALSE
 HAS_CUDA_TRUE
 hasnvcc
+CCSOFT_LDFLAGS
+CCSOFT_CFLAGS
+HAS_CCSOFT_FALSE
+HAS_CCSOFT_TRUE
 RSSOFT_LDFLAGS
 RSSOFT_CFLAGS
 HAS_RSSOFT_FALSE
@@ -677,6 +681,8 @@ enable_dependency_tracking
 with_boost
 enable_rssoft
 with_rssoft
+enable_ccsoft
+with_ccsoft
 enable_cuda
 with_cuda
 with_cuda_sdk
@@ -1318,6 +1324,7 @@ Optional Features:
   --disable-dependency-tracking  speeds up one-time build
   --enable-dependency-tracking   do not reject slow dependency extractors
   --enable-rssoft         enable RSSoft support
+  --enable-ccsoft         enable CCSoft support
   --enable-cuda           enable CUDA support
 --enable-cuda-emu Turn on device emulation for CUDA
 
@@ -1326,6 +1333,7 @@ Optional Packages:
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
   --with-boost=DIR        prefix of Boost 1.42 [guess]
   --with-rssoft=PATH      prefix where RSSoft is installed [default=auto]
+  --with-ccsoft=PATH      prefix where CCSoft is installed [default=auto]
   --with-cuda=PATH        prefix where CUDA is installed [default=auto]
   --with-cuda-sdk=PATH    prefix where CUDA SDK is installed [default=auto]
   --with-cuda-arch=ARCH   CUDA hardware architecture passed as -arch= argument
@@ -4440,6 +4448,103 @@ fi
 
 
 # ------------------------------------------------------------------------------
+# CCSOFT
+# ------------------------------------------------------------------------------
+
+# Setup defaut CCSoft paths
+RSSOFT_INSTALL_PATH="/usr/local/ccsoft"
+
+# Check: enable CCSoft?
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether to use CCSoft library" >&5
+$as_echo_n "checking whether to use CCSoft library... " >&6; }
+# Check whether --enable-ccsoft was given.
+if test "${enable_ccsoft+set}" = set; then :
+  enableval=$enable_ccsoft; ccsoftval="yes"
+else
+  ccsoftval="no"
+fi
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ccsoftval" >&5
+$as_echo "$ccsoftval" >&6; }
+
+# check to see if CCSoft been selected
+if test "x$ccsoftval" == "xno"; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: Not using CCSoft!" >&5
+$as_echo "$as_me: WARNING: Not using CCSoft!" >&2;}
+fi
+
+# Setup custom RSSoft paths
+
+# Check whether --with-ccsoft was given.
+if test "${with_ccsoft+set}" = set; then :
+  withval=$with_ccsoft; CCSOFT_INSTALL_PATH=$withval
+else
+  with_ccsoft=auto
+fi
+
+
+# Verify CCSoft paths
+if test  "x$ccsoftval" == "xyes"; then
+    as_ac_File=`$as_echo "ac_cv_file_${CCSOFT_INSTALL_PATH}/include/CC_SequentialDecoding.h" | $as_tr_sh`
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for ${CCSOFT_INSTALL_PATH}/include/CC_SequentialDecoding.h" >&5
+$as_echo_n "checking for ${CCSOFT_INSTALL_PATH}/include/CC_SequentialDecoding.h... " >&6; }
+if eval \${$as_ac_File+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  test "$cross_compiling" = yes &&
+  as_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5
+if test -r "${CCSOFT_INSTALL_PATH}/include/CC_SequentialDecoding.h"; then
+  eval "$as_ac_File=yes"
+else
+  eval "$as_ac_File=no"
+fi
+fi
+eval ac_res=\$$as_ac_File
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
+  hasccsoft="yes"
+else
+  hasccsoft="no"
+fi
+
+    if test "x$hasccsoft" == "xno"; then
+       { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: CCSoft library not found - will not have CCSoft support" >&5
+$as_echo "$as_me: WARNING: CCSoft library not found - will not have CCSoft support" >&2;}
+       ccsoftval="no"
+    fi
+     if test "x$ccsoftval" == "xyes"; then
+  HAS_CCSOFT_TRUE=
+  HAS_CCSOFT_FALSE='#'
+else
+  HAS_CCSOFT_TRUE='#'
+  HAS_CCSOFT_FALSE=
+fi
+
+else
+     if false; then
+  HAS_CCSOFT_TRUE=
+  HAS_CCSOFT_FALSE='#'
+else
+  HAS_CCSOFT_TRUE='#'
+  HAS_CCSOFT_FALSE=
+fi
+
+fi
+
+# Setup RSSoft flags
+if test  "x$ccsoftval" == "xyes"; then
+    CCSOFT_CFLAGS="-I$CCSOFT_INSTALL_PATH/include"
+    CCSOFT_LDFLAGS="-L$CCSOFT_INSTALL_PATH/lib -lccsoft"
+
+
+
+$as_echo "#define _CCSOFT 1" >>confdefs.h
+
+fi
+
+
+# ------------------------------------------------------------------------------
 # CUDA
 # ------------------------------------------------------------------------------
 
@@ -5260,6 +5365,14 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${HAS_RSSOFT_TRUE}" && test -z "${HAS_RSSOFT_FALSE}"; then
   as_fn_error $? "conditional \"HAS_RSSOFT\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${HAS_CCSOFT_TRUE}" && test -z "${HAS_CCSOFT_FALSE}"; then
+  as_fn_error $? "conditional \"HAS_CCSOFT\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${HAS_CCSOFT_TRUE}" && test -z "${HAS_CCSOFT_FALSE}"; then
+  as_fn_error $? "conditional \"HAS_CCSOFT\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${HAS_CUDA_TRUE}" && test -z "${HAS_CUDA_FALSE}"; then

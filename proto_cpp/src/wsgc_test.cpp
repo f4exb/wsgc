@@ -89,6 +89,11 @@
 #endif
 #endif
 
+#ifdef _CCSOFT
+#include "CC_ReliabilityMatrix.h"
+#include "CCSoft_DecisionBox.h"
+#endif
+
 #ifdef _CUDA
 #include "CudaManager.h"
 #endif
@@ -131,7 +136,12 @@ void generate_training_prn_list_unpiloted(std::vector<unsigned int>& prn_list, G
 void generate_message_prn_list(std::vector<unsigned int>& prn_list, GoldCodeGenerator& gc_generator);
 void generate_pilot_prn_list(std::vector<unsigned int>& prn_list, GoldCodeGenerator& gc_generator, unsigned int pilot_prni);
 void apply_fir(wsgc_complex *inout, unsigned int& nb_samples, const std::vector<wsgc_float>& fir_coef);
+#ifdef _RSSOFT
 void run_rssoft_decoding(Options& options);
+#endif
+#ifdef _CCSOFT
+void run_ccsoft_decoding(Options& options, ccsoft::CC_ReliabilityMatrix *relmat);
+#endif
 
 //=================================================================================================
 int main(int argc, char *argv[])
@@ -963,24 +973,63 @@ void message_processing_MFSK(
 
 	wsgc_complex *signal_samples;
 
+	bool run_rssoft = false;
+	bool run_ccsoft = false;
+
+#ifdef _RSSOFT
+	run_rssoft = (options._rssoft_engine != 0);
+#endif
+
+#ifdef _CCSOFT
+    run_ccsoft = (options.ccsoft_engine != 0);
+	ccsoft::CC_ReliabilityMatrix *cc_relmat = 0;
+
+	if (options.ccsoft_engine)
+	{
+	    cc_relmat = new ccsoft::CC_ReliabilityMatrix(1<<options.ccsoft_engine->get_n(), options.prns.size());
+	}
+#endif
+
     clock_gettime(time_option, &time1);
 
     while (sample_sequencer.get_next_code_samples(&signal_samples)) // pseudo real time loop, one PRN length at a time
     {
-    	mfsk_message_demodulator->execute(signal_samples, options._rssoft_engine);
+        if (run_rssoft)
+        {
+#ifdef _RSSOFT
+            mfsk_message_demodulator->execute(signal_samples, options._rssoft_engine->get_reliability_matrix());
+#endif
+        }
+        else if (run_ccsoft)
+        {
+#ifdef _CCSOFT
+            mfsk_message_demodulator->execute(signal_samples, *cc_relmat);
+#endif
+        }
+        else
+        {
+            mfsk_message_demodulator->execute(signal_samples);
+        }
     }
 
     clock_gettime(time_option, &time2);
     std::cout << "MFSK message sequence decoding time: " << std::setw(12) << std::setprecision(9) << WsgcUtils::get_time_difference(time2,time1) << " s" << std::endl << std::endl;
     
-#ifdef _RSSOFT    
-    if (options._rssoft_engine)
+    if (run_rssoft)
     {
+#ifdef _RSSOFT
         run_rssoft_decoding(options);
+#endif
+    }
+    else if (run_ccsoft)
+    {
+#ifdef _CCSOFT
+    	run_ccsoft_decoding(options, cc_relmat);
+        delete cc_relmat;
+#endif
     }
     else
     {
-#endif
         std::ostringstream demod_os;
         demod_os << "--- demodulation records:" << std::endl;
         mfsk_message_demodulator->dump_demodulation_records(demod_os);
@@ -1030,9 +1079,7 @@ void message_processing_MFSK(
         std::cout << error_counts << " errors (" << ((float) error_counts)/decision_box.get_decoded_symbols().size() << ")" << std::endl;
         std::cout << erasure_counts+error_counts << " total (" << ((float) erasure_counts+error_counts)/decision_box.get_decoded_symbols().size() << ")" << std::endl;
         std::cout << "_SUM " << erasure_counts << "," << error_counts << "," << erasure_counts+error_counts << "," << erasure_counts+2*error_counts << std::endl;
-#ifdef _RSSOFT        
     }
-#endif
 }
 
 
@@ -1106,22 +1153,22 @@ void run_rssoft_decoding(Options& options)
 
     switch (options.rs_decoding_mode)
     {
-        case Options::RSSoft_decoding_all:
-        case Options::RSSoft_decoding_full:
-        case Options::RSSoft_decoding_best:
-        case Options::RSSoft_decoding_first:
+        case RSSoft_Engine::RSSoft_decoding_all:
+        case RSSoft_Engine::RSSoft_decoding_full:
+        case RSSoft_Engine::RSSoft_decoding_best:
+        case RSSoft_Engine::RSSoft_decoding_first:
             rssoft_decision_box.run(options.rs_decoding_mode);
             break;
-        case Options::RSSoft_decoding_regex:
+        case RSSoft_Engine::RSSoft_decoding_regex:
             rssoft_decision_box.run_regex(options.rs_decoding_match_str);
             break;
-        case Options::RSSoft_decoding_match:
+        case RSSoft_Engine::RSSoft_decoding_match:
             rssoft_decision_box.run_match(options.rs_decoding_match_str);
             break;
-        case Options::RSSoft_decoding_binmatch:
+        case RSSoft_Engine::RSSoft_decoding_binmatch:
             rssoft_decision_box.run_match(options.source_prns);
             break;
-        case Options::RSSoft_decoding_relthr:
+        case RSSoft_Engine::RSSoft_decoding_relthr:
             rssoft_decision_box.run_reliability_threshold(options.rs_reliability_threshold);
             break;
         default:
@@ -1129,5 +1176,16 @@ void run_rssoft_decoding(Options& options)
     }
 
     rssoft_decision_box.print_stats(*options._rssoft_engine, options.source_prns, options.prns, std::cout);
+}
+#endif
+
+#ifdef _CCSOFT
+//=================================================================================================
+void run_ccsoft_decoding(Options& options, ccsoft::CC_ReliabilityMatrix *relmat)
+{
+    CCSoft_DecisionBox ccsoft_decision_box(*options.ccsoft_engine, options._source_codec);
+    ccsoft_decision_box.run(*relmat);
+    ccsoft_decision_box.print_retrieved_message(std::cout);
+    ccsoft_decision_box.print_stats(options.source_prns, options.prns, std::cout);
 }
 #endif

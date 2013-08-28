@@ -119,13 +119,6 @@ void RSSoft_Engine::encode(const std::vector<unsigned int>& in_msg, std::vector<
 
 
 //=================================================================================================
-void RSSoft_Engine::record_magnitudes(wsgc_float *magnitudes)
-{
-	 mat_Pi.enter_symbol_data(magnitudes);
-}
-
-
-//=================================================================================================
 void RSSoft_Engine::decode(std::vector<RSSoft_generic_codeword>& candidate_messages, bool unique)
 {
 	mat_Pi.normalize();
