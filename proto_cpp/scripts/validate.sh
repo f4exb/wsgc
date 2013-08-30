@@ -12,4 +12,4 @@ echo "*** Message correlation MFSK" | tee -a validate.out
 echo "*** MFSK with JT65 classic source encoding and Reed-Solomon with RSSoft library" | tee -a validate.out
 /opt/install/wsgc_test/bin/wsgc_test -s 4096 -d "MFSK:3,0,-32" -t 0.0 -M 64 -R 16 -n -20 -f "W:0.0,1.0,5.0,0.0" -j "JT65::F6HTJ F4EXB JN33" -O RS/63,12,16,10,4:iarith,regex,.*F4EXB.* >> validate.out
 echo "*** MFSK with Convolutional Coding with CCSoft library, Layland-Lushbaugh rate 1/2 k=32 code" | tee -a validate.out
-/opt/install/wsgc_test/bin/wsgc_test -s 4096 -d "MFSK:3,0,-32" -t 0.0 -M 2 -R 36 -n -10 -O CC/32/4073739089,3831577671/fano:-1,-8,1,2000000,-4,20000000,-24 >> validate.out
+/opt/install/wsgc_test/bin/wsgc_test -s 4096 -d "MFSK:3,0,-32" -t 0.0 -M 2 -R 36 -n -26 -O CC/32/4073739089,3831577671/fano:-1.5,-8,1,2000000,-4,20000000,-20 >> validate.out

@@ -1814,6 +1814,8 @@ bool Options::parse_convolutional_code_data(std::vector<std::string> coding_data
                     {
                         if (algo_specs[0] == "STACK")
                         {
+                            cc_algorithm_type = CCSoft_Engine::Algorithm_Stack;
+
                             if (algo_parms.size() > 0)
                             {
                                 cc_edge_bias = algo_parms[0];
@@ -1832,6 +1834,8 @@ bool Options::parse_convolutional_code_data(std::vector<std::string> coding_data
                         }
                         else if (algo_specs[0] == "FANO")
                         {
+                            cc_algorithm_type = CCSoft_Engine::Algorithm_Fano;
+
                             if (algo_parms.size() > 0)
                             {
                                 cc_edge_bias = algo_parms[0];

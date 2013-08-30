@@ -175,9 +175,12 @@ int main(int argc, char *argv[])
         }
         bool use_cuda_ok = cuda_manager.diagnose();
         options.use_cuda = options.use_cuda && use_cuda_ok;
-        std::ostringstream cuda_os;
-        cuda_manager.dump(cuda_os);
-        std::cout << cuda_os.str() << std::endl << std::endl;
+        if (options.use_cuda)
+        {
+            std::ostringstream cuda_os;
+            cuda_manager.dump(cuda_os);
+            std::cout << cuda_os.str() << std::endl << std::endl;
+        }
 #endif
 
         CodeModulator *codeModulator = 0;
@@ -345,6 +348,7 @@ int main(int argc, char *argv[])
 
             if (codeModulator_MFSK)
             {
+                std::cout << "message_processing_MFSK" << std::endl;
 				message_processing_MFSK(
 #ifdef _CUDA
 				cuda_manager,
@@ -986,7 +990,7 @@ void message_processing_MFSK(
 
 	if (options.ccsoft_engine)
 	{
-	    cc_relmat = new ccsoft::CC_ReliabilityMatrix(1<<options.ccsoft_engine->get_n(), options.prns.size());
+	    cc_relmat = new ccsoft::CC_ReliabilityMatrix(1<<options.ccsoft_engine->get_n(), options.prns.size()-1);
 	}
 #endif
 
@@ -1003,7 +1007,7 @@ void message_processing_MFSK(
         else if (run_ccsoft)
         {
 #ifdef _CCSOFT
-            mfsk_message_demodulator->execute(signal_samples, *cc_relmat);
+            mfsk_message_demodulator->execute(signal_samples, cc_relmat);
 #endif
         }
         else
@@ -1183,9 +1187,18 @@ void run_rssoft_decoding(Options& options)
 //=================================================================================================
 void run_ccsoft_decoding(Options& options, ccsoft::CC_ReliabilityMatrix *relmat)
 {
+	options.ccsoft_engine->reset();
     CCSoft_DecisionBox ccsoft_decision_box(*options.ccsoft_engine, options._source_codec);
     ccsoft_decision_box.run(*relmat);
     ccsoft_decision_box.print_retrieved_message(std::cout);
     ccsoft_decision_box.print_stats(options.source_prns, options.prns, std::cout);
+
+    /*
+    std::ofstream dot_file;
+    dot_file.open("cc_tree.dot");
+    options.ccsoft_engine->print_dot(dot_file);
+    dot_file.close();
+    */
+
 }
 #endif

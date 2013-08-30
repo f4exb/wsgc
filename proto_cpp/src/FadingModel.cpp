@@ -107,7 +107,7 @@ void FadingModel::apply_awgn(wsgc_complex *samples, unsigned int nb_samples, uns
     wsgc_float noise_amplitude = sqrt(mean_signal_power / pow(10.0, (snr_db/10.0)));
     
     std::cout << "Signal power: " << mean_signal_power << " Noise amplitude: " << noise_amplitude << std::endl;
-    
+
     noise_amplitude /= sqrt(2.0); // because of complex (analytical) signal
     
     if (!_verbose)

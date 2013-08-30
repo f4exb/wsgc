@@ -79,7 +79,7 @@ void CCSoft_DecisionBox::print_stats(const std::vector<unsigned int>& sent_messa
     if (decode_success)
     {
         bool decode_ok = (sent_message == retrieved_message);
-        ccsoft_engine.print_stats(os, decode_success);
+        ccsoft_engine.print_stats(os, decode_ok);
     }
     else
     {

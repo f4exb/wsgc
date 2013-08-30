@@ -87,10 +87,10 @@ void MFSK_MessageDemodulator_Host::execute(wsgc_complex *symbol_samples, rssoft:
 
 //=================================================================================================
 #ifdef _CCSOFT
-void MFSK_MessageDemodulator_Host::execute(wsgc_complex *symbol_samples, ccsoft::CC_ReliabilityMatrix& relmat)
+void MFSK_MessageDemodulator_Host::execute(wsgc_complex *symbol_samples, ccsoft::CC_ReliabilityMatrix* relmat)
 {
     calculate_magnitudes(symbol_samples);
-    relmat.enter_symbol_data(_magsum_s);
+    relmat->enter_symbol_data(_magsum_s);
 }
 #endif
 

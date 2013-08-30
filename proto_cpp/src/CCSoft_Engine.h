@@ -37,7 +37,7 @@
 class CCSoft_Engine
 {
 public:
-    typedef enum
+    typedef enum AlgoritmType_e
     {
         Algorithm_Stack,
         Algorithm_Fano
@@ -159,6 +159,11 @@ public:
      * \param score Metric of the retrieved input message
      */
     bool decode(ccsoft::CC_ReliabilityMatrix& relmat, std::vector<unsigned int>& retrieved_msg, float& score);
+
+    void print_dot(std::ostream& os) const
+    {
+        cc_decoding->print_dot(os);
+    }
 
 protected:
     const std::vector<unsigned int>& k_constraints;

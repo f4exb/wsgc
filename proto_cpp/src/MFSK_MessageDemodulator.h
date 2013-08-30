@@ -88,10 +88,10 @@ public:
      * Execute demodulation on one symbol length of samples. Time and frequency synchronization is supposed to have taken place
      * Implementation (Host or CUDA) dependent
      * \param symbol_samples Pointer to the symbol samples. Number of samples is assumed to be FFT size times the number of FFTs per symbol
-     * \param relmat Reference of a CCSoft library reliability matrix.
+     * \param relmat Pointer to a CCSoft library reliability matrix.
      */
 #ifdef _CCSOFT
-    virtual void execute(wsgc_complex *symbol_samples, ccsoft::CC_ReliabilityMatrix& relmat) = 0;
+    virtual void execute(wsgc_complex *symbol_samples, ccsoft::CC_ReliabilityMatrix* relmat) = 0;
 #endif
 
 	/**
