@@ -1827,7 +1827,7 @@ bool Options::parse_convolutional_code_data(std::vector<std::string> coding_data
                             }
                             if (algo_parms.size() > 2)
                             {
-                                cc_metric_limit = algo_parms[1];
+                                cc_metric_limit = algo_parms[2];
                                 cc_use_metric_limit = true;
                             }
                             status = true;
