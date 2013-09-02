@@ -28,9 +28,8 @@
 
 #include "CCSoft_Engine.h"
 #include "CCSoft_Exception.h"
-#include "CC_StackDecoding.h"
-#include "CC_FanoDecoding.h"
-#include "CC_Encoding.h"
+#include "CC_StackDecoding_FA.h"
+#include "CC_FanoDecoding_FA.h"
 
 
 
@@ -64,7 +63,7 @@ CCSoft_Engine::~CCSoft_Engine()
 //=================================================================================================
 void CCSoft_Engine::init_decoding_stack(float edge_bias)
 {
-    cc_decoding = new ccsoft::CC_StackDecoding<unsigned int, unsigned int>(k_constraints, generator_polys);
+    cc_decoding = new ccsoft::CC_StackDecoding_FA<unsigned int, unsigned int, 1>(k_constraints, generator_polys);
     cc_decoding->set_edge_bias(edge_bias);
 }
 
@@ -75,7 +74,7 @@ void CCSoft_Engine::init_decoding_fano(float edge_bias,
         unsigned int tree_cache_size,
         float init_threshold_delta)
 {
-    cc_decoding = new ccsoft::CC_FanoDecoding<unsigned int, unsigned int>(k_constraints,
+    cc_decoding = new ccsoft::CC_FanoDecoding_FA<unsigned int, unsigned int, 1>(k_constraints,
             generator_polys,
             init_threshold,
             delta_threshold,

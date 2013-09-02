@@ -205,8 +205,12 @@ int main(int argc, char *argv[])
 
             for (unsigned int si = 0; si < nb_faded_source_samples; si++)
             {
-            	ofs.write((const char *) &faded_source_samples[si].real(), sizeof(faded_source_samples[si].real()));
-            	ofs.write((const char *) &faded_source_samples[si].imag(), sizeof(faded_source_samples[si].imag()));
+                float sample_r = faded_source_samples[si].real();
+                float sample_i = faded_source_samples[si].imag();
+            	ofs.write((const char *) &sample_r, sizeof(sample_r));
+            	ofs.write((const char *) &sample_i, sizeof(sample_i));
+            	//ofs.write((const char *) &faded_source_samples[si].real(), sizeof(faded_source_samples[si].real()));
+            	//ofs.write((const char *) &faded_source_samples[si].imag(), sizeof(faded_source_samples[si].imag()));
             }
 
             // close file, that's it!

@@ -1296,7 +1296,7 @@ void Options::print_convolutional_code_data(std::ostringstream& os)
     {
         ccsoft_engine->print_convolutional_code_data(os);
         
-        os << "Edge metric bias ...................: " << cc_edge_bias << std::endl;
+        os << "Edge metric bias ...................: " << std::setw(5) << std::setprecision(2) << cc_edge_bias << std::endl;
         
         if (cc_use_node_limit)
         {

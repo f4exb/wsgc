@@ -29,10 +29,10 @@
 #define __CCSOFT_ENGINE_H__
 
 #include "CC_ReliabilityMatrix.h"
-#include "CC_SequentialDecoding.h"
+#include "CC_SequentialDecoding_FA.h"
 
 /**
- * \brief Interface engine with the RSSoft Reed Solomon soft decision librarys
+ * \brief Interface engine with the CCSoft Convolutional Coding soft decision library
  */
 class CCSoft_Engine
 {
@@ -171,7 +171,7 @@ protected:
     unsigned int k;
     unsigned int n;
     AlgoritmType algorithm_type; //!< Type of algorithm used
-    ccsoft::CC_SequentialDecoding<unsigned int, unsigned int> *cc_decoding;
+    ccsoft::CC_SequentialDecoding_FA<unsigned int, unsigned int, 1> *cc_decoding;
     float fano_init_metric;
     float fano_delta_metric;
     unsigned int fano_tree_cache_size;
