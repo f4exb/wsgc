@@ -109,6 +109,7 @@ wsgc_test_SOURCES += CodeModulator_BPSK.cpp \
     Reception.cpp \
     Reception_FEC.cpp \
     Reception_WSGC.cpp \
+    Reception_MFSK.cpp \
     CudaManager.cu \
     CudaDeviceManager.cu \
     LocalCodesFFT_Cuda.cu \
@@ -207,7 +208,8 @@ wsgc_test_SOURCES += CodeModulator_BPSK.cpp \
     Transmission.cpp \
     Reception.cpp \
     Reception_FEC.cpp \
-    Reception_WSGC.cpp
+    Reception_WSGC.cpp \
+    Reception_MFSK.cpp
 endif
 
 wsgc_generator_SOURCES += wsgc_generator.cpp \

@@ -79,7 +79,7 @@ void Reception_FEC::run_rssoft_decoding(Options& options, rssoft::RS_Reliability
 
 #ifdef _CCSOFT
 //=================================================================================================
-void Reception_FEC::run_ccsoft_decoding(Options& options, ccsoft::CC_ReliabilityMatrix *relmat)
+void Reception_FEC::run_ccsoft_decoding(Options& options, ccsoft::CC_ReliabilityMatrix& relmat)
 {
     CCSoft_Engine ccsoft_engine(options.cc_k_constraints, options.cc_generator_polys);
     
@@ -115,7 +115,7 @@ void Reception_FEC::run_ccsoft_decoding(Options& options, ccsoft::CC_Reliability
 	//ccsoft_engine.reset();
     
     CCSoft_DecisionBox ccsoft_decision_box(ccsoft_engine, options._source_codec);
-    ccsoft_decision_box.run(*relmat);
+    ccsoft_decision_box.run(relmat);
     ccsoft_decision_box.print_retrieved_message(std::cout);
     ccsoft_decision_box.print_stats(options.source_prns, options.prns, std::cout);
 }

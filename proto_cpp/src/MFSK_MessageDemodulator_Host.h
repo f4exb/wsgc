@@ -89,7 +89,7 @@ public:
      * \param relmat Pointer to a CCSoft library reliability matrix.
      */
 #ifdef _CCSOFT
-    virtual void execute(wsgc_complex *symbol_samples, ccsoft::CC_ReliabilityMatrix* relmat);
+    virtual void execute(wsgc_complex *symbol_samples, ccsoft::CC_ReliabilityMatrix& relmat);
 #endif
 
 	virtual void execute(wsgc_complex *symbol_samples);
