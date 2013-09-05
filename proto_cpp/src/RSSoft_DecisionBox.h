@@ -50,7 +50,7 @@ public:
     void run_match(const std::string& rs_decoding_matching_source_message);
     void run_match(const std::vector<unsigned int>& matching_codeword);
     void run_reliability_threshold(float reliability_threshold);
-    void print_stats(RSSoft_Engine& rssoft_engine, const std::vector<unsigned int>& sent_message, const std::vector<unsigned int>& sent_codeword, std::ostream& os);
+    void print_stats(const std::vector<unsigned int>& sent_message, const std::vector<unsigned int>& sent_codeword, std::ostream& os);
     
 protected:
     void full_scan_all();

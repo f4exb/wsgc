@@ -44,18 +44,12 @@ class CC_ReliabilityMatrix;
 class Reception_FEC
 {
 public:
-    Reception_FEC(Options& _options);
-    ~Reception_FEC();
-
-protected:
-    Options& options;
-
 #ifdef _RSSOFT
-    void run_rssoft_decoding(rssoft::RS_ReliabilityMatrix *relmat);
+    static void run_rssoft_decoding(Options& options, rssoft::RS_ReliabilityMatrix& relmat);
 #endif
 
 #ifdef _CCSOFT
-    void run_ccsoft_decoding(ccsoft::CC_ReliabilityMatrix *relmat);
+    static void run_ccsoft_decoding(Options& options, ccsoft::CC_ReliabilityMatrix *relmat);
 #endif
 };
 

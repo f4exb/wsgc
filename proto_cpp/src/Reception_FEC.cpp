@@ -23,6 +23,7 @@
 */
 
 #include "Reception_FEC.h"
+#include "Options.h"
 
 #ifdef _RSSOFT
 #include "RSSoft_Engine.h"
@@ -31,25 +32,14 @@
 #endif
 
 #ifdef _CCSOFT
-#include "CCSoft_engine.h"
+#include "CCSoft_Engine.h"
 #include "CCSoft_DecisionBox.h"
 #include "CC_ReliabilityMatrix.h"
 #endif
 
-//=================================================================================================
-Reception_FEC::Reception_FEC(Options& _options) :
-        options(_options)
-{
-}    
-        
-//=================================================================================================
-Reception_FEC::~Reception_FEC()
-{
-}
-
 #ifdef _RSSOFT
 //=================================================================================================
-void run_rssoft_decoding(rssoft::RS_ReliabilityMatrix *relmat)
+void Reception_FEC::run_rssoft_decoding(Options& options, rssoft::RS_ReliabilityMatrix& relmat)
 {
     RSSoft_Engine rssoft_engine(options.rs_logq, options.rs_k);
     rssoft_engine.set_initial_global_multiplicity(options.rs_init_M);
@@ -57,7 +47,7 @@ void run_rssoft_decoding(rssoft::RS_ReliabilityMatrix *relmat)
     rssoft_engine.set_retry_base_increment(options.rs_inc);
     rssoft_engine.set_retry_mm_strategy(options.rs_inc_strategy);
     
-    RSSoft_DecisionBox rssoft_decision_box(rssoft_engine, options._source_codec, *relmat);
+    RSSoft_DecisionBox rssoft_decision_box(rssoft_engine, options._source_codec, relmat);
 
     switch (options.rs_decoding_mode)
     {
@@ -83,13 +73,13 @@ void run_rssoft_decoding(rssoft::RS_ReliabilityMatrix *relmat)
             std::cout << "Unknown RSSoft decoding options" << std::endl;
     }
 
-    rssoft_decision_box.print_stats(rssoft_engine, options.source_prns, options.prns, std::cout);
+    rssoft_decision_box.print_stats(options.source_prns, options.prns, std::cout);
 }
 #endif
 
 #ifdef _CCSOFT
 //=================================================================================================
-void run_ccsoft_decoding(ccsoft::CC_ReliabilityMatrix *relmat)
+void Reception_FEC::run_ccsoft_decoding(Options& options, ccsoft::CC_ReliabilityMatrix *relmat)
 {
     CCSoft_Engine ccsoft_engine(options.cc_k_constraints, options.cc_generator_polys);
     

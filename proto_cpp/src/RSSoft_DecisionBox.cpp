@@ -306,7 +306,7 @@ void RSSoft_DecisionBox::show_message(const RSSoft_generic_codeword& message, st
 }
 
 //=================================================================================================
-void RSSoft_DecisionBox::print_stats(RSSoft_Engine& rssoft_engine, const std::vector<unsigned int>& sent_message, const std::vector<unsigned int>& sent_codeword, std::ostream& os)
+void RSSoft_DecisionBox::print_stats(const std::vector<unsigned int>& sent_message, const std::vector<unsigned int>& sent_codeword, std::ostream& os)
 {
     float source_codeword_score = rssoft_engine.calculate_reliability(rs_relmat, sent_codeword);
     

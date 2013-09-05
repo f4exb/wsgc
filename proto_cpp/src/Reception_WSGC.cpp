@@ -23,6 +23,8 @@
 */
 
 #include "Reception_WSGC.h"
+#include "Reception_FEC.h"
+#include "WsgcUtils.h"
 #include "LocalCodes.h"
 #include "PilotCorrelator.h"
 #include "PilotedMessageCorrelator.h"
@@ -49,16 +51,10 @@
 #include "SourceFFT_Host.h"
 
 #ifdef _RSSOFT
-#include "RSSoft_DecisionBox.h"
 #include "RS_ReliabilityMatrix.h"
 #ifdef _CUDA
 #include "RSSoft_ReliabilityMatrixCuda.h"
 #endif
-#endif
-
-#ifdef _CCSOFT
-#include "CC_ReliabilityMatrix.h"
-#include "CCSoft_DecisionBox.h"
 #endif
 
 #include <iostream>
@@ -109,23 +105,12 @@ void Reception_WSGC::message_processing(wsgc_complex *faded_source_samples, unsi
     PilotCorrelator *pilot_correlator = 0;
     PilotedMessageCorrelator *message_correlator = 0;
     std::vector<CorrelationRecord> correlation_records;
-    unsigned int fft_N = gc_generator.get_nb_code_samples(options.f_sampling, options.f_chip);
     
 #ifdef _RSSOFT
 #ifdef _CUDA
     RSSoft_ReliabilityMatrixCuda *rssoft_reliability_matrix_cuda = 0;
 #endif
-    RSSoft_Engine *rssoft_engine = 0;
     rssoft::RS_ReliabilityMatrix rs_relmat(options.rs_logq, (1<<options.rs_logq) - 1);
-
-    if (options.fec_scheme == Options::OptionFEC_RSSoft)
-    {
-        rssoft_engine = new RSSoft_Engine(options.rs_logq, options.rs_k);
-        rssoft_engine->set_initial_global_multiplicity(options.rs_init_M);
-        rssoft_engine->set_nb_retries(options.rs_r);
-        rssoft_engine->set_retry_base_increment(options.rs_inc);
-        rssoft_engine->set_retry_mm_strategy(options.rs_inc_strategy);
-    }
 #endif
 
     std::vector<unsigned int> message_prn_numbers;
@@ -234,7 +219,7 @@ void Reception_WSGC::message_processing(wsgc_complex *faded_source_samples, unsi
             rssoft_reliability_matrix_cuda->copy_to_host(rs_relmat); // move reliability data from device to host
         }
 #endif         
-        run_rssoft_decoding(*rssoft_engine, rs_relmat); // Do RSSoft decoding with RSSoft decision box
+        Reception_FEC::run_rssoft_decoding(options, rs_relmat); // Do RSSoft decoding with RSSoft decision box
     }
 #endif
 
@@ -428,58 +413,3 @@ void Reception_WSGC::training_processing(wsgc_complex *faded_source_samples, uns
     }
 }
 
-#ifdef _RSSOFT
-//=================================================================================================
-void Reception_WSGC::run_rssoft_decoding(RSSoft_Engine& rssoft_engine,
-		rssoft::RS_ReliabilityMatrix& rs_relmat)
-{
-    RSSoft_DecisionBox rssoft_decision_box(rssoft_engine, options._source_codec, rs_relmat);
-
-    switch (options.rs_decoding_mode)
-    {
-        case RSSoft_Engine_defs::RSSoft_decoding_all:
-        case RSSoft_Engine_defs::RSSoft_decoding_full:
-        case RSSoft_Engine_defs::RSSoft_decoding_best:
-        case RSSoft_Engine_defs::RSSoft_decoding_first:
-            rssoft_decision_box.run(options.rs_decoding_mode);
-            break;
-        case RSSoft_Engine_defs::RSSoft_decoding_regex:
-            rssoft_decision_box.run_regex(options.rs_decoding_match_str);
-            break;
-        case RSSoft_Engine_defs::RSSoft_decoding_match:
-            rssoft_decision_box.run_match(options.rs_decoding_match_str);
-            break;
-        case RSSoft_Engine_defs::RSSoft_decoding_binmatch:
-            rssoft_decision_box.run_match(options.source_prns);
-            break;
-        case RSSoft_Engine_defs::RSSoft_decoding_relthr:
-            rssoft_decision_box.run_reliability_threshold(options.rs_reliability_threshold);
-            break;
-        default:
-            std::cout << "Unknown RSSoft decoding options" << std::endl;
-    }
-
-    rssoft_decision_box.print_stats(rssoft_engine, options.source_prns, options.prns, std::cout);
-}
-#endif
-
-#ifdef _CCSOFT
-//=================================================================================================
-void Reception_WSGC::run_ccsoft_decoding(CCSoft_Engine& ccsoft_engine,
-		ccsoft::CC_ReliabilityMatrix *relmat)
-{
-	ccsoft_engine.reset();
-    CCSoft_DecisionBox ccsoft_decision_box(ccsoft_engine, options._source_codec);
-    ccsoft_decision_box.run(*relmat);
-    ccsoft_decision_box.print_retrieved_message(std::cout);
-    ccsoft_decision_box.print_stats(options.source_prns, options.prns, std::cout);
-
-    /*
-    std::ofstream dot_file;
-    dot_file.open("cc_tree.dot");
-    options.ccsoft_engine->print_dot(dot_file);
-    dot_file.close();
-    */
-
-}
-#endif

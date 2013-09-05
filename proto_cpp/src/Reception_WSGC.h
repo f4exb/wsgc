@@ -57,15 +57,6 @@ public:
     void training_processing(wsgc_complex *faded_source_samples, unsigned int nb_faded_source_samples);
 
 protected:
-
-#ifdef _RSSOFT
-    void run_rssoft_decoding(RSSoft_Engine& rssoft_engine, rssoft::RS_ReliabilityMatrix& rs_relmat);
-#endif
-
-#ifdef _CCSOFT
-    void run_ccsoft_decoding(CCSoft_Engine& ccsoft_engine, ccsoft::CC_ReliabilityMatrix *relmat);
-#endif
-
     CodeModulator_BPSK localCodeModulator;
 #ifdef _CUDA
     CudaManager cuda_manager;

@@ -1087,7 +1087,7 @@ void run_rssoft_decoding(Options& options,
             std::cout << "Unknown RSSoft decoding options" << std::endl;
     }
 
-    rssoft_decision_box.print_stats(rssoft_engine, options.source_prns, options.prns, std::cout);
+    rssoft_decision_box.print_stats(options.source_prns, options.prns, std::cout);
 }
 #endif
 
