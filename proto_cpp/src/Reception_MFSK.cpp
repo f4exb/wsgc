@@ -56,9 +56,7 @@ void Reception_MFSK::message_processing(wsgc_complex *faded_source_samples, unsi
 {
     timespec time1, time2;
     int time_option = CLOCK_REALTIME;
-    MFSK_MessageDemodulator *mfsk_message_demodulator;
-
-    mfsk_message_demodulator = new MFSK_MessageDemodulator_Host(
+    MFSK_MessageDemodulator_Host mfsk_message_demodulator(
             options.mfsk_options._fft_N,
             options.mfsk_options._nb_fft_per_symbol,
             options.mfsk_options._zero_fft_slot,
@@ -77,7 +75,7 @@ void Reception_MFSK::message_processing(wsgc_complex *faded_source_samples, unsi
 
         while (sample_sequencer.get_next_code_samples(&signal_samples)) // pseudo real time loop, one PRN length at a time
         {
-            mfsk_message_demodulator->execute(signal_samples, rs_relmat);
+            mfsk_message_demodulator.execute(signal_samples, rs_relmat);
         }
 
         clock_gettime(time_option, &time2);
@@ -97,7 +95,7 @@ void Reception_MFSK::message_processing(wsgc_complex *faded_source_samples, unsi
 
         while (sample_sequencer.get_next_code_samples(&signal_samples)) // pseudo real time loop, one PRN length at a time
         {
-            mfsk_message_demodulator->execute(signal_samples, cc_relmat);
+            mfsk_message_demodulator.execute(signal_samples, cc_relmat);
         }
 
         clock_gettime(time_option, &time2);
@@ -114,7 +112,7 @@ void Reception_MFSK::message_processing(wsgc_complex *faded_source_samples, unsi
 
         while (sample_sequencer.get_next_code_samples(&signal_samples)) // pseudo real time loop, one PRN length at a time
         {
-            mfsk_message_demodulator->execute(signal_samples);
+            mfsk_message_demodulator.execute(signal_samples);
         }
 
         clock_gettime(time_option, &time2);
@@ -122,11 +120,11 @@ void Reception_MFSK::message_processing(wsgc_complex *faded_source_samples, unsi
 
         std::ostringstream demod_os;
         demod_os << "--- demodulation records:" << std::endl;
-        mfsk_message_demodulator->dump_demodulation_records(demod_os);
+        mfsk_message_demodulator.dump_demodulation_records(demod_os);
         std::cout << demod_os.str() << std::endl;
 
         DecisionBox_MFSK decision_box(options.mfsk_options._fft_N, options.mfsk_options._nb_fft_per_symbol, options.decision_thresholds);
-        decision_box.estimate_symbols(mfsk_message_demodulator->get_demodulation_records());
+        decision_box.estimate_symbols(mfsk_message_demodulator.get_demodulation_records());
 
         options.prns.pop_back(); // pop padding symbol
 
@@ -139,7 +137,7 @@ void Reception_MFSK::message_processing(wsgc_complex *faded_source_samples, unsi
         std::ostringstream os_result;
         options.decision_thresholds.print_options(os_result);
         os_result << std::endl << "Decisions status:" << std::endl;
-        decision_box.dump_decision_status(os_result, options.prns, mfsk_message_demodulator->get_demodulation_records());
+        decision_box.dump_decision_status(os_result, options.prns, mfsk_message_demodulator.get_demodulation_records());
         os_result << std::endl << "Index, original and decoded symbols (-1 denotes an erasure):";
         os_result << std::endl << "-----------------------------------------------------------" << std::endl;
         os_result << "_SIN "; print_vector<unsigned int, unsigned int>(symbol_indices, 4, os_result); os_result << std::endl;
