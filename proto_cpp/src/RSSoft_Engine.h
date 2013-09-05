@@ -122,7 +122,7 @@ protected:
 };
 
 /**
- * \brief Interface engine with the RSSoft Reed Solomon soft decision librarys
+ * \brief Interface engine with the RSSoft Reed Solomon soft decision library
  */
 class RSSoft_Engine
 {
@@ -173,15 +173,6 @@ public:
     }
 
     /**
-     * Get reference to the reliability matrix for direct update
-     * \return r/w reference to the reliability matrix
-     */
-    rssoft::RS_ReliabilityMatrix& get_reliability_matrix()
-    {
-        return mat_Pi;
-    }
-    
-    /**
      * Encode message into codeword
      * \param in_msg Message
      * \param out_codeword Codeword
@@ -194,14 +185,16 @@ public:
      * It will systematically loop the given number of retries.
      * \param candidate_messages Vector of candidate messages filled in in decreasing value of reliability
      */
-    void decode(std::vector<RSSoft_generic_codeword>& candidate_messages, bool unique=true);
+    void decode(rssoft::RS_ReliabilityMatrix& mat_Pi,
+    		std::vector<RSSoft_generic_codeword>& candidate_messages, bool unique=true);
     
     /**
      * Decode one codeword based on given magnitudes for the length of one codeword. Returns only the first candidate
      * message along with its reliability value. 
      * \param first_message First message found
      */
-    bool decode(RSSoft_generic_codeword& first_message);
+    bool decode(rssoft::RS_ReliabilityMatrix& mat_Pi,
+    		RSSoft_generic_codeword& first_message);
     
     /**
      * Decode one codeword based on given magnitudes for the length of one codeword. Tries to find the message that was sent
@@ -212,7 +205,10 @@ public:
      * \param sent_message Message that was sent
      * \return true if the message sent was found
      */
-    bool decode(RSSoft_generic_codeword& retrieved_message, RSSoft_generic_codeword& retrieved_codeword, const RSSoft_generic_codeword& sent_message);
+    bool decode(rssoft::RS_ReliabilityMatrix& mat_Pi,
+    		RSSoft_generic_codeword& retrieved_message,
+    		RSSoft_generic_codeword& retrieved_codeword,
+    		const RSSoft_generic_codeword& sent_message);
     
     /**
      * Decode one codeword based on given magnitudes for the length of one codeword. Tries to match found textual messages with the given
@@ -223,10 +219,11 @@ public:
      * \param regexp Regular expression to match with the textual message
      * \return true if a matching message is found
      */
-    bool decode_regex(std::string& retrieved_text_msg,
-        RSSoft_generic_codeword& retrieved_message, 
-        const SourceCodec& src_codec,
-        const std::string& regexp);
+    bool decode_regex(rssoft::RS_ReliabilityMatrix& mat_Pi,
+    		std::string& retrieved_text_msg,
+    		RSSoft_generic_codeword& retrieved_message,
+    		const SourceCodec& src_codec,
+    		const std::string& regexp);
 
     /**
      * Decode one codeword based on given magnitudes for the length of one codeword. Tries to match found textual messages exactly
@@ -237,10 +234,11 @@ public:
      * \param match_str textual source message to match with the textual message
      * \return true if a matching message is found
      */
-    bool decode_match(std::string& retrieved_text_msg,
-        RSSoft_generic_codeword& retrieved_message,
-        const SourceCodec& src_codec,
-        const std::string& match_str);
+    bool decode_match(rssoft::RS_ReliabilityMatrix& mat_Pi,
+    		std::string& retrieved_text_msg,
+    		RSSoft_generic_codeword& retrieved_message,
+    		const SourceCodec& src_codec,
+    		const std::string& match_str);
 
     /**
      * Decode one codeword based on given magnitudes for the length of one codeword. Tries to match found textual messages exactly
@@ -249,8 +247,9 @@ public:
      * \param match_message source message to match with the message
      * \return true if a matching message is found
      */
-    bool decode_match(RSSoft_generic_codeword& retrieved_message,
-        const std::vector<unsigned int>& match_message);
+    bool decode_match(rssoft::RS_ReliabilityMatrix& mat_Pi,
+    		RSSoft_generic_codeword& retrieved_message,
+    		const std::vector<unsigned int>& match_message);
 
     /**
      * Decode one codeword based on given magnitudes for the length of one codeword. Returns the first candidate showing a reliability figure above a given threshold
@@ -259,7 +258,9 @@ public:
      * \param regexp Regular expression to match with the textual message
      * \return true if a matching message is found
      */
-    bool decode(RSSoft_generic_codeword& retrieved_message, float reliability_threshold);
+    bool decode(rssoft::RS_ReliabilityMatrix& mat_Pi,
+    		RSSoft_generic_codeword& retrieved_message,
+    		float reliability_threshold);
 
     /**
      * Calculate the reliability of a codeword once the reliability matrix has been normalized
@@ -267,7 +268,8 @@ public:
      * \codeword codeword for which to calculate the reliability
      * \return codeword reliability with respect to current reliability matrix
      */
-    float calculate_reliability(const std::vector<unsigned int>& codeword);
+    float calculate_reliability(rssoft::RS_ReliabilityMatrix& mat_Pi,
+    		const std::vector<unsigned int>& codeword);
         
 protected:
     bool regexp_match(const std::string& value, const std::string& regexp) const;
@@ -286,7 +288,6 @@ protected:
     rssoft::gf::GFq gf; //!< Galois Field being used
     rssoft::EvaluationValues evaluation_values; //!< Evaluation values for RS
     rssoft::RS_Encoding rs_encoding; //!< Encoder
-    rssoft::RS_ReliabilityMatrix mat_Pi; //!< Reliability matrix
     rssoft::GSKV_Interpolation gskv; //!< Guruswami-Sudan-Koetter-Vardy interpolation engine
     rssoft::RR_Factorization rr; //!< Roth-Ruckensteil factorization engine
     rssoft::FinalEvaluation final_evaluation; //!< Evaluation engine

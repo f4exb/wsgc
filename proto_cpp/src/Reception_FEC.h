@@ -19,34 +19,44 @@
 
      Static not real time prototype in C++
       
-     LocalCodes
-      
-     Creates a local copy of all symbols gold codes in the time domain 
-     i.e. complex cojugate of the code modulated samples
-     Used for plain time domain correlation
-     
+     Reception class specialized in FEC processing
 */
-#include "LocalCodes.h"
-#include "GoldCodeGenerator.h"
-#include "CodeModulator.h"
-#include <string.h>
-#include <assert.h>
+#ifndef __RECEPTION_FEC_H__
+#define __RECEPTION_FEC_H__
 
-LocalCodes::LocalCodes(
-			CodeModulator& code_modulator,
-			const GoldCodeGenerator& gc_generator,
-			wsgc_float f_sampling,
-			wsgc_float f_chip,
-			std::vector<unsigned int>& symbols) :
-	_code_modulator(code_modulator),
-	_gc_generator(gc_generator),
-	_f_sampling(f_sampling),
-	_f_chip(f_chip),
-	_nb_code_samples(gc_generator.get_nb_code_samples(f_sampling,f_chip)),
-	_symbols(symbols)
-{
-}
+class Options;
 
-LocalCodes::~LocalCodes()
+#ifdef _RSSOFT
+namespace rssoft
 {
+class RS_ReliabilityMatrix;
 }
+#endif
+
+#ifdef _CCSOFT
+namespace ccsoft
+{
+class CC_ReliabilityMatrix;
+}
+#endif
+
+
+class Reception_FEC
+{
+public:
+    Reception_FEC(Options& _options);
+    ~Reception_FEC();
+
+protected:
+    Options& options;
+
+#ifdef _RSSOFT
+    void run_rssoft_decoding(rssoft::RS_ReliabilityMatrix *relmat);
+#endif
+
+#ifdef _CCSOFT
+    void run_ccsoft_decoding(ccsoft::CC_ReliabilityMatrix *relmat);
+#endif
+};
+
+#endif // __RECEPTION_FEC_H__

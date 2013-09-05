@@ -55,7 +55,7 @@ public:
 	*/
 	LocalCodesFFT_Host(
 			CodeModulator& code_modulator,
-			GoldCodeGenerator& gc_generator,
+			const GoldCodeGenerator& gc_generator,
 			wsgc_float f_sampling,
 			wsgc_float f_chip,
 			std::vector<unsigned int>& symbols);

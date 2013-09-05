@@ -9,6 +9,7 @@
 #include "Options.h"
 #include "GoldCodeGenerator.h"
 #include "Transmission.h"
+#include "Reception.h"
 #include "WsgcUtils.h"
 #include "Demodulator.h"
 #include "DemodulatorDifferential.h"
@@ -46,25 +47,8 @@ int main(int argc, char *argv[])
             // demodulate OOK
             if (options.simulate_demod)
             {
-            	Demodulator *demodulator;
-
-            	if (options.modulation.getScheme() == Modulation::Modulation_OOK)
-				{
-					demodulator = new DemodulatorSquaring();
-					std::cout << "Simulate AM power detection" << std::endl;
-				}
-				else if (options.modulation.isDifferential())
-				{
-					unsigned int int_samples_per_chip = ((wsgc_float) fft_N) /  gc_generator.get_code_length();
-					static const wsgc_complex c_zero(0.0, 0.0);
-
-					demodulator = new DemodulatorDifferential(int_samples_per_chip);
-				    ((DemodulatorDifferential *) demodulator)->set_value_at_origin(c_zero);
-				}
-
-			    demodulator->demodulate_in_place(faded_source_samples, nb_faded_source_samples);
-
-			    delete demodulator;
+                Reception reception(options, gc_generator);
+                reception.demodulate_before_correlate(faded_source_samples, nb_faded_source_samples);
             }
         
             // Write out samples

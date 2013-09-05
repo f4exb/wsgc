@@ -31,10 +31,18 @@
 
 class SourceCodec;
 
+namespace rssoft
+{
+	class RS_ReliabilityMatrix;
+}
+
 class RSSoft_DecisionBox
 {
 public:
-    RSSoft_DecisionBox(RSSoft_Engine& _rssoft_engine, const SourceCodec *_source_codec);
+    RSSoft_DecisionBox(RSSoft_Engine& _rssoft_engine,
+    		const SourceCodec *_source_codec,
+    		rssoft::RS_ReliabilityMatrix& _rs_relmat);
+
     ~RSSoft_DecisionBox();
     
     void run(RSSoft_Engine_defs::RSSoft_decoding_mode rs_decoding_mode);
@@ -57,6 +65,7 @@ protected:
 
     RSSoft_Engine& rssoft_engine;
     const SourceCodec *source_codec;
+    rssoft::RS_ReliabilityMatrix& rs_relmat;
     std::vector<RSSoft_generic_codeword> candidate_messages;
 };
 

@@ -50,7 +50,7 @@
 
 
 SinglePrnCorrelator_FreqDep_Cuda::SinglePrnCorrelator_FreqDep_Cuda(
-		GoldCodeGenerator& gc_generator,
+		const GoldCodeGenerator& gc_generator,
 		CodeModulator& code_modulator,
 		wsgc_float f_sampling,
 		wsgc_float f_chip,

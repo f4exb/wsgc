@@ -73,6 +73,7 @@
 //#include "FIR_RCoef.h"
 //#include "FIRCoefGenerator.h"
 #include "Transmission.h"
+#include "Reception_WSGC.h"
 #include "UnpilotedMultiplePrnCorrelator.h"
 #include "UnpilotedMultiplePrnCorrelator_Host.h"
 #include "UnpilotedTrainingMessageCorrelator.h"
@@ -102,8 +103,8 @@
 void message_processing(
 #ifdef _CUDA
     CudaManager& cuda_manager,
-#endif    
-    Options& options, 
+#endif
+    Options& options,
     GoldCodeGenerator& gc_generator,
     CodeModulator *localCodeModulator,
     wsgc_complex *faded_source_samples,
@@ -113,8 +114,8 @@ void message_processing(
 void training_processing(
 #ifdef _CUDA
     CudaManager& cuda_manager,
-#endif    
-    Options& options, 
+#endif
+    Options& options,
     GoldCodeGenerator& gc_generator,
     CodeModulator *localCodeModulator,
     wsgc_complex *faded_source_samples,
@@ -138,7 +139,7 @@ void generate_message_prn_list(std::vector<unsigned int>& prn_list, GoldCodeGene
 void generate_pilot_prn_list(std::vector<unsigned int>& prn_list, GoldCodeGenerator& gc_generator, unsigned int pilot_prni);
 
 #ifdef _RSSOFT
-void run_rssoft_decoding(Options& options, RSSoft_Engine& rssoft_engine);
+void run_rssoft_decoding(Options& options, RSSoft_Engine& rssoft_engine, rssoft::RS_ReliabilityMatrix& relmat);
 #endif
 
 #ifdef _CCSOFT
@@ -194,33 +195,6 @@ int main(int argc, char *argv[])
 
         if (faded_source_samples)
         {
-            // demodulate OOK
-            if (options.modulation.demodulateBeforeCorrelate())
-            {
-                Demodulator *demodulator = 0;
-
-            	if (options.modulation.getScheme() == Modulation::Modulation_OOK)
-				{
-					demodulator = new DemodulatorSquaring();
-					std::cout << "Simulate AM power detection" << std::endl;
-				}
-				else if (options.modulation.isDifferential())
-				{
-					unsigned int int_samples_per_chip = ((wsgc_float) fft_N) /  gc_generator.get_code_length();
-					static const wsgc_complex c_zero(0.0, 0.0);
-
-					demodulator = new DemodulatorDifferential(int_samples_per_chip);
-				    ((DemodulatorDifferential *) demodulator)->set_value_at_origin(c_zero);
-				}
-
-			    demodulator->demodulate_in_place(faded_source_samples, nb_faded_source_samples);
-
-	            if (demodulator)
-	            {
-	                delete demodulator;
-	            }
-            }
-
             if (options.transmission_scheme == Options::OptionTrans_MFSK)
             {
                 std::cout << "message_processing_MFSK" << std::endl;
@@ -233,11 +207,50 @@ int main(int argc, char *argv[])
 				nb_faded_source_samples
 				);
             }
+            else if (options.transmission_scheme == Options::OptionTrans_WSGC)
+            {
+                Reception_WSGC reception_WSGC(options, gc_generator);
+
+                if (options.simulate_training)
+                {
+                    reception_WSGC.training_processing(faded_source_samples, nb_faded_source_samples);
+                }
+                else
+                {
+                    reception_WSGC.message_processing(faded_source_samples, nb_faded_source_samples);
+                }
+            }
             else
             {
+                if (options.modulation.demodulateBeforeCorrelate())
+                {
+                    Demodulator *demodulator = 0;
+
+                    if (options.modulation.getScheme() == Modulation::Modulation_OOK)
+                    {
+                        demodulator = new DemodulatorSquaring();
+                        std::cout << "Simulate AM power detection" << std::endl;
+                    }
+                    else if (options.modulation.isDifferential())
+                    {
+                        unsigned int int_samples_per_chip = ((wsgc_float) fft_N) /  gc_generator.get_code_length();
+                        static const wsgc_complex c_zero(0.0, 0.0);
+
+                        demodulator = new DemodulatorDifferential(int_samples_per_chip);
+                        ((DemodulatorDifferential *) demodulator)->set_value_at_origin(c_zero);
+                    }
+
+                    demodulator->demodulate_in_place(faded_source_samples, nb_faded_source_samples);
+
+                    if (demodulator)
+                    {
+                        delete demodulator;
+                    }
+                }
+
                 CodeModulator *localCodeModulator = 0;
-                
-                if (options.modulation.getScheme() == Modulation::Modulation_BPSK) 
+
+                if (options.modulation.getScheme() == Modulation::Modulation_BPSK)
                 {
                     localCodeModulator = new CodeModulator_BPSK();
                 }
@@ -279,7 +292,7 @@ int main(int argc, char *argv[])
                         nb_faded_source_samples
                         );
                     }
-                    
+
                     delete localCodeModulator;
                 }
                 else
@@ -307,8 +320,8 @@ int main(int argc, char *argv[])
 void message_processing(
 #ifdef _CUDA
     CudaManager& cuda_manager,
-#endif    
-    Options& options, 
+#endif
+    Options& options,
     GoldCodeGenerator& gc_generator,
     CodeModulator *localCodeModulator,
     wsgc_complex *faded_source_samples,
@@ -333,8 +346,9 @@ void message_processing(
     //UnpilotedMultiplePrnCorrelator *unpiloted_mprn_correlator = 0;
     UnpilotedMultiplePrnCorrelator *dm_correlator = 0;
     unsigned int fft_N = gc_generator.get_nb_code_samples(options.f_sampling, options.f_chip);
-    
+
 #ifdef _RSSOFT
+    rssoft::RS_ReliabilityMatrix rs_relmat(options.rs_logq, (1<<options.rs_logq) - 1);
 #ifdef _CUDA
     RSSoft_ReliabilityMatrixCuda *rssoft_reliability_matrix_cuda = 0;
 #endif
@@ -352,7 +366,7 @@ void message_processing(
 
     std::vector<unsigned int> message_prn_numbers;
     std::vector<unsigned int> pilot_prn_numbers;
-    
+
     generate_message_prn_list(message_prn_numbers, gc_generator);
     generate_pilot_prn_list(pilot_prn_numbers, gc_generator, 1);
 
@@ -375,7 +389,7 @@ void message_processing(
                 pilot_correlator = new PilotCorrelator_Cuda(gc_generator, *localCodeModulator, options.f_sampling, options.f_chip, pilot_prn_numbers, cuda_device, options.nb_prns_per_symbol, options.df_steps, options.batch_size, options.f_step_division);
                 message_correlator = new PilotedMessageCorrelator_Cuda(*((LocalCodes_Cuda *) local_codes), options.f_sampling, options.f_chip, options.nb_prns_per_symbol, cuda_device);
 #ifdef _RSSOFT
-                // If Reed-Solomon is active, allocate and set RSSoft cuda reliability matrix 
+                // If Reed-Solomon is active, allocate and set RSSoft cuda reliability matrix
                 if (options.fec_scheme == Options::OptionFEC_RSSoft)
                 {
                     rssoft_reliability_matrix_cuda = new RSSoft_ReliabilityMatrixCuda(options.rs_logq, (1<<options.rs_logq)-1);
@@ -395,7 +409,7 @@ void message_processing(
             message_correlator = new PilotedMessageCorrelator_Host(*((LocalCodes_Host *) local_codes), options.f_sampling, options.f_chip, options.nb_prns_per_symbol);
 #endif
             prn_autocorrelator = new PrnAutocorrelator_Host(fft_N, options.nb_prns_per_symbol);
-            piloted_mprn_correlator = new PilotedMultiplePrnCorrelator(*pilot_correlation_analyzer, correlation_records, *pilot_correlator, *message_correlator, *prn_autocorrelator);
+            piloted_mprn_correlator = new PilotedMultiplePrnCorrelator(*pilot_correlation_analyzer, correlation_records, *pilot_correlator, *message_correlator);
         }
     }
     else
@@ -411,7 +425,7 @@ void message_processing(
         		options.nb_prns_per_symbol,
         		message_prn_numbers,
                 options.batch_size, // will be taken as number of symbols
-        		options.analysis_window_size, 
+        		options.analysis_window_size,
         		correlation_records,
         		*((LocalCodesFFT_Host *) local_codes_fft));
     }
@@ -422,11 +436,11 @@ void message_processing(
     wsgc_complex *signal_samples;
 
     clock_gettime(time_option, &time1);
-    
+
     // Support pipeline processing if necessary (with pilot assisted correlation using CUDA)
-    bool input_samples_available = false;           // input samples (length of one PRN) are available for processing  
+    bool input_samples_available = false;           // input samples (length of one PRN) are available for processing
     bool process_next_output = false;
-    
+
     SampleSequencer sample_sequencer(faded_source_samples, nb_faded_source_samples, fft_N);
     unsigned int prn_i = 0;
 
@@ -434,9 +448,9 @@ void message_processing(
     {
         if (piloted_mprn_correlator != 0) // Correlation with pilot PRN(s) - pipelined processing
         {
-            //std::cout << "Correlation with pilot PRN(s) - new correlator with pilot(s), PRNi=" << piloted_mprn_correlator->get_prn_index() 
+            //std::cout << "Correlation with pilot PRN(s) - new correlator with pilot(s), PRNi=" << piloted_mprn_correlator->get_prn_index()
             //          << ", CORRi=" << piloted_mprn_correlator->get_correlation_index() << std::endl;
-        
+
             if (input_samples_available) // process input
             {
                 // Use PilotedMultiplePrnCorrelator specialized class that encompasses pilot and message correlators and eventually produces correlation records usable directly in the Decision Box
@@ -455,10 +469,10 @@ void message_processing(
         }
         // else just do nothing as there are no other options
     }
-    
+
     clock_gettime(time_option, &time2);
     std::cout << "Message correlation time: " << std::setw(12) << std::setprecision(9) << WsgcUtils::get_time_difference(time2,time1) << " s" << std::endl << std::endl;
-    
+
     /*
     // Dump timing data
     if (pilot_correlation_analyzer != 0)
@@ -497,7 +511,7 @@ void message_processing(
         corr_os << std::endl << "--- correlation records:" << std::endl;
         pilot_correlation_analyzer->dump_message_correlation_records(corr_os);
         std::cout << corr_os.str() << std::endl;
-        
+
         if (options.modulation.isCodeDivisionCapable() && (options.nb_pilot_prns > 0))
         {
 #ifdef _RSSOFT
@@ -506,16 +520,16 @@ void message_processing(
 #ifdef _CUDA
                 if (rssoft_reliability_matrix_cuda)
                 {
-                    rssoft_reliability_matrix_cuda->copy_to_host(rssoft_engine->get_reliability_matrix()); // move reliability data from device to host
+                    rssoft_reliability_matrix_cuda->copy_to_host(rs_relmat); // move reliability data from device to host
                 }
-#endif         
-                run_rssoft_decoding(options, *rssoft_engine); // Do RSSoft decoding with RSSoft decision box
+#endif
+                run_rssoft_decoding(options, *rssoft_engine, rs_relmat); // Do RSSoft decoding with RSSoft decision box
             }
             else
             {
                 decision_box = new DecisionBox_Piloted_And_Synced(options.nb_prns_per_symbol, fft_N, options.decision_thresholds, *pilot_correlation_analyzer);
             }
-#else        
+#else
             decision_box = new DecisionBox_Piloted_And_Synced(options.nb_prns_per_symbol, fft_N, options.decision_thresholds, *pilot_correlation_analyzer);
 #endif
         }
@@ -530,7 +544,7 @@ void message_processing(
     	dm_correlator->dump_time_analyzer_results(corr_os);
         corr_os << std::endl;
         std::cout << corr_os.str() << std::endl;
-        
+
         decision_box = new DecisionBox_Unpiloted_And_Synced(options.nb_prns_per_symbol, fft_N, options.decision_thresholds, correlation_records);
         decision_box->set_mag_display_adj_factor(fft_N);
     }
@@ -563,7 +577,7 @@ void message_processing(
             {
                 symbol_indices.push_back(i);
             }
-            
+
             std::ostringstream os_result;
             os_result << std::endl;
             options.decision_thresholds.print_options(os_result);
@@ -607,7 +621,7 @@ void message_processing(
         delete decision_box;
     }
 
-    
+
 #if _RSSOFT
 #if _CUDA
     if (rssoft_reliability_matrix_cuda)
@@ -615,12 +629,12 @@ void message_processing(
         delete rssoft_reliability_matrix_cuda;
     }
 #endif
-#endif    
+#endif
     if (piloted_mprn_correlator)
     {
         delete piloted_mprn_correlator;
     }
-    
+
     if (prn_autocorrelator)
     {
         delete prn_autocorrelator;
@@ -645,7 +659,7 @@ void message_processing(
     {
         delete local_codes;
     }
-    
+
     if (pilot_correlation_analyzer)
     {
         delete pilot_correlation_analyzer;
@@ -658,8 +672,8 @@ void message_processing(
 void training_processing(
 #ifdef _CUDA
     CudaManager& cuda_manager,
-#endif    
-    Options& options, 
+#endif
+    Options& options,
     GoldCodeGenerator& gc_generator,
     CodeModulator *localCodeModulator,
     wsgc_complex *faded_source_samples,
@@ -675,9 +689,9 @@ void training_processing(
     PilotCorrelator *pilot_correlator = 0;
     PilotedTrainingMessageCorrelator *tr_message_correlator = 0;
     unsigned int fft_N = gc_generator.get_nb_code_samples(options.f_sampling, options.f_chip);
-    
-    
-    
+
+
+
     // - Modulation should support code division
     // - Modulation processing should be frequency dependant
     // - There should be at least 2 pilot PRN(s) - using second
@@ -690,7 +704,7 @@ void training_processing(
         generate_training_prn_list(training_prn_numbers, gc_generator);
 
         std::cout << "Creating managing objects..." << std::endl;
-        pilot_correlation_analyzer = new PilotCorrelationAnalyzer(options.analysis_window_size, options.nb_prns_per_symbol, options.nb_samples_per_code);    
+        pilot_correlation_analyzer = new PilotCorrelationAnalyzer(options.analysis_window_size, options.nb_prns_per_symbol, options.nb_samples_per_code);
 #ifdef _CUDA
         if (options.use_cuda)
         {
@@ -713,7 +727,7 @@ void training_processing(
         tr_message_correlator = new PilotedTrainingMessageCorrelator_Host(*((LocalCodes_Host *) local_codes), options.f_sampling, options.f_chip, options.nb_random_prns);
 #endif
         piloted_tr_mprn_correlator = new PilotedTrainingMultiplePrnCorrelator(*pilot_correlation_analyzer, *pilot_correlator, *tr_message_correlator);
-        
+
         // Do the correlation
         std::cout << "Do the correlation..." << std::endl;
         wsgc_complex *signal_samples;
@@ -721,7 +735,7 @@ void training_processing(
         unsigned int prn_i = 0;
 
         clock_gettime(time_option, &time1);
-        
+
         while (sample_sequencer.get_next_code_samples(&signal_samples)) // pseudo real time loop, one PRN length at a time
         {
             if (piloted_tr_mprn_correlator != 0) // Correlation with pilot PRN(s) - pipelined processing
@@ -730,7 +744,7 @@ void training_processing(
                 piloted_tr_mprn_correlator->make_correlation(0); // use the only pilot (code index 0)
             }
         }
-        
+
         clock_gettime(time_option, &time2);
         std::cout << "Training sequence correlation time: " << std::setw(12) << std::setprecision(9) << WsgcUtils::get_time_difference(time2,time1) << " s" << std::endl << std::endl;
 
@@ -747,9 +761,9 @@ void training_processing(
         pilot_correlation_analyzer->dump_training_correlation_records(corr_os);
 
         std::cout << corr_os.str() << std::endl;
-        
+
         // TODO: conclude on the message epoch
-    }    
+    }
     else if (options.modulation.demodulateBeforeCorrelate())
     {
     	LocalCodesFFT *local_codes_fft = 0;
@@ -810,27 +824,27 @@ void training_processing(
     {
         std::cout << "Synchronization training is not implemented under these conditions" << std::endl;
     }
-    
+
     if (piloted_tr_mprn_correlator)
     {
         delete piloted_tr_mprn_correlator;
     }
-    
+
     if (tr_message_correlator)
     {
         delete tr_message_correlator;
     }
-    
+
     if (pilot_correlator)
     {
         delete pilot_correlator;
     }
-    
+
     if (local_codes)
     {
         delete local_codes;
     }
-    
+
     if (pilot_correlation_analyzer)
     {
         delete pilot_correlation_analyzer;
@@ -865,6 +879,8 @@ void message_processing_MFSK(
 	if (options.fec_scheme == Options::OptionFEC_RSSoft)
 	{
 #ifdef _RSSOFT
+        rssoft::RS_ReliabilityMatrix rs_relmat(options.rs_logq, (1<<options.rs_logq) - 1);
+
 	    RSSoft_Engine rssoft_engine(options.rs_logq, options.rs_k);
 	    rssoft_engine.set_initial_global_multiplicity(options.rs_init_M);
 	    rssoft_engine.set_nb_retries(options.rs_r);
@@ -875,13 +891,13 @@ void message_processing_MFSK(
 
 	    while (sample_sequencer.get_next_code_samples(&signal_samples)) // pseudo real time loop, one PRN length at a time
 	    {
-	        mfsk_message_demodulator->execute(signal_samples, rssoft_engine.get_reliability_matrix());
+	        mfsk_message_demodulator->execute(signal_samples, rs_relmat);
 	    }
 
 	    clock_gettime(time_option, &time2);
 	    std::cout << "MFSK message sequence decoding time: " << std::setw(12) << std::setprecision(9) << WsgcUtils::get_time_difference(time2,time1) << " s" << std::endl << std::endl;
 
-	    run_rssoft_decoding(options, rssoft_engine);
+	    run_rssoft_decoding(options, rssoft_engine, rs_relmat);
 #else
 	    std::cout << "Program not linked with RSSoft, aborting decode" << std::endl;s
 #endif
@@ -1006,7 +1022,7 @@ void message_processing_MFSK(
 //=================================================================================================
 void generate_training_prn_list(std::vector<unsigned int>& prn_list, GoldCodeGenerator& gc_generator)
 {
-	for (unsigned int prni=0; prni < gc_generator.get_nb_message_codes(); prni++) 
+	for (unsigned int prni=0; prni < gc_generator.get_nb_message_codes(); prni++)
 	{
 		prn_list.push_back(prni);
 	}
@@ -1039,29 +1055,13 @@ void generate_pilot_prn_list(std::vector<unsigned int>& prn_list, GoldCodeGenera
     prn_list.push_back(gc_generator.get_nb_message_codes()+pilot_prni);
 }
 
-
-/*
-//=================================================================================================
-void apply_fir(wsgc_complex *inout, unsigned int& nb_samples, const std::vector<wsgc_float>& fir_coef)
-{
-	std::cout << "Apply lowpass FIR filter" << std::endl;
-
-	FIR_RCoef fir_filter(fir_coef);
-	static const wsgc_complex c_zero = (0.0, 0.0);
-
-	for (unsigned int i = 0; i<nb_samples; i++)
-	{
-		inout[i] = fir_filter.calc(inout[i]);
-	}
-}
-*/
-
-
 #ifdef _RSSOFT
 //=================================================================================================
-void run_rssoft_decoding(Options& options, RSSoft_Engine& rssoft_engine)
+void run_rssoft_decoding(Options& options,
+		RSSoft_Engine& rssoft_engine,
+		rssoft::RS_ReliabilityMatrix& relmat)
 {
-    RSSoft_DecisionBox rssoft_decision_box(rssoft_engine, options._source_codec);
+    RSSoft_DecisionBox rssoft_decision_box(rssoft_engine, options._source_codec, relmat);
 
     switch (options.rs_decoding_mode)
     {

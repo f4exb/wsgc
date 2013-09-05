@@ -921,14 +921,20 @@ void Options::print_standard_options(std::ostringstream& os)
 #ifdef _RSSOFT
     if (rs_k != 0)
     {
-    	os << "Reed Solomon (RSSoft lib) .: "; print_reed_solomon_data(os); os << std::endl;
+        os << std::endl;
+    	os << "Reed Solomon (RSSoft lib)" << std::endl; 
+        print_reed_solomon_data(os); 
+        os << std::endl;
     }
 #endif
 
 #ifdef _CCSOFT
     if (cc_k_constraints.size() > 0)
     {
-        os << "Conv. Code (CCSoft lib) ...: "; print_convolutional_code_data(os); os << std::endl;
+        os << std::endl;
+        os << "Conv. Code (CCSoft lib)" << std::endl; 
+        print_convolutional_code_data(os); 
+        os << std::endl;
     }
 #endif
 
@@ -1087,14 +1093,20 @@ void Options::print_mfsk_options(std::ostringstream& os)
 #ifdef _RSSOFT
     if (rs_k != 0)
     {
-    	os << "Reed Solomon (RSSoft lib) .: "; print_reed_solomon_data(os); os << std::endl;
+        os << std::endl;
+    	os << "Reed Solomon (RSSoft lib)" << std::endl; 
+        print_reed_solomon_data(os); 
+        os << std::endl;
     }
 #endif
 
 #ifdef _CCSOFT
     if (cc_k_constraints.size() > 0)
     {
-        os << "Conv. Code (CCSoft lib) ...: "; print_convolutional_code_data(os); os << std::endl;
+        os << std::endl;
+        os << "Conv. Code (CCSoft lib)" << std::endl; 
+        print_convolutional_code_data(os); 
+        os << std::endl;
     }
 #endif
 
@@ -1232,16 +1244,16 @@ void Options::print_reed_solomon_data(std::ostringstream& os)
 //=================================================================================================
 void Options::print_convolutional_code_data(std::ostringstream& os)
 {
-    os << "Edge metric bias ...................: " << std::setw(5) << std::setprecision(2) << cc_edge_bias << std::endl;
+    os << "Edge metric bias ..................: " << std::setw(5) << std::setprecision(2) << cc_edge_bias << std::endl;
 
     if (cc_use_node_limit)
     {
-        os << "Node number limit ..................: " << cc_node_limit << std::endl;
+        os << "Node number limit .................: " << cc_node_limit << std::endl;
     }
 
     if (cc_use_metric_limit)
     {
-        os << "Path metric number limit ...........: " << cc_metric_limit << std::endl;
+        os << "Path metric number limit ..........: " << cc_metric_limit << std::endl;
     }
 
     switch (cc_algorithm_type)
@@ -1251,10 +1263,10 @@ void Options::print_convolutional_code_data(std::ostringstream& os)
         break;
     case CCSoft_Engine_defs::Algorithm_Fano:
         os << "Using Fano algorithm" << std::endl;
-        os << "  Initial metric threshold .........: " << cc_fano_init_metric << std::endl;
-        os << "  Metric threshold delta ...........: " << cc_fano_delta_metric << std::endl;
-        os << "  Nb nodes cached ..................: " << cc_fano_tree_cache_size << std::endl;
-        os << "  Initial metric threshold delta ...: " << cc_fano_delta_init_threshold << std::endl;
+        os << "  Initial metric threshold ........: " << cc_fano_init_metric << std::endl;
+        os << "  Metric threshold delta ..........: " << cc_fano_delta_metric << std::endl;
+        os << "  Nb nodes cached .................: " << cc_fano_tree_cache_size << std::endl;
+        os << "  Initial metric threshold delta ..: " << cc_fano_delta_init_threshold << std::endl;
         break;
     default:
         os << "Unknown algorithm" << std::endl;

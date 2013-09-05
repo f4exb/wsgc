@@ -27,8 +27,12 @@
 #include "WsgcUtils.h"
 
 //=================================================================================================
-RSSoft_DecisionBox::RSSoft_DecisionBox(RSSoft_Engine& _rssoft_engine, const SourceCodec *_source_codec) :
-    rssoft_engine(_rssoft_engine), source_codec(_source_codec)
+RSSoft_DecisionBox::RSSoft_DecisionBox(RSSoft_Engine& _rssoft_engine,
+		const SourceCodec *_source_codec,
+		rssoft::RS_ReliabilityMatrix& _rs_relmat) :
+    rssoft_engine(_rssoft_engine),
+    source_codec(_source_codec),
+    rs_relmat(_rs_relmat)
 {}
 
 //=================================================================================================
@@ -156,7 +160,7 @@ void RSSoft_DecisionBox::full_scan_unique()
 {
     candidate_messages.clear();
     
-    rssoft_engine.decode(candidate_messages, true);
+    rssoft_engine.decode(rs_relmat, candidate_messages, true);
 }
 
 //=================================================================================================
@@ -164,7 +168,7 @@ void RSSoft_DecisionBox::full_scan_all()
 {
     candidate_messages.clear();
     
-    rssoft_engine.decode(candidate_messages, false);
+    rssoft_engine.decode(rs_relmat, candidate_messages, false);
 }
 
 //=================================================================================================
@@ -173,7 +177,7 @@ bool RSSoft_DecisionBox::find_first()
     RSSoft_generic_codeword unique_message;
     candidate_messages.clear();
     
-    if (rssoft_engine.decode(unique_message))
+    if (rssoft_engine.decode(rs_relmat, unique_message))
     {
         candidate_messages.push_back(unique_message);
         return true;
@@ -190,7 +194,7 @@ bool RSSoft_DecisionBox::find_first_above_reliability_threshold(float reliabilit
     RSSoft_generic_codeword unique_message;
     candidate_messages.clear();
     
-    if (rssoft_engine.decode(unique_message, reliability_threshold))
+    if (rssoft_engine.decode(rs_relmat, unique_message, reliability_threshold))
     {
         candidate_messages.push_back(unique_message);
         return true;
@@ -207,7 +211,7 @@ bool RSSoft_DecisionBox::regex_scan(std::string& decoded_text, const std::string
     RSSoft_generic_codeword unique_message;
     candidate_messages.clear();
     
-    if (rssoft_engine.decode_regex(decoded_text, unique_message, *source_codec, rs_decoding_regex))
+    if (rssoft_engine.decode_regex(rs_relmat, decoded_text, unique_message, *source_codec, rs_decoding_regex))
     {
         candidate_messages.push_back(unique_message);
         return true;
@@ -224,7 +228,7 @@ bool RSSoft_DecisionBox::match_scan(std::string& decoded_text, const std::string
     RSSoft_generic_codeword unique_message;
     candidate_messages.clear();
 
-    if (rssoft_engine.decode_match(decoded_text, unique_message, *source_codec, rs_decoding_matching_source_message))
+    if (rssoft_engine.decode_match(rs_relmat, decoded_text, unique_message, *source_codec, rs_decoding_matching_source_message))
     {
         candidate_messages.push_back(unique_message);
         return true;
@@ -241,7 +245,7 @@ bool RSSoft_DecisionBox::match_scan(const std::vector<unsigned int>& matching_co
     RSSoft_generic_codeword unique_message;
     candidate_messages.clear();
 
-    if (rssoft_engine.decode_match(unique_message, matching_codeword))
+    if (rssoft_engine.decode_match(rs_relmat, unique_message, matching_codeword))
     {
         candidate_messages.push_back(unique_message);
         return true;
@@ -304,7 +308,7 @@ void RSSoft_DecisionBox::show_message(const RSSoft_generic_codeword& message, st
 //=================================================================================================
 void RSSoft_DecisionBox::print_stats(RSSoft_Engine& rssoft_engine, const std::vector<unsigned int>& sent_message, const std::vector<unsigned int>& sent_codeword, std::ostream& os)
 {
-    float source_codeword_score = rssoft_engine.calculate_reliability(sent_codeword);
+    float source_codeword_score = rssoft_engine.calculate_reliability(rs_relmat, sent_codeword);
     
     if (candidate_messages.size() == 0) // no result found
     {

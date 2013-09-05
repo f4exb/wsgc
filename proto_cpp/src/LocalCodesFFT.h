@@ -55,7 +55,7 @@ public:
 	*/
 	LocalCodesFFT(
 		CodeModulator& code_modulator,
-		GoldCodeGenerator& gc_generator,
+		const GoldCodeGenerator& gc_generator,
 		wsgc_float f_sampling,
 		wsgc_float f_chip,
 		std::vector<unsigned int>& symbols);
@@ -92,7 +92,7 @@ public:
 
 protected:
 	CodeModulator& _code_modulator; //!< Reference to the code modulator
-	GoldCodeGenerator& _gc_generator; //!< Reference to the Gold Code generator
+	const GoldCodeGenerator& _gc_generator; //!< Reference to the Gold Code generator
 	wsgc_float _f_sampling; //!< Sampling frequency
 	wsgc_float _f_chip; //!< Chip rate
 	std::vector<unsigned int>& _symbols; //!< List of symbols to be processed

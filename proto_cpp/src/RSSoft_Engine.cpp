@@ -41,13 +41,13 @@ RSSoft_PPolys::RSSoft_PPolys()
         rssoft::gf::GF2_Element pp_gf64[7]  = {1,0,0,0,0,1,1};
         rssoft::gf::GF2_Element pp_gf128[8] = {1,0,0,0,0,0,1,1};
         rssoft::gf::GF2_Element pp_gf256[9] = {1,0,0,0,1,1,1,0,1};
-    
+
         ppolys.push_back(rssoft::gf::GF2_Polynomial(4,pp_gf8));
         ppolys.push_back(rssoft::gf::GF2_Polynomial(5,pp_gf16));
         ppolys.push_back(rssoft::gf::GF2_Polynomial(6,pp_gf32));
         ppolys.push_back(rssoft::gf::GF2_Polynomial(7,pp_gf64));
         ppolys.push_back(rssoft::gf::GF2_Polynomial(8,pp_gf128));
-        ppolys.push_back(rssoft::gf::GF2_Polynomial(9,pp_gf256));    
+        ppolys.push_back(rssoft::gf::GF2_Polynomial(9,pp_gf256));
 }
 
 
@@ -95,7 +95,6 @@ RSSoft_Engine::RSSoft_Engine(unsigned int _m, unsigned int _k) :
     gf(m, ppolys.get_ppoly(m)),
     evaluation_values(gf),
     rs_encoding(gf, k, evaluation_values),
-    mat_Pi(m,n),
     gskv(gf, k, evaluation_values),
     rr(gf, k),
     final_evaluation(gf, k, evaluation_values),
@@ -119,7 +118,9 @@ void RSSoft_Engine::encode(const std::vector<unsigned int>& in_msg, std::vector<
 
 
 //=================================================================================================
-void RSSoft_Engine::decode(std::vector<RSSoft_generic_codeword>& candidate_messages, bool unique)
+void RSSoft_Engine::decode(rssoft::RS_ReliabilityMatrix& mat_Pi,
+		std::vector<RSSoft_generic_codeword>& candidate_messages,
+		bool unique)
 {
 	mat_Pi.normalize();
 	M = init_M;
@@ -143,7 +144,7 @@ void RSSoft_Engine::decode(std::vector<RSSoft_generic_codeword>& candidate_messa
                     for (; msg_it != messages.end(); ++ msg_it) // Explore results
                     {
                         bool msg_found = false;
-                        
+
                         if (unique)
                         {
                             std::vector<RSSoft_generic_codeword>::iterator candidates_it = candidate_messages.begin();
@@ -165,7 +166,7 @@ void RSSoft_Engine::decode(std::vector<RSSoft_generic_codeword>& candidate_messa
                             }
                         }
 
-                        if (!msg_found) 
+                        if (!msg_found)
                         {
                             static RSSoft_generic_codeword tmp_codeword;
                             candidate_messages.push_back(tmp_codeword);
@@ -198,7 +199,10 @@ void RSSoft_Engine::decode(std::vector<RSSoft_generic_codeword>& candidate_messa
 
 
 //=================================================================================================
-bool RSSoft_Engine::decode(RSSoft_generic_codeword& retrieved_message, RSSoft_generic_codeword& retrieved_codeword, const RSSoft_generic_codeword& sent_message)
+bool RSSoft_Engine::decode(rssoft::RS_ReliabilityMatrix& mat_Pi,
+		RSSoft_generic_codeword& retrieved_message,
+		RSSoft_generic_codeword& retrieved_codeword,
+		const RSSoft_generic_codeword& sent_message)
 {
 	mat_Pi.normalize();
     M = init_M;
@@ -243,13 +247,14 @@ bool RSSoft_Engine::decode(RSSoft_generic_codeword& retrieved_message, RSSoft_ge
         rr.init();
         final_evaluation.init();
     } // Retry loop
-    
+
     return found;
 }
 
 
 //=================================================================================================
-bool RSSoft_Engine::decode(RSSoft_generic_codeword& first_message)
+bool RSSoft_Engine::decode(rssoft::RS_ReliabilityMatrix& mat_Pi,
+		RSSoft_generic_codeword& first_message)
 {
 	mat_Pi.normalize();
     M = init_M;
@@ -280,14 +285,15 @@ bool RSSoft_Engine::decode(RSSoft_generic_codeword& first_message)
         rr.init();
         final_evaluation.init();
     } // Retry loop
-    
+
     return false;
 }
 
 
 //=================================================================================================
-bool RSSoft_Engine::decode_regex(std::string& retrieved_text_msg,
-        RSSoft_generic_codeword& retrieved_message, 
+bool RSSoft_Engine::decode_regex(rssoft::RS_ReliabilityMatrix& mat_Pi,
+		std::string& retrieved_text_msg,
+        RSSoft_generic_codeword& retrieved_message,
         const SourceCodec& src_codec,
         const std::string& regexp)
 {
@@ -329,13 +335,14 @@ bool RSSoft_Engine::decode_regex(std::string& retrieved_text_msg,
         rr.init();
         final_evaluation.init();
     } // Retry loop
-    
+
     return found;
 }
 
 
 //=================================================================================================
-bool RSSoft_Engine::decode_match(std::string& retrieved_text_msg,
+bool RSSoft_Engine::decode_match(rssoft::RS_ReliabilityMatrix& mat_Pi,
+		std::string& retrieved_text_msg,
         RSSoft_generic_codeword& retrieved_message,
         const SourceCodec& src_codec,
         const std::string& match_str)
@@ -384,7 +391,8 @@ bool RSSoft_Engine::decode_match(std::string& retrieved_text_msg,
 
 
 //=================================================================================================
-bool RSSoft_Engine::decode_match(RSSoft_generic_codeword& retrieved_message,
+bool RSSoft_Engine::decode_match(rssoft::RS_ReliabilityMatrix& mat_Pi,
+		RSSoft_generic_codeword& retrieved_message,
         const std::vector<unsigned int>& match_message)
 {
 	mat_Pi.normalize();
@@ -430,7 +438,9 @@ bool RSSoft_Engine::decode_match(RSSoft_generic_codeword& retrieved_message,
 
 
 //=================================================================================================
-bool RSSoft_Engine::decode(RSSoft_generic_codeword& retrieved_message, float reliability_threshold)
+bool RSSoft_Engine::decode(rssoft::RS_ReliabilityMatrix& mat_Pi,
+		RSSoft_generic_codeword& retrieved_message,
+		float reliability_threshold)
 {
 	mat_Pi.normalize();
     M = init_M;
@@ -469,13 +479,14 @@ bool RSSoft_Engine::decode(RSSoft_generic_codeword& retrieved_message, float rel
         rr.init();
         final_evaluation.init();
     } // Retry loop
-    
+
     return found;
 }
 
 
 //=================================================================================================
-bool RSSoft_Engine::regexp_match(const std::string& value, const std::string& regexp) const
+bool RSSoft_Engine::regexp_match(const std::string& value,
+		const std::string& regexp) const
 {
 	try
 	{
@@ -513,7 +524,8 @@ void RSSoft_Engine::new_multiplicity()
 }
 
 //=================================================================================================
-float RSSoft_Engine::calculate_reliability(const std::vector<unsigned int>& codeword)
+float RSSoft_Engine::calculate_reliability(rssoft::RS_ReliabilityMatrix& mat_Pi,
+		const std::vector<unsigned int>& codeword)
 {
 	if (codeword.size() < n)
 	{

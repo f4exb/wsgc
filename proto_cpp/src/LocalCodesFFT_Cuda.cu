@@ -40,7 +40,7 @@
 #include <assert.h>
 
 LocalCodesFFT_Cuda::LocalCodesFFT_Cuda(CodeModulator& code_modulator, 
-            GoldCodeGenerator& gc_generator, 
+            const GoldCodeGenerator& gc_generator,
             wsgc_float f_sampling, 
             wsgc_float f_chip,
             std::vector<unsigned int>& symbols,

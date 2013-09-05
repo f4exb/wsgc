@@ -43,7 +43,6 @@ class PilotCorrelationAnalyzer;
 class CorrelationRecord;
 class PilotCorrelator;
 class PilotedMessageCorrelator;
-class PrnAutocorrelator;
 
 /**
  * \brief Correlator engine to get the correlation estimation of PRNs sent in the message using a pilot correlator and a message correlator
@@ -71,14 +70,12 @@ public:
     * \param correlation_records Reference to the (message) correlation records
     * \param pilot_correlator Reference to the pilot correlator
     * \param message_correlator Reference to the message correlator
-    * \param prn_autocorrelator Reference to the PRN autocorrelator
     */
     PilotedMultiplePrnCorrelator(
             PilotCorrelationAnalyzer& pilot_correlation_analyzer,
     		std::vector<CorrelationRecord>& correlation_records,
             PilotCorrelator& pilot_correlator, 
-            PilotedMessageCorrelator& message_correlator,
-            PrnAutocorrelator& prn_autocorrelator);
+            PilotedMessageCorrelator& message_correlator);
 
     virtual ~PilotedMultiplePrnCorrelator();
     /**
@@ -100,7 +97,6 @@ protected:
     std::vector<CorrelationRecord>& _correlation_records; //!< Reference to the message correlation records
     PilotCorrelator& _pilot_correlator; //!< Reference to the pilot correlator
     PilotedMessageCorrelator& _message_correlator; //!< Reference to the message correlator
-    PrnAutocorrelator& _prn_autocorrelator; //!< Reference to the PRN autocorrelator
 };
 
 #endif // __PILOTED_MULTIPLE_PRN_CORRELATOR_H__

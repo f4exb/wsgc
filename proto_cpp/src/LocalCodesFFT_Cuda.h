@@ -58,7 +58,7 @@ class LocalCodesFFT_Cuda : public CudaDeviceManager, public LocalCodesFFT
         * \param cuda_device CUDA GPU# on which to run
         */
         LocalCodesFFT_Cuda(CodeModulator& code_modulator, 
-            GoldCodeGenerator& gc_generator, 
+            const GoldCodeGenerator& gc_generator,
             wsgc_float f_sampling, 
             wsgc_float f_chip,
             std::vector<unsigned int>& symbols,

@@ -85,7 +85,7 @@ void test_cuda::test1()
 }
 
 
-void test_cuda::test2(wsgc_complex *message_samples, GoldCodeGenerator& gc_generator, CodeModulator_BPSK& code_modulator)
+void test_cuda::test2(wsgc_complex *message_samples, const GoldCodeGenerator& gc_generator, CodeModulator_BPSK& code_modulator)
 {
 	std::cout << "--- input:" << std::endl;
 
@@ -145,7 +145,7 @@ void test_cuda::test2(wsgc_complex *message_samples, GoldCodeGenerator& gc_gener
 }
 
 
-void test_cuda::test3(wsgc_complex *message_samples, GoldCodeGenerator& gc_generator, CodeModulator_BPSK& code_modulator)
+void test_cuda::test3(wsgc_complex *message_samples, const GoldCodeGenerator& gc_generator, CodeModulator_BPSK& code_modulator)
 {
 	SourceFFT_Cuda source_fft(_options.f_sampling, _options.f_chip, _options.fft_N, _options.freq_step_division, _options.cuda_device);
 	thrust::device_vector<cuComplex>& d_source_block = source_fft.do_fft(message_samples);
@@ -276,7 +276,7 @@ void test_cuda::test3(wsgc_complex *message_samples, GoldCodeGenerator& gc_gener
 }
 
 
-void test_cuda::test4(wsgc_complex *message_samples, GoldCodeGenerator& gc_generator, CodeModulator_BPSK& code_modulator)
+void test_cuda::test4(wsgc_complex *message_samples, const GoldCodeGenerator& gc_generator, CodeModulator_BPSK& code_modulator)
 {
 	SourceFFT_Cuda source_fft(_options.f_sampling, _options.f_chip, _options.fft_N, _options.freq_step_division, _options.cuda_device);
 	thrust::device_vector<cuComplex>& d_source_block = source_fft.do_fft(message_samples);
@@ -759,7 +759,7 @@ void test_cuda::test_ifft_averaged_range()
 }
 
 
-void test_cuda::test_simple_time_correlation(wsgc_complex *message_samples, GoldCodeGenerator& gc_generator, CodeModulator_BPSK& code_modulator)
+void test_cuda::test_simple_time_correlation(wsgc_complex *message_samples, const GoldCodeGenerator& gc_generator, CodeModulator_BPSK& code_modulator)
 {
 	thrust::device_vector<cuComplex> d_source_block(_options.fft_N);
 	thrust::device_vector<cuComplex> d_mul_block(_options.fft_N);
@@ -789,7 +789,7 @@ void test_cuda::test_simple_time_correlation(wsgc_complex *message_samples, Gold
     }
 }
 
-void test_cuda::test_multiple_time_correlation(wsgc_complex *message_samples, GoldCodeGenerator& gc_generator, CodeModulator_BPSK& code_modulator)
+void test_cuda::test_multiple_time_correlation(wsgc_complex *message_samples, const GoldCodeGenerator& gc_generator, CodeModulator_BPSK& code_modulator)
 {
 	thrust::device_vector<cuComplex> d_source_block(_options.fft_N);
 	thrust::device_vector<cuComplex> d_mul_block(_options.fft_N*_options.prn_list.size());
