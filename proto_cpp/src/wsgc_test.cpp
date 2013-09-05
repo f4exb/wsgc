@@ -31,11 +31,11 @@
 #include <cmath>
 #include "Options.h"
 #include "GoldCodeGenerator.h"
-#include "SimulatedSource.h"
+//#include "SimulatedSource.h"
 #include "CodeModulator_BPSK.h"
-#include "CodeModulator_DBPSK.h"
+//#include "CodeModulator_DBPSK.h"
 #include "CodeModulator_OOK.h"
-#include "CodeModulator_MFSK.h"
+//#include "CodeModulator_MFSK.h"
 #include "LocalCodes.h"
 #include "LocalCodes_Host.h"
 #include "WsgcUtils.h"
@@ -68,10 +68,11 @@
 #include "DecisionBox_Piloted_And_Synced.h"
 #include "DecisionBox_Unpiloted_And_Synced.h"
 #include "SampleSequencer.h"
-#include "SourceMixer.h"
-#include "FadingModel.h"
-#include "FIR_RCoef.h"
-#include "FIRCoefGenerator.h"
+//#include "SourceMixer.h"
+//#include "FadingModel.h"
+//#include "FIR_RCoef.h"
+//#include "FIRCoefGenerator.h"
+#include "Transmission.h"
 #include "UnpilotedMultiplePrnCorrelator.h"
 #include "UnpilotedMultiplePrnCorrelator_Host.h"
 #include "UnpilotedTrainingMessageCorrelator.h"
@@ -135,12 +136,13 @@ void generate_training_prn_list(std::vector<unsigned int>& prn_list, GoldCodeGen
 void generate_training_prn_list_unpiloted(std::vector<unsigned int>& prn_list, GoldCodeGenerator& gc_generator);
 void generate_message_prn_list(std::vector<unsigned int>& prn_list, GoldCodeGenerator& gc_generator);
 void generate_pilot_prn_list(std::vector<unsigned int>& prn_list, GoldCodeGenerator& gc_generator, unsigned int pilot_prni);
-void apply_fir(wsgc_complex *inout, unsigned int& nb_samples, const std::vector<wsgc_float>& fir_coef);
+
 #ifdef _RSSOFT
-void run_rssoft_decoding(Options& options);
+void run_rssoft_decoding(Options& options, RSSoft_Engine& rssoft_engine);
 #endif
+
 #ifdef _CCSOFT
-void run_ccsoft_decoding(Options& options, ccsoft::CC_ReliabilityMatrix *relmat);
+void run_ccsoft_decoding(Options& options, CCSoft_Engine& ccsoft_engine, ccsoft::CC_ReliabilityMatrix *relmat);
 #endif
 
 //=================================================================================================
@@ -183,142 +185,15 @@ int main(int argc, char *argv[])
         }
 #endif
 
-        CodeModulator *codeModulator = 0;
-        CodeModulator *localCodeModulator = 0;
-        CodeModulator_MFSK *codeModulator_MFSK = 0;
-
         unsigned int fft_N = gc_generator.get_nb_code_samples(options.f_sampling, options.f_chip);
-        
-        // Allocate appropriate objects depending on modulation options
-                                      
-        // create code modulator                                      
-        if (options.modulation.getScheme() == Modulation::Modulation_BPSK) 
+
+        Transmission transmission(options, gc_generator);
+        transmission.generate_samples();
+        wsgc_complex *faded_source_samples = transmission.get_samples();
+        unsigned int nb_faded_source_samples = transmission.get_nb_samples();
+
+        if (faded_source_samples)
         {
-            codeModulator = new CodeModulator_BPSK();
-            localCodeModulator = new CodeModulator_BPSK();
-        }
-        else if (options.modulation.getScheme() == Modulation::Modulation_OOK)
-        {
-            codeModulator = new CodeModulator_OOK();
-            //localCodeModulator = new CodeModulator_OOK_detection();
-            localCodeModulator = new CodeModulator_OOK();
-        }
-        else if (options.modulation.getScheme() == Modulation::Modulation_DBPSK)
-        {
-            codeModulator = new CodeModulator_DBPSK();
-            localCodeModulator = new CodeModulator_BPSK();
-        }
-        else if (options.modulation.getScheme() == Modulation::Modulation_MFSK)
-        {
-            codeModulator_MFSK = new CodeModulator_MFSK(
-            		options.mfsk_options._f_sampling,
-            		options.mfsk_options._zero_frequency + options.f_tx,
-            		options.mfsk_options._symbol_bandwidth,
-            		options.mfsk_options._symbol_time);
-        }
-        
-        wsgc_complex *source_samples = 0;
-        unsigned int nb_source_samples = 0;
-        SourceMixer *source_mixer = 0;
-        SimulatedSource *message_source = 0;
-        SimulatedSource *pilot_source = 0;
-
-        if (codeModulator) // if a code modulator is available then the actual signal processing can take place
-        {
-            // Produce signal samples
-            std::cout << "Produce signal samples..." << std::endl;
-
-            std::vector<unsigned int> pilot_prns;
-            
-            if (options.simulate_training)
-            {
-                // only one "PRN per symbol" for training sequence
-                message_source = new SimulatedSource(gc_generator, options.prns, options.f_sampling, options.f_chip,
-                                                     options.f_tx, options.code_shift, 1, 0.0);
-            }
-            else
-            {
-                message_source = new SimulatedSource(gc_generator, options.prns, options.f_sampling, options.f_chip,
-                                                     options.f_tx, options.code_shift, options.nb_prns_per_symbol, 0.0);
-            }
-
-            message_source->set_code_modulator(codeModulator);
-            message_source->create_samples();
-
-            if (options.modulation.isCodeDivisionCapable() && options.nb_pilot_prns > 0)
-            {
-                if (options.simulate_training)
-                {
-                    pilot_prns.assign(options.prns.size() + options.batch_size, options.pilot2);
-                    // only one "PRN per symbol" for training sequence
-                    pilot_source = new SimulatedSource(gc_generator, pilot_prns, options.f_sampling, options.f_chip,
-                                                       options.f_tx, options.code_shift, 1, 0.0);
-                }
-                else
-                {
-                    pilot_prns.assign(options.prns.size() + (options.batch_size/options.nb_prns_per_symbol), options.pilot1); 
-            	    pilot_source= new SimulatedSource(gc_generator, pilot_prns, options.f_sampling, options.f_chip,
-                                                      options.f_tx, options.code_shift, options.nb_prns_per_symbol, 0.0);
-                }
-
-            	pilot_source->set_code_modulator(codeModulator);
-            	pilot_source->create_samples();
-
-            	wsgc_float pilot_gain = pow(10.0, (options.pilot_gain_db / 10.0));
-            	source_mixer = new SourceMixer(message_source, pilot_source, pilot_gain);
-
-            	source_samples = source_mixer->get_samples();
-            	nb_source_samples = source_mixer->get_nb_samples();
-            }
-            else
-            {
-            	source_samples = message_source->get_samples();
-            	nb_source_samples = message_source->get_nb_samples();
-            }
-        }
-        else if (codeModulator_MFSK)
-        {
-        	options.prns.push_back(0); // pad with one symbol
-        	nb_source_samples = codeModulator_MFSK->get_nb_symbol_samples()*options.prns.size();
-        	source_samples = (wsgc_complex *) WSGC_FFTW_MALLOC(nb_source_samples*sizeof(wsgc_fftw_complex));
-        	codeModulator_MFSK->modulate(reinterpret_cast<wsgc_fftw_complex*>(source_samples), options.prns);
-        }
-
-        if (source_samples)
-        {
-            // Apply lowpass filter if any
-            if (options._fir_coef_generator != 0)
-            {
-            	std::cout << "Apply Lowpass FIR" << std::endl;
-            	apply_fir(source_samples, nb_source_samples, options._fir_coef_generator->get_coefs());
-            }
-
-            // get fading model
-            FadingModel *fading = options._fading_model;
-            wsgc_complex *faded_source_samples;
-            unsigned int nb_faded_source_samples; // fading may add delay hence there could be more samples after the fading process
-            
-            // apply fading
-            if (fading->is_fading_active())
-            {
-            	std::cout << "Apply fading" << std::endl;
-                nb_faded_source_samples = fading->get_output_size(nb_source_samples);
-                faded_source_samples = (wsgc_complex *) WSGC_FFTW_MALLOC(nb_faded_source_samples*sizeof(wsgc_fftw_complex));
-                fading->apply_fading(source_samples, faded_source_samples, nb_source_samples);
-            }
-            else
-            {
-                faded_source_samples = source_samples;
-                nb_faded_source_samples = nb_source_samples;
-            }
-            
-            // apply AWGN
-            if (options.make_noise)
-            {
-            	std::cout << "Apply AWGN" << std::endl;
-                fading->apply_awgn(faded_source_samples, nb_faded_source_samples, options.code_shift, options.snr);
-            }
-
             // demodulate OOK
             if (options.modulation.demodulateBeforeCorrelate())
             {
@@ -346,7 +221,7 @@ int main(int argc, char *argv[])
 	            }
             }
 
-            if (codeModulator_MFSK)
+            if (options.transmission_scheme == Options::OptionTrans_MFSK)
             {
                 std::cout << "message_processing_MFSK" << std::endl;
 				message_processing_MFSK(
@@ -360,63 +235,62 @@ int main(int argc, char *argv[])
             }
             else
             {
-				// Implement correlator(s)
-				if (options.simulate_training)
-				{
-					training_processing(
-	#ifdef _CUDA
-						cuda_manager,
-	#endif
-						options,
-						gc_generator,
-						localCodeModulator,
-						faded_source_samples,
-						nb_faded_source_samples
-						);
-				}
-				else
-				{
-					message_processing(
-	#ifdef _CUDA
-					cuda_manager,
-	#endif
-					options,
-					gc_generator,
-					localCodeModulator,
-					faded_source_samples,
-					nb_faded_source_samples
-					);
-				}
-            }
-            
-            if (source_mixer)
-            {
-                delete source_mixer;
-            }
+                CodeModulator *localCodeModulator = 0;
+                
+                if (options.modulation.getScheme() == Modulation::Modulation_BPSK) 
+                {
+                    localCodeModulator = new CodeModulator_BPSK();
+                }
+                else if (options.modulation.getScheme() == Modulation::Modulation_OOK)
+                {
+                    localCodeModulator = new CodeModulator_OOK();
+                }
+                else if (options.modulation.getScheme() == Modulation::Modulation_DBPSK)
+                {
+                    localCodeModulator = new CodeModulator_BPSK();
+                }
 
-            if (pilot_source)
-            {
-                delete pilot_source;
-            }
-
-            if (message_source)
-            {
-                delete message_source;
+                if (localCodeModulator)
+                {
+                    // Implement correlator(s)
+                    if (options.simulate_training)
+                    {
+                        training_processing(
+        #ifdef _CUDA
+                            cuda_manager,
+        #endif
+                            options,
+                            gc_generator,
+                            localCodeModulator,
+                            faded_source_samples,
+                            nb_faded_source_samples
+                            );
+                    }
+                    else
+                    {
+                        message_processing(
+        #ifdef _CUDA
+                        cuda_manager,
+        #endif
+                        options,
+                        gc_generator,
+                        localCodeModulator,
+                        faded_source_samples,
+                        nb_faded_source_samples
+                        );
+                    }
+                    
+                    delete localCodeModulator;
+                }
+                else
+                {
+                    std::cout << "Local code modulator not implemented for this modulation scheme" << std::endl;
+                }
             }
         }
         else
         {
             std::cout << "Code modulator not implemented for this modulation scheme" << std::endl;
-        }
-          
-        if (localCodeModulator)
-        {
-            delete localCodeModulator;
-        }
-          
-        if (codeModulator)
-        {
-            delete codeModulator;
         }
 
         return 0;
@@ -451,11 +325,6 @@ void message_processing(
     const std::map<unsigned int, unsigned int> *prn_shift_occurences = 0;
     PilotCorrelator *pilot_correlator = 0;
     PilotedMessageCorrelator *message_correlator = 0;
-#ifdef _RSSOFT
-#ifdef _CUDA
-    RSSoft_ReliabilityMatrixCuda *rssoft_reliability_matrix_cuda = 0;
-#endif
-#endif    
     PrnAutocorrelator *prn_autocorrelator = 0;
     DecisionBox *decision_box = 0;
     std::vector<CorrelationRecord> correlation_records;
@@ -465,6 +334,22 @@ void message_processing(
     UnpilotedMultiplePrnCorrelator *dm_correlator = 0;
     unsigned int fft_N = gc_generator.get_nb_code_samples(options.f_sampling, options.f_chip);
     
+#ifdef _RSSOFT
+#ifdef _CUDA
+    RSSoft_ReliabilityMatrixCuda *rssoft_reliability_matrix_cuda = 0;
+#endif
+    RSSoft_Engine *rssoft_engine = 0;
+
+    if (options.fec_scheme == Options::OptionFEC_RSSoft)
+    {
+        rssoft_engine = new RSSoft_Engine(options.rs_logq, options.rs_k);
+        rssoft_engine->set_initial_global_multiplicity(options.rs_init_M);
+        rssoft_engine->set_nb_retries(options.rs_r);
+        rssoft_engine->set_retry_base_increment(options.rs_inc);
+        rssoft_engine->set_retry_mm_strategy(options.rs_inc_strategy);
+    }
+#endif
+
     std::vector<unsigned int> message_prn_numbers;
     std::vector<unsigned int> pilot_prn_numbers;
     
@@ -491,7 +376,7 @@ void message_processing(
                 message_correlator = new PilotedMessageCorrelator_Cuda(*((LocalCodes_Cuda *) local_codes), options.f_sampling, options.f_chip, options.nb_prns_per_symbol, cuda_device);
 #ifdef _RSSOFT
                 // If Reed-Solomon is active, allocate and set RSSoft cuda reliability matrix 
-                if (options._rssoft_engine)
+                if (options.fec_scheme == Options::OptionFEC_RSSoft)
                 {
                     rssoft_reliability_matrix_cuda = new RSSoft_ReliabilityMatrixCuda(options.rs_logq, (1<<options.rs_logq)-1);
                     ((PilotedMessageCorrelator_Cuda *)message_correlator)->set_reliability_matrix_cuda(rssoft_reliability_matrix_cuda);
@@ -616,15 +501,15 @@ void message_processing(
         if (options.modulation.isCodeDivisionCapable() && (options.nb_pilot_prns > 0))
         {
 #ifdef _RSSOFT
-            if (options._rssoft_engine)
+            if (options.fec_scheme == Options::OptionFEC_RSSoft)
             {
 #ifdef _CUDA
                 if (rssoft_reliability_matrix_cuda)
                 {
-                    rssoft_reliability_matrix_cuda->copy_to_host(options._rssoft_engine->get_reliability_matrix()); // move reliability data from device to host
+                    rssoft_reliability_matrix_cuda->copy_to_host(rssoft_engine->get_reliability_matrix()); // move reliability data from device to host
                 }
 #endif         
-                run_rssoft_decoding(options); // Do RSSoft decoding with RSSoft decision box
+                run_rssoft_decoding(options, *rssoft_engine); // Do RSSoft decoding with RSSoft decision box
             }
             else
             {
@@ -977,63 +862,94 @@ void message_processing_MFSK(
 
 	wsgc_complex *signal_samples;
 
-	bool run_rssoft = false;
-	bool run_ccsoft = false;
-
-#ifdef _RSSOFT
-	run_rssoft = (options._rssoft_engine != 0);
-#endif
-
-#ifdef _CCSOFT
-    run_ccsoft = (options.ccsoft_engine != 0);
-	ccsoft::CC_ReliabilityMatrix *cc_relmat = 0;
-
-	if (options.ccsoft_engine)
+	if (options.fec_scheme == Options::OptionFEC_RSSoft)
 	{
-	    cc_relmat = new ccsoft::CC_ReliabilityMatrix(1<<options.ccsoft_engine->get_n(), options.prns.size()-1);
+#ifdef _RSSOFT
+	    RSSoft_Engine rssoft_engine(options.rs_logq, options.rs_k);
+	    rssoft_engine.set_initial_global_multiplicity(options.rs_init_M);
+	    rssoft_engine.set_nb_retries(options.rs_r);
+	    rssoft_engine.set_retry_base_increment(options.rs_inc);
+	    rssoft_engine.set_retry_mm_strategy(options.rs_inc_strategy);
+
+	    clock_gettime(time_option, &time1);
+
+	    while (sample_sequencer.get_next_code_samples(&signal_samples)) // pseudo real time loop, one PRN length at a time
+	    {
+	        mfsk_message_demodulator->execute(signal_samples, rssoft_engine.get_reliability_matrix());
+	    }
+
+	    clock_gettime(time_option, &time2);
+	    std::cout << "MFSK message sequence decoding time: " << std::setw(12) << std::setprecision(9) << WsgcUtils::get_time_difference(time2,time1) << " s" << std::endl << std::endl;
+
+	    run_rssoft_decoding(options, rssoft_engine);
+#else
+	    std::cout << "Program not linked with RSSoft, aborting decode" << std::endl;s
+#endif
 	}
-#endif
-
-    clock_gettime(time_option, &time1);
-
-    while (sample_sequencer.get_next_code_samples(&signal_samples)) // pseudo real time loop, one PRN length at a time
-    {
-        if (run_rssoft)
-        {
-#ifdef _RSSOFT
-            mfsk_message_demodulator->execute(signal_samples, options._rssoft_engine->get_reliability_matrix());
-#endif
-        }
-        else if (run_ccsoft)
-        {
+	else if (options.fec_scheme == Options::OptionFEC_CCSoft)
+	{
 #ifdef _CCSOFT
+	    CCSoft_Engine ccsoft_engine(options.cc_k_constraints, options.cc_generator_polys);
+
+	    switch (options.cc_algorithm_type)
+	    {
+	    case CCSoft_Engine_defs::Algorithm_Stack:
+	        ccsoft_engine.init_decoding_stack(options.cc_edge_bias);
+	        break;
+	    case CCSoft_Engine_defs::Algorithm_Fano:
+	        ccsoft_engine.init_decoding_fano(options.cc_edge_bias, options.cc_fano_init_metric, options.cc_fano_delta_metric, options.cc_fano_tree_cache_size, options.cc_fano_delta_init_threshold);
+	        break;
+	    default:
+	        std::cout << "Unrecognised convolutional coding decoding algorithm" << std::endl;
+	        return;
+	    }
+
+	    if (options.cc_use_node_limit)
+	    {
+	        ccsoft_engine.set_node_limit(options.cc_node_limit);
+	    }
+
+	    if (options.cc_use_metric_limit)
+	    {
+	        ccsoft_engine.set_metric_limit(options.cc_metric_limit);
+	    }
+
+	    if (1<<(ccsoft_engine.get_k()) != options.nb_message_symbols)
+	    {
+	        std::cout << "Invalid size of symbols alphabet (" << options.nb_message_symbols << ") for a (n,k,m) CC code with k = " << ccsoft_engine.get_k() << std::endl;
+	        return;
+	    }
+
+	    ccsoft::CC_ReliabilityMatrix *cc_relmat = new ccsoft::CC_ReliabilityMatrix(1<<ccsoft_engine.get_n(), options.prns.size()-1);
+
+        clock_gettime(time_option, &time1);
+
+        while (sample_sequencer.get_next_code_samples(&signal_samples)) // pseudo real time loop, one PRN length at a time
+        {
             mfsk_message_demodulator->execute(signal_samples, cc_relmat);
-#endif
         }
-        else
-        {
-            mfsk_message_demodulator->execute(signal_samples);
-        }
-    }
 
-    clock_gettime(time_option, &time2);
-    std::cout << "MFSK message sequence decoding time: " << std::setw(12) << std::setprecision(9) << WsgcUtils::get_time_difference(time2,time1) << " s" << std::endl << std::endl;
-    
-    if (run_rssoft)
-    {
-#ifdef _RSSOFT
-        run_rssoft_decoding(options);
-#endif
-    }
-    else if (run_ccsoft)
-    {
-#ifdef _CCSOFT
-    	run_ccsoft_decoding(options, cc_relmat);
+        clock_gettime(time_option, &time2);
+        std::cout << "MFSK message sequence decoding time: " << std::setw(12) << std::setprecision(9) << WsgcUtils::get_time_difference(time2,time1) << " s" << std::endl << std::endl;
+
+        run_ccsoft_decoding(options, ccsoft_engine, cc_relmat);
         delete cc_relmat;
+#else
+        std::cout << "Program not linked with CCSoft, aborting decode" << std::endl;s
 #endif
-    }
-    else
-    {
+	}
+	else
+	{
+	    clock_gettime(time_option, &time1);
+
+	    while (sample_sequencer.get_next_code_samples(&signal_samples)) // pseudo real time loop, one PRN length at a time
+	    {
+	        mfsk_message_demodulator->execute(signal_samples);
+	    }
+
+	    clock_gettime(time_option, &time2);
+	    std::cout << "MFSK message sequence decoding time: " << std::setw(12) << std::setprecision(9) << WsgcUtils::get_time_difference(time2,time1) << " s" << std::endl << std::endl;
+
         std::ostringstream demod_os;
         demod_os << "--- demodulation records:" << std::endl;
         mfsk_message_demodulator->dump_demodulation_records(demod_os);
@@ -1083,7 +999,7 @@ void message_processing_MFSK(
         std::cout << error_counts << " errors (" << ((float) error_counts)/decision_box.get_decoded_symbols().size() << ")" << std::endl;
         std::cout << erasure_counts+error_counts << " total (" << ((float) erasure_counts+error_counts)/decision_box.get_decoded_symbols().size() << ")" << std::endl;
         std::cout << "_SUM " << erasure_counts << "," << error_counts << "," << erasure_counts+error_counts << "," << erasure_counts+2*error_counts << std::endl;
-    }
+	}
 }
 
 
@@ -1124,7 +1040,7 @@ void generate_pilot_prn_list(std::vector<unsigned int>& prn_list, GoldCodeGenera
 }
 
 
-
+/*
 //=================================================================================================
 void apply_fir(wsgc_complex *inout, unsigned int& nb_samples, const std::vector<wsgc_float>& fir_coef)
 {
@@ -1137,58 +1053,50 @@ void apply_fir(wsgc_complex *inout, unsigned int& nb_samples, const std::vector<
 	{
 		inout[i] = fir_filter.calc(inout[i]);
 	}
-
-	/* tail
-	for (unsigned int i = 0; i<nb_taps; i++)
-	{
-		inout[i] = fir_filter.calc(c_zero);
-	}
-
-	nb_samples += nb_taps;
-	*/
 }
+*/
 
 
 #ifdef _RSSOFT
 //=================================================================================================
-void run_rssoft_decoding(Options& options)
+void run_rssoft_decoding(Options& options, RSSoft_Engine& rssoft_engine)
 {
-    RSSoft_DecisionBox rssoft_decision_box(*options._rssoft_engine, options._source_codec);
+    RSSoft_DecisionBox rssoft_decision_box(rssoft_engine, options._source_codec);
 
     switch (options.rs_decoding_mode)
     {
-        case RSSoft_Engine::RSSoft_decoding_all:
-        case RSSoft_Engine::RSSoft_decoding_full:
-        case RSSoft_Engine::RSSoft_decoding_best:
-        case RSSoft_Engine::RSSoft_decoding_first:
+        case RSSoft_Engine_defs::RSSoft_decoding_all:
+        case RSSoft_Engine_defs::RSSoft_decoding_full:
+        case RSSoft_Engine_defs::RSSoft_decoding_best:
+        case RSSoft_Engine_defs::RSSoft_decoding_first:
             rssoft_decision_box.run(options.rs_decoding_mode);
             break;
-        case RSSoft_Engine::RSSoft_decoding_regex:
+        case RSSoft_Engine_defs::RSSoft_decoding_regex:
             rssoft_decision_box.run_regex(options.rs_decoding_match_str);
             break;
-        case RSSoft_Engine::RSSoft_decoding_match:
+        case RSSoft_Engine_defs::RSSoft_decoding_match:
             rssoft_decision_box.run_match(options.rs_decoding_match_str);
             break;
-        case RSSoft_Engine::RSSoft_decoding_binmatch:
+        case RSSoft_Engine_defs::RSSoft_decoding_binmatch:
             rssoft_decision_box.run_match(options.source_prns);
             break;
-        case RSSoft_Engine::RSSoft_decoding_relthr:
+        case RSSoft_Engine_defs::RSSoft_decoding_relthr:
             rssoft_decision_box.run_reliability_threshold(options.rs_reliability_threshold);
             break;
         default:
             std::cout << "Unknown RSSoft decoding options" << std::endl;
     }
 
-    rssoft_decision_box.print_stats(*options._rssoft_engine, options.source_prns, options.prns, std::cout);
+    rssoft_decision_box.print_stats(rssoft_engine, options.source_prns, options.prns, std::cout);
 }
 #endif
 
 #ifdef _CCSOFT
 //=================================================================================================
-void run_ccsoft_decoding(Options& options, ccsoft::CC_ReliabilityMatrix *relmat)
+void run_ccsoft_decoding(Options& options, CCSoft_Engine& ccsoft_engine, ccsoft::CC_ReliabilityMatrix *relmat)
 {
-	options.ccsoft_engine->reset();
-    CCSoft_DecisionBox ccsoft_decision_box(*options.ccsoft_engine, options._source_codec);
+	ccsoft_engine.reset();
+    CCSoft_DecisionBox ccsoft_decision_box(ccsoft_engine, options._source_codec);
     ccsoft_decision_box.run(*relmat);
     ccsoft_decision_box.print_retrieved_message(std::cout);
     ccsoft_decision_box.print_stats(options.source_prns, options.prns, std::cout);

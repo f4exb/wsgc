@@ -1,5 +1,5 @@
 /*
-     Copyright 2012 Edouard Griffiths <f4exb at free dot fr>
+     Copyright 2012-2013 Edouard Griffiths <f4exb at free dot fr>
 
      This file is part of WSGC. A Weak Signal transmission mode using Gold Codes
 
@@ -19,37 +19,23 @@
 
      Static not real time prototype in C++
 
-     Source mixer
+     CCSoft_Engine
 
-     Mixes two simulated source outputs
+     Convolutional coding soft decision engine based on ccsoft library
+     https://code.google.com/p/rssoft/#Convolutional_codes_library
+
 */
+#ifndef __CCSOFT_ENGINE_DEFS_H__
+#define __CCSOFT_ENGINE_DEFS_H__
 
-#ifndef __SOURCE_MIXER_H__
-#define __SOURCE_MIXER_H__
-
-#include "WsgcTypes.h"
-
-class SimulatedSource;
-
-class SourceMixer
+struct CCSoft_Engine_defs
 {
-	public:
-		SourceMixer(SimulatedSource& source_A, SimulatedSource& source_B, wsgc_float b_gain);
-		~SourceMixer();
-
-		void get_samples(wsgc_complex **samples);
-
-		unsigned int get_nb_samples()
-		{
-			return _nb_samples;
-		}
-
-
-	protected:
-		SimulatedSource& _source_A;
-		SimulatedSource& _source_B;
-		wsgc_float _B_gain;
-		unsigned int _nb_samples;
+public:
+    typedef enum AlgoritmType_e
+    {
+        Algorithm_Stack,
+        Algorithm_Fano
+    } AlgoritmType;
 };
 
-#endif /* __SOURCE_MIXER_H__ */
+#endif // __CCSOFT_ENGINE_DEFS_H__

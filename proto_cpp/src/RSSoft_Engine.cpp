@@ -101,7 +101,7 @@ RSSoft_Engine::RSSoft_Engine(unsigned int _m, unsigned int _k) :
     final_evaluation(gf, k, evaluation_values),
     retry_base_increment(1),
     retry_increment(0),
-    retry_mm_strategy(MMatrix_retry_arithmetic)
+    retry_mm_strategy(RSSoft_Engine_defs::MMatrix_retry_arithmetic)
 {
 }
 
@@ -493,17 +493,17 @@ void RSSoft_Engine::new_multiplicity()
 {
 	switch (retry_mm_strategy)
 	{
-	case MMatrix_retry_arithmetic:
+	case RSSoft_Engine_defs::MMatrix_retry_arithmetic:
 		M += retry_base_increment;
 		break;
-	case MMatrix_retry_arithmetic_increment:
+	case RSSoft_Engine_defs::MMatrix_retry_arithmetic_increment:
 		retry_increment += retry_base_increment;
 		M += retry_increment;
 		break;
-	case MMatrix_retry_geometric:
+	case RSSoft_Engine_defs::MMatrix_retry_geometric:
 		M *= retry_base_increment;
 		break;
-	case MMatrix_retry_geometric_increment:
+	case RSSoft_Engine_defs::MMatrix_retry_geometric_increment:
 		retry_increment *= retry_base_increment;
 		M *= retry_increment;
 		break;

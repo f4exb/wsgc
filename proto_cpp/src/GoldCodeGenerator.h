@@ -145,7 +145,7 @@ class GoldCodeGenerator
          * \param f_sample Sampling frequency. If zero (default) return raw code bits
          * \param f_chip Chip rate (frequency)
          */
-        void make_code(std::vector<char>& code, unsigned int prn_number, wsgc_float f_sample=0.0, wsgc_float f_chip=0.0);
+        void make_code(std::vector<char>& code, unsigned int prn_number, wsgc_float f_sample=0.0, wsgc_float f_chip=0.0) const;
         /**
          * Print successive LFSR register values for G1
          * \param os Printing string stream

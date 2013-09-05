@@ -33,11 +33,11 @@
 #include "DecisionBox_Thresholds.h"
 
 #ifdef _RSSOFT
-#include "RSSoft_Engine.h"
+#include "RSSoft_Engine_defs.h"
 #endif
 
 #ifdef _CCSOFT
-#include "CCSoft_Engine.h"
+#include "CCSoft_Engine_defs.h"
 #endif
 
 #include <vector>
@@ -51,11 +51,27 @@ class SourceCodec;
 class Options
 {
 public:
-	typedef enum
+	typedef enum Options_Executable_e
 	{
-		Options_wsgc_test,
-		Options_wsgc_generator
+		Options_wsgc_test,     //!< Run a Rx-Tx test
+		Options_wsgc_generator //!< Generate Tx only
 	} Options_Executable;
+    
+    typedef enum Options_TransmissionScheme_e
+    {
+        OptionTrans_None,   //!< Dummy: don't do anything and exit
+        OptionTrans_WSGC,   //!< Correlation, BPSK, Pilot
+        OptionTrans_WSGCD,  //!< Correlation, DBPSK
+        OptionTrans_WSGCO,  //!< Correlation, OOK
+        OptionTrans_MFSK    //!< No correlation, MFSK
+    } Options_TransmissionScheme;
+
+    typedef enum Options_FEC_e
+    {
+        OptionFEC_None,
+        OptionFEC_RSSoft,
+        OptionFEC_CCSoft
+    } Options_FEC;
 
 	Options(std::string& _binary_name, Options_Executable _options_executable = Options_wsgc_test);
 	~Options();
@@ -74,6 +90,8 @@ public:
 	}
 
 	Options_Executable options_executable;
+    Options_TransmissionScheme transmission_scheme;
+    Options_FEC fec_scheme;
 	std::string binary_path;
 	std::string binary_name;
 	wsgc_float f_sampling;
@@ -128,17 +146,15 @@ public:
 	unsigned int rs_init_M;
 	unsigned int rs_r;
 	unsigned int rs_inc;
-	RSSoft_Engine::MultiplicityMatrix_RetryStrategy rs_inc_strategy;
-	RSSoft_Engine *_rssoft_engine;
-	RSSoft_Engine::RSSoft_decoding_mode rs_decoding_mode;
+	RSSoft_Engine_defs::MultiplicityMatrix_RetryStrategy rs_inc_strategy;
+	RSSoft_Engine_defs::RSSoft_decoding_mode rs_decoding_mode;
 	std::string rs_decoding_match_str;
     float rs_reliability_threshold;
 #endif
     std::vector<unsigned int> cc_k_constraints;
     std::vector<std::vector<unsigned int> > cc_generator_polys;
 #ifdef _CCSOFT
-    CCSoft_Engine *ccsoft_engine;
-    CCSoft_Engine::AlgoritmType cc_algorithm_type;
+    CCSoft_Engine_defs::AlgoritmType cc_algorithm_type;
     float cc_edge_bias;
     unsigned int cc_node_limit;
     bool cc_use_node_limit;
@@ -172,8 +188,6 @@ private:
 	bool parse_reed_solomon_data(std::string coding_data_str);
 	bool parse_reed_solomon_data_generator(std::string coding_data_str);
 	void print_reed_solomon_data(std::ostringstream& os);
-	bool encode_reed_solomon();
-    bool init_and_encode_msg_rssoft();
 #endif
 #ifdef _CCSOFT
     bool parse_convolutional_code_data(std::vector<std::string> coding_data_strings);
@@ -181,8 +195,6 @@ private:
     bool parse_convolutional_code_constraints(std::string constraints_str);
     bool parse_convolutional_code_genpolys(std::string genpolys_str);
     void print_convolutional_code_data(std::ostringstream& os);
-    bool encode_convolutional_code();
-    bool init_and_encode_msg_ccsoft();
 #endif
 };
 

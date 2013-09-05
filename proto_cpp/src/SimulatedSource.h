@@ -37,21 +37,14 @@ class GoldCodeGenerator;
 class SimulatedSource
 {
     public:
-        SimulatedSource(GoldCodeGenerator& gc_generator, std::vector<unsigned int>& prn_list, wsgc_float f_sampling, wsgc_float f_chip, wsgc_float f_tx, unsigned int code_shift,
+        SimulatedSource(const GoldCodeGenerator& gc_generator, std::vector<unsigned int>& prn_list, wsgc_float f_sampling, wsgc_float f_chip, wsgc_float f_tx, unsigned int code_shift,
                         unsigned int prns_per_symbol=4, wsgc_float start_phase=0.0);
         ~SimulatedSource();
-        void create_samples();
+        void create_samples(wsgc_complex **samples);
 
         void set_noisy(bool make_noise)
         {
             _make_noise = make_noise;
-        }
-        
-        bool get_next_code_samples(wsgc_complex **samples);
-        
-        wsgc_complex *get_samples()
-        {
-            return _samples;
         }
         
         unsigned int get_nb_samples() // facility, the caller should normally know it
@@ -77,7 +70,7 @@ class SimulatedSource
         NormalDistribution _noiseDistributionUnit;
         ContinuousPhaseCarrier _localOscillator;
         
-        GoldCodeGenerator& _gc_generator;
+        const GoldCodeGenerator& _gc_generator;
         CodeModulator *_code_modulator;
         std::vector<unsigned int>& _prn_list;
         wsgc_float _f_sampling;
@@ -90,7 +83,6 @@ class SimulatedSource
         wsgc_float _start_phase; 
         unsigned int _nb_code_samples;
         
-        wsgc_complex *_samples;
         unsigned int _nb_samples;
         unsigned int _serviced_samples_index;        
 };

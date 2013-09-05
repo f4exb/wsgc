@@ -78,7 +78,7 @@ void GoldCodeGenerator::lfsr_generator(std::vector<unsigned int>& regs, std::vec
     } while(lfsr != (1<<_nb_stages)-1);
 }
 
-void GoldCodeGenerator::make_code(std::vector<char>& code, unsigned int prn_number, wsgc_float f_sampling, wsgc_float f_chip)
+void GoldCodeGenerator::make_code(std::vector<char>& code, unsigned int prn_number, wsgc_float f_sampling, wsgc_float f_chip) const
 {
     assert(prn_number+GC_PRN_SHIFT < 1<<_nb_stages);
     

@@ -22,11 +22,12 @@ int main(int argc, char *argv[])
 
     //std::cout << "-- test2 : Frequency domain correlation --" << std::endl;
 
+	wsgc_complex *signal_samples;
     GoldCodeGenerator gc_generator(options.gc_nb_stages, options.nb_message_symbols, options.nb_service_symbols, 0, options.g1_poly_powers, options.g2_poly_powers);
     SimulatedSource message_source(gc_generator, options.prn_list, options.f_sampling, options.f_chip, options.f_tx, options.code_shift);
     CodeModulator_BPSK code_modulator;
     message_source.set_code_modulator(&code_modulator);
-    message_source.create_samples();
+    message_source.create_samples(&signal_samples);
 
     //test_cuda_instance.test2(message_source.get_samples(), gc_generator, code_modulator);
 
@@ -76,6 +77,8 @@ int main(int argc, char *argv[])
     //options.prn_list.push_back(1);
     //options.prn_list.push_back(2);
     //test_cuda_instance.test_multiple_time_correlation(message_source.get_samples(), gc_generator, code_modulator);
+
+    WSGC_FFTW_FREE(signal_samples);
 
     return 0;
 }

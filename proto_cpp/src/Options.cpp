@@ -69,6 +69,8 @@ template<typename TOpt, typename TField> bool extract_option(TField& field, char
 //=================================================================================================
 Options::Options(std::string& _binary_name, Options_Executable _options_executable) :
 	options_executable(_options_executable),
+	transmission_scheme(OptionTrans_WSGC),
+	fec_scheme(OptionFEC_None),
     binary_path(_binary_name),
     f_sampling(4096.0),
     f_chip(1023.0),
@@ -111,12 +113,8 @@ Options::Options(std::string& _binary_name, Options_Executable _options_executab
     _source_codec(0),
     rs_logq(0),
     rs_k(0)
-#ifdef _RSSOFT
-    ,_rssoft_engine(0)
-#endif
 #ifdef _CCSOFT
-    ,ccsoft_engine(0),
-    cc_algorithm_type(CCSoft_Engine::Algorithm_Fano),
+    ,cc_algorithm_type(CCSoft_Engine_defs::Algorithm_Fano),
     cc_edge_bias(0.0),
     cc_node_limit(0),
     cc_use_node_limit(false),
@@ -149,12 +147,6 @@ Options::~Options()
     {
     	delete _source_codec;
     }
-#ifdef _RSSOFT
-    if (_rssoft_engine != 0)
-    {
-    	delete _rssoft_engine;
-    }
-#endif
 }
 
 
@@ -579,58 +571,6 @@ bool Options::get_options(int argc, char *argv[])
 				}
 			}
 
-#ifdef _RSSOFT
-			// Reed-Solomon
-			if (rs_k != 0)
-			{
-                if (!init_and_encode_msg_rssoft())
-                {
-                    return false;
-                }
-                /*
-				if (1<<rs_logq != nb_message_symbols)
-				{
-					std::cout << "Invalid size of symbols alphabet (" << nb_message_symbols << ") for the Reed-Solomon parameters RS(" << (1<<rs_logq) - 1 << "," << rs_k << ")" << std::endl;
-					return false;
-				}
-
-				if (prns.size() != rs_k)
-				{
-					std::cout << "Invalid number of message symbols for the Reed-Solomon parameters" << std::endl;
-					return false;
-				}
-
-				if (rs_k > nb_message_symbols - 2)
-				{
-					std::cout << "Invalid k parameter for Reed-Solomon" << std::endl;
-					return false;
-				}
-
-				_rssoft_engine = new RSSoft_Engine(rs_logq, rs_k);
-				_rssoft_engine->set_initial_global_multiplicity(rs_init_M);
-				_rssoft_engine->set_nb_retries(rs_r);
-				_rssoft_engine->set_retry_base_increment(rs_inc);
-				_rssoft_engine->set_retry_mm_strategy(rs_inc_strategy);
-
-				if (!encode_reed_solomon())
-				{
-					std::cout << "Cannot encode message with Reed-Solomon" << std::endl;
-				}
-                */
-			}
-#endif
-
-#ifdef _CCSOFT
-            // Convolutional Coding
-            if (cc_k_constraints.size() > 0)
-            {
-                if (!init_and_encode_msg_ccsoft())
-                {
-                    return false;
-                }
-            }
-#endif
-            
 			// last validation: generator polynomials
             if ((g1_poly_powers.size() > 0) && (g2_poly_powers.size() > 0)) // basic checks on given generator polynomials
             {
@@ -1231,16 +1171,16 @@ void Options::print_reed_solomon_data(std::ostringstream& os)
 			os << ", increment strategy = ";
 			switch (rs_inc_strategy)
 			{
-			case RSSoft_Engine::MMatrix_retry_arithmetic:
+			case RSSoft_Engine_defs::MMatrix_retry_arithmetic:
 				os << "arithmetic";
 				break;
-			case RSSoft_Engine::MMatrix_retry_arithmetic_increment:
+			case RSSoft_Engine_defs::MMatrix_retry_arithmetic_increment:
 				os << "arithmetic increment";
 				break;
-			case RSSoft_Engine::MMatrix_retry_geometric:
+			case RSSoft_Engine_defs::MMatrix_retry_geometric:
 				os << "geometric";
 				break;
-			case RSSoft_Engine::MMatrix_retry_geometric_increment:
+			case RSSoft_Engine_defs::MMatrix_retry_geometric_increment:
 				os << "geometric increment";
 				break;
 			default:
@@ -1251,28 +1191,28 @@ void Options::print_reed_solomon_data(std::ostringstream& os)
 			os << ", decoding mode = ";
 			switch (rs_decoding_mode)
 			{
-			case RSSoft_Engine::RSSoft_decoding_all:
+			case RSSoft_Engine_defs::RSSoft_decoding_all:
 				os << "all";
 				break;
-			case RSSoft_Engine::RSSoft_decoding_full:
+			case RSSoft_Engine_defs::RSSoft_decoding_full:
 				os << "full";
 				break;
-			case RSSoft_Engine::RSSoft_decoding_best:
+			case RSSoft_Engine_defs::RSSoft_decoding_best:
 				os << "best";
 				break;
-			case RSSoft_Engine::RSSoft_decoding_first:
+			case RSSoft_Engine_defs::RSSoft_decoding_first:
 				os << "first";
 				break;
-			case RSSoft_Engine::RSSoft_decoding_regex:
+			case RSSoft_Engine_defs::RSSoft_decoding_regex:
 				os << "regex: \"" << rs_decoding_match_str << "\"";
 				break;
-			case RSSoft_Engine::RSSoft_decoding_match:
+			case RSSoft_Engine_defs::RSSoft_decoding_match:
 				os << "match: \"" << rs_decoding_match_str << "\"";
 				break;
-			case RSSoft_Engine::RSSoft_decoding_binmatch:
+			case RSSoft_Engine_defs::RSSoft_decoding_binmatch:
 				os << "binmatch";
 				break;
-			case RSSoft_Engine::RSSoft_decoding_relthr:
+			case RSSoft_Engine_defs::RSSoft_decoding_relthr:
 				os << "relthr: " << rs_reliability_threshold << " dB/Symbol";
 				break;
 			default:
@@ -1292,38 +1232,33 @@ void Options::print_reed_solomon_data(std::ostringstream& os)
 //=================================================================================================
 void Options::print_convolutional_code_data(std::ostringstream& os)
 {
-    if (ccsoft_engine)
+    os << "Edge metric bias ...................: " << std::setw(5) << std::setprecision(2) << cc_edge_bias << std::endl;
+
+    if (cc_use_node_limit)
     {
-        ccsoft_engine->print_convolutional_code_data(os);
-        
-        os << "Edge metric bias ...................: " << std::setw(5) << std::setprecision(2) << cc_edge_bias << std::endl;
-        
-        if (cc_use_node_limit)
-        {
-            os << "Node number limit ..................: " << cc_node_limit << std::endl;
-        }
+        os << "Node number limit ..................: " << cc_node_limit << std::endl;
+    }
 
-        if (cc_use_metric_limit)
-        {
-            os << "Path metric number limit ...........: " << cc_metric_limit << std::endl;
-        }
+    if (cc_use_metric_limit)
+    {
+        os << "Path metric number limit ...........: " << cc_metric_limit << std::endl;
+    }
 
-        switch (cc_algorithm_type)
-        {
-        case CCSoft_Engine::Algorithm_Stack:
-            os << "Using stack algorithm" << std::endl;
-            break;
-        case CCSoft_Engine::Algorithm_Fano:
-            os << "Using Fano algorithm" << std::endl;
-            os << "  Initial metric threshold .........: " << cc_fano_init_metric << std::endl;
-            os << "  Metric threshold delta ...........: " << cc_fano_delta_metric << std::endl;
-            os << "  Nb nodes cached ..................: " << cc_fano_tree_cache_size << std::endl;
-            os << "  Initial metric threshold delta ...: " << cc_fano_delta_init_threshold << std::endl;
-            break;
-        default:
-            os << "Unknown algorithm" << std::endl;
-            break;
-        }
+    switch (cc_algorithm_type)
+    {
+    case CCSoft_Engine_defs::Algorithm_Stack:
+        os << "Using stack algorithm" << std::endl;
+        break;
+    case CCSoft_Engine_defs::Algorithm_Fano:
+        os << "Using Fano algorithm" << std::endl;
+        os << "  Initial metric threshold .........: " << cc_fano_init_metric << std::endl;
+        os << "  Metric threshold delta ...........: " << cc_fano_delta_metric << std::endl;
+        os << "  Nb nodes cached ..................: " << cc_fano_tree_cache_size << std::endl;
+        os << "  Initial metric threshold delta ...: " << cc_fano_delta_init_threshold << std::endl;
+        break;
+    default:
+        os << "Unknown algorithm" << std::endl;
+        break;
     }
 }
 #endif
@@ -1457,25 +1392,31 @@ bool Options::parse_modulation_data(std::string modulation_data_str)
 	if (modulation_data_str == "BPSK")
 	{
 		modulation.setScheme(Modulation::Modulation_BPSK);
+        transmission_scheme = OptionTrans_WSGC;
 		return true;
 	}
 	if (modulation_data_str == "DBPSK")
 	{
 		modulation.setScheme(Modulation::Modulation_DBPSK);
+        transmission_scheme = OptionTrans_WSGCD;
 		return true;
 	}
 	else if (modulation_data_str == "OOK")
 	{
         modulation.setScheme(Modulation::Modulation_OOK);
+        transmission_scheme = OptionTrans_WSGCO;
         return true;
 	}
 	else if (modulation_data_str == "CW")
 	{
         modulation.setScheme(Modulation::Modulation_CW);
+        transmission_scheme = OptionTrans_None;
         return true;
 	}
 	else if (modulation_data_str.compare(0,4,"MFSK") == 0)
 	{
+        transmission_scheme = OptionTrans_MFSK;
+        
 		if (modulation_data_str.size() < 6)
 		{
 			std::cout << "MFSK modulation specification is incorrect" << std::endl;
@@ -1651,19 +1592,19 @@ bool Options::parse_reed_solomon_data(std::string parameter_str)
 
     if (rs_str_parameters[0] == "arith")
     {
-    	rs_inc_strategy = RSSoft_Engine::MMatrix_retry_arithmetic;
+    	rs_inc_strategy = RSSoft_Engine_defs::MMatrix_retry_arithmetic;
     }
     else if (rs_str_parameters[0] == "iarith")
     {
-    	rs_inc_strategy = RSSoft_Engine::MMatrix_retry_arithmetic_increment;
+    	rs_inc_strategy = RSSoft_Engine_defs::MMatrix_retry_arithmetic_increment;
     }
     else if (rs_str_parameters[0] == "geom")
     {
-    	rs_inc_strategy = RSSoft_Engine::MMatrix_retry_geometric;
+    	rs_inc_strategy = RSSoft_Engine_defs::MMatrix_retry_geometric;
     }
     else if (rs_str_parameters[0] == "igeom")
     {
-    	rs_inc_strategy = RSSoft_Engine::MMatrix_retry_geometric_increment;
+    	rs_inc_strategy = RSSoft_Engine_defs::MMatrix_retry_geometric_increment;
     }
     else
     {
@@ -1673,23 +1614,23 @@ bool Options::parse_reed_solomon_data(std::string parameter_str)
 
     if (rs_str_parameters[1] == "all")
     {
-    	rs_decoding_mode = RSSoft_Engine::RSSoft_decoding_all;
+    	rs_decoding_mode = RSSoft_Engine_defs::RSSoft_decoding_all;
     }
     else if (rs_str_parameters[1] == "full")
     {
-    	rs_decoding_mode = RSSoft_Engine::RSSoft_decoding_full;
+    	rs_decoding_mode = RSSoft_Engine_defs::RSSoft_decoding_full;
     }
     else if (rs_str_parameters[1] == "best")
     {
-    	rs_decoding_mode = RSSoft_Engine::RSSoft_decoding_best;
+    	rs_decoding_mode = RSSoft_Engine_defs::RSSoft_decoding_best;
     }
     else if (rs_str_parameters[1] == "first")
     {
-    	rs_decoding_mode = RSSoft_Engine::RSSoft_decoding_first;
+    	rs_decoding_mode = RSSoft_Engine_defs::RSSoft_decoding_first;
     }
     else if (rs_str_parameters[1] == "regex")
     {
-    	rs_decoding_mode = RSSoft_Engine::RSSoft_decoding_regex;
+    	rs_decoding_mode = RSSoft_Engine_defs::RSSoft_decoding_regex;
     	if (rs_str_parameters.size() < 3)
     	{
     		std::cout << "Regular expression expected for RSSoft decoding mode with regular expression" << std::endl;
@@ -1699,7 +1640,7 @@ bool Options::parse_reed_solomon_data(std::string parameter_str)
     }
     else if (rs_str_parameters[1] == "match")
     {
-    	rs_decoding_mode = RSSoft_Engine::RSSoft_decoding_match;
+    	rs_decoding_mode = RSSoft_Engine_defs::RSSoft_decoding_match;
     	if (rs_str_parameters.size() < 3)
     	{
     		std::cout << "Exact match string expected for RSSoft decoding mode with exact match" << std::endl;
@@ -1709,11 +1650,11 @@ bool Options::parse_reed_solomon_data(std::string parameter_str)
     }
     else if (rs_str_parameters[1] == "binmatch")
     {
-    	rs_decoding_mode = RSSoft_Engine::RSSoft_decoding_binmatch;
+    	rs_decoding_mode = RSSoft_Engine_defs::RSSoft_decoding_binmatch;
     }
     else if (rs_str_parameters[1] == "relthr")
     {
-    	rs_decoding_mode = RSSoft_Engine::RSSoft_decoding_relthr;
+    	rs_decoding_mode = RSSoft_Engine_defs::RSSoft_decoding_relthr;
     	if (rs_str_parameters.size() < 3)
     	{
     		std::cout << "Regular expression expected for RSSoft decoding mode with regular expression" << std::endl;
@@ -1814,7 +1755,7 @@ bool Options::parse_convolutional_code_data(std::vector<std::string> coding_data
                     {
                         if (algo_specs[0] == "STACK")
                         {
-                            cc_algorithm_type = CCSoft_Engine::Algorithm_Stack;
+                            cc_algorithm_type = CCSoft_Engine_defs::Algorithm_Stack;
 
                             if (algo_parms.size() > 0)
                             {
@@ -1834,7 +1775,7 @@ bool Options::parse_convolutional_code_data(std::vector<std::string> coding_data
                         }
                         else if (algo_specs[0] == "FANO")
                         {
-                            cc_algorithm_type = CCSoft_Engine::Algorithm_Fano;
+                            cc_algorithm_type = CCSoft_Engine_defs::Algorithm_Fano;
 
                             if (algo_parms.size() > 0)
                             {
@@ -2003,29 +1944,6 @@ bool Options::is_power_of_2(unsigned int x, unsigned int& log2)
     return (x == 1);
 }
 
-#ifdef _RSSOFT
-//=================================================================================================
-bool Options::encode_reed_solomon()
-{
-	source_prns = prns;
-	prns.clear();
-	_rssoft_engine->encode(source_prns, prns);
-	return true;
-}
-#endif
-
-#ifdef _CCSOFT
-//=================================================================================================
-bool Options::encode_convolutional_code()
-{
-	source_prns = prns;
-	ccsoft_engine->zero_pad(source_prns);
-	prns.clear();
-	ccsoft_engine->encode(source_prns, prns);
-	return true;
-}
-#endif
-
 //=================================================================================================
 bool Options::parse_fec_option(std::string fec_option_str)
 {
@@ -2039,6 +1957,8 @@ bool Options::parse_fec_option(std::string fec_option_str)
             if (fec_elements[0] == "RS")
             {
 #ifdef _RSSOFT
+                fec_scheme = OptionFEC_RSSoft;
+
                 if (options_executable == Options_wsgc_test)
                 {
                     status = parse_reed_solomon_data(fec_elements[1]);
@@ -2060,6 +1980,8 @@ bool Options::parse_fec_option(std::string fec_option_str)
             else if (fec_elements[0] == "CC")
             {
 #ifdef _CCSOFT
+                fec_scheme = OptionFEC_CCSoft;
+
                 if (options_executable == Options_wsgc_test)
                 {
                     status = parse_convolutional_code_data(fec_elements);
@@ -2093,90 +2015,3 @@ bool Options::parse_fec_option(std::string fec_option_str)
 
     return status;
 }
-
-#ifdef _RSSOFT
-//=================================================================================================
-bool Options::init_and_encode_msg_rssoft()
-{
-    if (1<<rs_logq != nb_message_symbols)
-    {
-        std::cout << "Invalid size of symbols alphabet (" << nb_message_symbols << ") for the Reed-Solomon parameters RS(" << (1<<rs_logq) - 1 << "," << rs_k << ")" << std::endl;
-        return false;
-    }
-
-    if (prns.size() != rs_k)
-    {
-        std::cout << "Invalid number of message symbols for the Reed-Solomon parameters" << std::endl;
-        return false;
-    }
-
-    if (rs_k > nb_message_symbols - 2)
-    {
-        std::cout << "Invalid k parameter for Reed-Solomon" << std::endl;
-        return false;
-    }
-
-    _rssoft_engine = new RSSoft_Engine(rs_logq, rs_k);
-    _rssoft_engine->set_initial_global_multiplicity(rs_init_M);
-    _rssoft_engine->set_nb_retries(rs_r);
-    _rssoft_engine->set_retry_base_increment(rs_inc);
-    _rssoft_engine->set_retry_mm_strategy(rs_inc_strategy);
-
-    if (encode_reed_solomon())
-    {
-        return true;
-    }
-    else
-    {
-        std::cout << "Cannot encode message with Reed-Solomon" << std::endl;
-        return false;
-    }
-}
-#endif
-
-#ifdef _CCSOFT
-//=================================================================================================
-bool Options::init_and_encode_msg_ccsoft()
-{
-    ccsoft_engine = new CCSoft_Engine(cc_k_constraints, cc_generator_polys);
-    
-    switch (cc_algorithm_type)
-    {
-    case CCSoft_Engine::Algorithm_Stack:
-        ccsoft_engine->init_decoding_stack(cc_edge_bias);
-        break;
-    case CCSoft_Engine::Algorithm_Fano:
-        ccsoft_engine->init_decoding_fano(cc_edge_bias, cc_fano_init_metric, cc_fano_delta_metric, cc_fano_tree_cache_size, cc_fano_delta_init_threshold);
-        break;
-    default:
-        std::cout << "Unrecognised convolutional coding decoding algorithm" << std::endl;
-        return false;
-    }
-    
-    if (cc_use_node_limit)
-    {
-        ccsoft_engine->set_node_limit(cc_node_limit);
-    }
-    
-    if (cc_use_metric_limit)
-    {   
-        ccsoft_engine->set_metric_limit(cc_metric_limit);
-    }
-    
-    if (1<<(ccsoft_engine->get_k()) != nb_message_symbols)
-    {
-        std::cout << "Invalid size of symbols alphabet (" << nb_message_symbols << ") for a (n,k,m) CC code with k = " << ccsoft_engine->get_k() << std::endl;
-        return false;
-    }
-    
-    if (encode_convolutional_code())
-    {
-        return true;
-    }
-    else
-    {
-        std::cout << "Cannot encode message with Convolutional Coding" << std::endl;
-        return false;
-    }
-}
-#endif

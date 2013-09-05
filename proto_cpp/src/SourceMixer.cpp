@@ -30,36 +30,43 @@
 #include <algorithm>
 #include <cmath>
 
-SourceMixer::SourceMixer(SimulatedSource *source_A, SimulatedSource *source_B, wsgc_float b_gain) :
+SourceMixer::SourceMixer(SimulatedSource& source_A, SimulatedSource& source_B, wsgc_float b_gain) :
 	_source_A(source_A),
 	_source_B(source_B),
 	_B_gain(b_gain),
-	_nb_samples(std::max(_source_A->get_nb_samples(), _source_B->get_nb_samples()))
+	_nb_samples(std::max(_source_A.get_nb_samples(), _source_B.get_nb_samples()))
 {
+}
+
+void SourceMixer::get_samples(wsgc_complex **samples)
+{
+    wsgc_complex *samples_A, *samples_B;
     wsgc_float normalization_factor = 1.0 / (1.0 + _B_gain);
-	wsgc_complex *samples_A = _source_A->get_samples();
-	wsgc_complex *samples_B = _source_B->get_samples();
-	_samples = (wsgc_complex *) WSGC_FFTW_MALLOC(_nb_samples*sizeof(wsgc_fftw_complex));
+	_source_A.create_samples(&samples_A);
+	_source_B.create_samples(&samples_B);
+	*samples = (wsgc_complex *) WSGC_FFTW_MALLOC(_nb_samples*sizeof(wsgc_fftw_complex));
 
 	for (unsigned int i = 0; i < _nb_samples; i++)
 	{
-		if (i >= _source_A->get_nb_samples())
+		if (i >= _source_A.get_nb_samples())
 		{
-			_samples[i] = normalization_factor * _B_gain * samples_B[i];
+		    (*samples)[i] = normalization_factor * _B_gain * samples_B[i];
 		}
-		else if (i >= _source_B->get_nb_samples())
+		else if (i >= _source_B.get_nb_samples())
 		{
-			_samples[i] = normalization_factor * samples_A[i];
+		    (*samples)[i] = normalization_factor * samples_A[i];
 		}
 		else
 		{
-			_samples[i] = normalization_factor * (samples_A[i] + _B_gain * samples_B[i]);
+		    (*samples)[i] = normalization_factor * (samples_A[i] + _B_gain * samples_B[i]);
 		}
 	}
+
+	WSGC_FFTW_FREE(samples_A);
+    WSGC_FFTW_FREE(samples_B);
 }
 
 
 SourceMixer::~SourceMixer()
 {
-	WSGC_FFTW_FREE(_samples);
 }

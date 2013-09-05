@@ -41,6 +41,7 @@
 #include "RS_Encoding.h"
 #include "WsgcTypes.h"
 #include "SourceCodec.h"
+#include "RSSoft_Engine_defs.h"
 #include <string>
 
 /**
@@ -126,26 +127,6 @@ protected:
 class RSSoft_Engine
 {
 public:
-	typedef enum
-	{
-		MMatrix_retry_arithmetic,            //!< Mul(Mn+1) = Mul(Mn) + inc
-		MMatrix_retry_arithmetic_increment,  //!< Mul(Mn+1) = Mul(Mn) + (n+1)*inc
-		MMatrix_retry_geometric,             //!< Mul(Mn+1) = Mul(Mn) * inc
-		MMatrix_retry_geometric_increment    //!< Mul(Mn+1) = Mul(Mn) * (inc^(n+1))
-	} MultiplicityMatrix_RetryStrategy;
-
-    typedef enum
-    {
-        RSSoft_decoding_all,
-        RSSoft_decoding_full,
-        RSSoft_decoding_best,
-        RSSoft_decoding_first,
-        RSSoft_decoding_regex,
-        RSSoft_decoding_match,
-        RSSoft_decoding_binmatch,
-        RSSoft_decoding_relthr
-    } RSSoft_decoding_mode;
-
 	RSSoft_Engine(unsigned int _m, unsigned int _k);
 
 	~RSSoft_Engine();
@@ -186,7 +167,7 @@ public:
     	retry_base_increment = _retry_base_increment;
     }
 
-    void set_retry_mm_strategy(MultiplicityMatrix_RetryStrategy _retry_mm_strategy)
+    void set_retry_mm_strategy(RSSoft_Engine_defs::MultiplicityMatrix_RetryStrategy _retry_mm_strategy)
     {
     	retry_mm_strategy = _retry_mm_strategy;
     }
@@ -300,7 +281,7 @@ protected:
 	unsigned int init_M; //!< Initial value for global multiplicity for soft decision multiplicity matrix at first try
 	unsigned int retry_base_increment; //!< multiplicity base increment for retry
 	unsigned int retry_increment; //!< current multiplicity increment for retry
-	MultiplicityMatrix_RetryStrategy retry_mm_strategy; //!< strategy for multiplicity increment
+	RSSoft_Engine_defs::MultiplicityMatrix_RetryStrategy retry_mm_strategy; //!< strategy for multiplicity increment
     RSSoft_PPolys ppolys; //!< Collection of pre-defined primitive polynomials
     rssoft::gf::GFq gf; //!< Galois Field being used
     rssoft::EvaluationValues evaluation_values; //!< Evaluation values for RS

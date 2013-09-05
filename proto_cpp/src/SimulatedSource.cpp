@@ -30,7 +30,7 @@
 #include <math.h>
 #include <assert.h>
 
-SimulatedSource::SimulatedSource(GoldCodeGenerator& gc_generator, std::vector<unsigned int>& prn_list, wsgc_float f_sampling, wsgc_float f_chip, wsgc_float f_tx, unsigned int code_shift,
+SimulatedSource::SimulatedSource(const GoldCodeGenerator& gc_generator, std::vector<unsigned int>& prn_list, wsgc_float f_sampling, wsgc_float f_chip, wsgc_float f_tx, unsigned int code_shift,
                                  unsigned int prns_per_symbol, wsgc_float start_phase) :
     _noiseDistributionUnit(0.0,1.0),
     _localOscillator(f_sampling, gc_generator.get_nb_code_samples(f_sampling, f_chip), start_phase),
@@ -50,17 +50,16 @@ SimulatedSource::SimulatedSource(GoldCodeGenerator& gc_generator, std::vector<un
     _serviced_samples_index(0)
 {
     _randomEngine.seed(time(0));
-    _samples = (wsgc_complex *) WSGC_FFTW_MALLOC(_nb_samples*sizeof(wsgc_fftw_complex)); 
 }    
      
 SimulatedSource::~SimulatedSource()
 {
-    WSGC_FFTW_FREE(_samples);
 }
 
-void SimulatedSource::create_samples()
+void SimulatedSource::create_samples(wsgc_complex **samples)
 {
-    wsgc_fftw_complex *samples_fftw = reinterpret_cast<wsgc_fftw_complex *>(_samples);
+    *samples = (wsgc_complex *) WSGC_FFTW_MALLOC(_nb_samples*sizeof(wsgc_fftw_complex));
+    wsgc_fftw_complex *samples_fftw = reinterpret_cast<wsgc_fftw_complex *>(*samples);
     const wsgc_complex *lo_samples;
     unsigned int sample_i = 0;
     
@@ -92,20 +91,5 @@ void SimulatedSource::create_samples()
             
             sample_i += _nb_code_samples;
         }
-    }
-}
-
-
-bool SimulatedSource::get_next_code_samples(wsgc_complex **samples) 
-{
-    if (_serviced_samples_index + _nb_code_samples < _nb_samples)
-    {
-        *samples = &_samples[_serviced_samples_index];
-        _serviced_samples_index += _nb_code_samples;
-        return true;
-    }
-    else
-    {
-        return false;
     }
 }
