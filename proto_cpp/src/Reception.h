@@ -30,6 +30,10 @@
 #include "WsgcTypes.h"
 #include "Options.h"
 #include "GoldCodeGenerator.h"
+#include "CorrelationRecord.h"
+#include "TrainingCorrelationRecord.h"
+
+class CodeModulator;
 
 class Reception
 {
@@ -43,7 +47,17 @@ public:
     ~Reception()
     {}
 
-    void demodulate_before_correlate(wsgc_complex *faded_source_samples, unsigned int nb_faded_source_samples);
+    void unpiloted_message_correlation(CodeModulator& localCodeModulator, 
+        wsgc_complex *faded_source_samples, 
+        unsigned int nb_faded_source_samples, 
+        std::vector<CorrelationRecord>& correlation_records);
+        
+    void unpiloted_training_correlation(CodeModulator& localCodeModulator, 
+        wsgc_complex *faded_source_samples, 
+        unsigned int nb_faded_source_samples, 
+        std::vector<TrainingCorrelationRecord>& training_correlation_records);
+        
+    void unpiloted_and_synced_decision(std::vector<CorrelationRecord>& correlation_records);
     
 protected:
     void generate_training_prn_list(std::vector<unsigned int>& prn_list);

@@ -52,13 +52,13 @@ public:
         return nb_signal_samples;
     }
     
-    void generate_samples();
+    void generate_samples(std::vector<unsigned int>& symbols);
     void normalize();
     
 protected:
     void apply_fir(wsgc_complex *inout, unsigned int& nb_samples, const std::vector<wsgc_float>& fir_coef);
     void apply_channel();
-    void apply_fec();
+    void apply_fec(std::vector<unsigned int>& symbols);
 
     Options& options; //!< Reference to the options
     const GoldCodeGenerator& gc_generator; //!< Reference to the Gold Code generator

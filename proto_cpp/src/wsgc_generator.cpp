@@ -9,7 +9,7 @@
 #include "Options.h"
 #include "GoldCodeGenerator.h"
 #include "Transmission.h"
-#include "Reception.h"
+#include "Demodulation.h"
 #include "WsgcUtils.h"
 #include "Demodulator.h"
 #include "DemodulatorDifferential.h"
@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
         unsigned int fft_N = gc_generator.get_nb_code_samples(options.f_sampling, options.f_chip);
 
         Transmission transmission(options, gc_generator);
-        transmission.generate_samples();
+        transmission.generate_samples(options.prns);
         wsgc_complex *faded_source_samples = transmission.get_samples();
         unsigned int nb_faded_source_samples = transmission.get_nb_samples();
 
@@ -47,8 +47,7 @@ int main(int argc, char *argv[])
             // demodulate OOK
             if (options.simulate_demod)
             {
-                Reception reception(options, gc_generator);
-                reception.demodulate_before_correlate(faded_source_samples, nb_faded_source_samples);
+                Demodulation::demodulate_generic(options, gc_generator, faded_source_samples, nb_faded_source_samples);
             }
         
             // Write out samples

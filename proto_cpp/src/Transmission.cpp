@@ -65,25 +65,31 @@ Transmission::~Transmission()
 }
     
 //=================================================================================================
-void Transmission::generate_samples()
+void Transmission::generate_samples(std::vector<unsigned int>& symbols)
 {
-    apply_fec();
+    apply_fec(symbols);
 
+    if (signal_samples)
+    {
+        WSGC_FFTW_FREE(signal_samples);
+        nb_signal_samples = 0;
+    }
+    
     if (options.transmission_scheme == Options::OptionTrans_WSGC)
     {
         CodeModulator_BPSK code_modulator;
         unsigned int nb_prns_per_symbol = options.nb_prns_per_symbol;
         unsigned int pilot_id = options.pilot1;
-        unsigned int nb_pilot_prns = options.prns.size() + (options.batch_size/options.nb_prns_per_symbol);
+        unsigned int nb_pilot_prns = symbols.size() + (options.batch_size/options.nb_prns_per_symbol);
         
         if (options.simulate_training) // only one "PRN per symbol" for training sequence
         {
             nb_prns_per_symbol = 1;
             pilot_id = options.pilot2;
-            nb_pilot_prns = options.prns.size() + options.batch_size;
+            nb_pilot_prns = symbols.size() + options.batch_size;
         }
         
-        SimulatedSource message_source(gc_generator, options.prns, options.f_sampling, options.f_chip,
+        SimulatedSource message_source(gc_generator, symbols, options.f_sampling, options.f_chip,
                                        options.f_tx, options.code_shift, nb_prns_per_symbol, 0.0);
         message_source.set_code_modulator(&code_modulator);  
         
@@ -101,9 +107,15 @@ void Transmission::generate_samples()
     else if (options.transmission_scheme == Options::OptionTrans_WSGCD)
     {
         CodeModulator_DBPSK code_modulator;
+        unsigned int nb_prns_per_symbol = options.nb_prns_per_symbol;
+
+        if (options.simulate_training) // only one "PRN per symbol" for training sequence
+        {
+            nb_prns_per_symbol = 1;
+        }
         
-        SimulatedSource message_source(gc_generator, options.prns, options.f_sampling, options.f_chip,
-                                       options.f_tx, options.code_shift, options.nb_prns_per_symbol, 0.0);
+        SimulatedSource message_source(gc_generator, symbols, options.f_sampling, options.f_chip,
+                                       options.f_tx, options.code_shift, nb_prns_per_symbol, 0.0);
         message_source.set_code_modulator(&code_modulator);  
         message_source.create_samples(&signal_samples);
         nb_signal_samples = message_source.get_nb_samples();
@@ -111,9 +123,15 @@ void Transmission::generate_samples()
     else if (options.transmission_scheme == Options::OptionTrans_WSGCO)
     {
         CodeModulator_OOK code_modulator;
+        unsigned int nb_prns_per_symbol = options.nb_prns_per_symbol;
+
+        if (options.simulate_training) // only one "PRN per symbol" for training sequence
+        {
+            nb_prns_per_symbol = 1;
+        }
         
-        SimulatedSource message_source(gc_generator, options.prns, options.f_sampling, options.f_chip,
-                                       options.f_tx, options.code_shift, options.nb_prns_per_symbol, 0.0);
+        SimulatedSource message_source(gc_generator, symbols, options.f_sampling, options.f_chip,
+                                       options.f_tx, options.code_shift, nb_prns_per_symbol, 0.0);
         message_source.set_code_modulator(&code_modulator);  
         message_source.create_samples(&signal_samples);
         nb_signal_samples = message_source.get_nb_samples();
@@ -126,10 +144,10 @@ void Transmission::generate_samples()
             options.mfsk_options._symbol_bandwidth,
             options.mfsk_options._symbol_time);
             
-        options.prns.push_back(0); // pad with one symbol
-        nb_signal_samples = codeModulator_MFSK.get_nb_symbol_samples()*options.prns.size();
+        symbols.push_back(0); // pad with one symbol
+        nb_signal_samples = codeModulator_MFSK.get_nb_symbol_samples()*symbols.size();
         signal_samples = (wsgc_complex *) WSGC_FFTW_MALLOC(nb_signal_samples*sizeof(wsgc_fftw_complex));
-        codeModulator_MFSK.modulate(reinterpret_cast<wsgc_fftw_complex*>(signal_samples), options.prns);
+        codeModulator_MFSK.modulate(reinterpret_cast<wsgc_fftw_complex*>(signal_samples), symbols);
     }
     
     if (signal_samples)
@@ -197,7 +215,7 @@ void Transmission::apply_channel()
 }
 
 //=================================================================================================
-void Transmission::apply_fec()
+void Transmission::apply_fec(std::vector<unsigned int>& symbols)
 {
     if (options.fec_scheme == Options::OptionFEC_RSSoft)
     {
@@ -209,7 +227,7 @@ void Transmission::apply_fec()
             return;
         }
 
-        if (options.prns.size() != options.rs_k)
+        if (symbols.size() != options.rs_k)
         {
             std::cout << "Invalid number of message symbols for the Reed-Solomon parameters" << std::endl;
             std::cout << "FEC ignored" << std::endl;
@@ -229,10 +247,10 @@ void Transmission::apply_fec()
         rssoft_engine.set_retry_base_increment(options.rs_inc);
         rssoft_engine.set_retry_mm_strategy(options.rs_inc_strategy);
 
-        options.source_prns = options.prns;
-        options.prns.clear();
+        options.source_prns = symbols; // preserve original symbols in options context for future use
+        symbols.clear();
 
-        rssoft_engine.encode(options.source_prns, options.prns);
+        rssoft_engine.encode(options.source_prns, symbols);
 #else
         std::cout << "Program not linked with RSSoft library, ignoring FEC with RSSoft" << std::endl;
 #endif
@@ -273,10 +291,10 @@ void Transmission::apply_fec()
             return;
         }
 
-        options.source_prns = options.prns;
+        options.source_prns = symbols;
         ccsoft_engine.zero_pad(options.source_prns);
-        options.prns.clear();
-        ccsoft_engine.encode(options.source_prns, options.prns);
+        symbols.clear();
+        ccsoft_engine.encode(options.source_prns, symbols);
 #else
         std::cout << "Program not linked with CCSoft library, ignoring FEC with CCSoft" << std::endl;
 #endif

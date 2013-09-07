@@ -19,41 +19,23 @@
 
      Static not real time prototype in C++
       
-     Reception WSGC: Correlation, BPSK, Pilot
+     Demodulation
+      
+     Common part of all demodulation classes.
+     
 */
-#ifndef __RECEPTION_WSGC_H__
-#define __RECEPTION_WSGC_H__
+#ifndef __DEMODULATION_H__
+#define __DEMODULATION_H__
 
-#include "Reception.h"
-#include "CodeModulator_BPSK.h"
+#include "WsgcTypes.h"
 
-#ifdef _CUDA
-#include "CudaManager.h"
-#endif
+class Options;
+class GoldCodeGenerator;
 
-#ifdef _RSSOFT
-class RSSoft_Engine;
-namespace rssoft
-{
-	class RS_ReliabilityMatrix;
-}
-#endif
-
-class Reception_WSGC : public Reception
+class Demodulation
 {
 public:
-    Reception_WSGC(Options& _options, const GoldCodeGenerator& _gc_generator);
-    ~Reception_WSGC();
-    
-    void message_processing(wsgc_complex *faded_source_samples, unsigned int nb_faded_source_samples);
-    void training_processing(wsgc_complex *faded_source_samples, unsigned int nb_faded_source_samples);
-
-protected:
-    CodeModulator_BPSK localCodeModulator;
-#ifdef _CUDA
-    CudaManager cuda_manager;
-#endif
+    static void demodulate_generic(Options& options, const GoldCodeGenerator& gc_generator, wsgc_complex *faded_source_samples, unsigned int nb_faded_source_samples);    
 };
 
-
-#endif // __RECEPTION_WSGC_H__
+#endif // __DEMODULATION_H__

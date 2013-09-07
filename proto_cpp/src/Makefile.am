@@ -106,9 +106,12 @@ wsgc_test_SOURCES += CodeModulator_BPSK.cpp \
     SourceCodec_JT65.cpp \
     Locator.cpp \
     Transmission.cpp \
+    Demodulation.cpp \
     Reception.cpp \
     Reception_FEC.cpp \
     Reception_WSGC.cpp \
+    Reception_WSGCO.cpp \
+    Reception_WSGCD.cpp \
     Reception_MFSK.cpp \
     CudaManager.cu \
     CudaDeviceManager.cu \
@@ -206,9 +209,12 @@ wsgc_test_SOURCES += CodeModulator_BPSK.cpp \
     SourceCodec_JT65.cpp \
     Locator.cpp \
     Transmission.cpp \
+    Demodulation.cpp \
     Reception.cpp \
     Reception_FEC.cpp \
     Reception_WSGC.cpp \
+    Reception_WSGCO.cpp \
+    Reception_WSGCD.cpp \
     Reception_MFSK.cpp
 endif
 
@@ -242,7 +248,7 @@ wsgc_generator_SOURCES += wsgc_generator.cpp \
     SourceCodec_JT65.cpp \
     Locator.cpp \
     Transmission.cpp \
-    Reception.cpp
+    Demodulation.cpp
     
 wsgc_jt65src_SOURCES = wsgc_jt65src.cpp \
     SourceCodec_JT65.cpp \
