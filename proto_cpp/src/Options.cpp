@@ -790,6 +790,7 @@ void Options::get_help(std::ostringstream& os)
     os << "Source codecs:" << std::endl;
     os << " - JT65: classical. Uses RS(63,12): -j \"JT65::<source text message>\"" << std::endl;
     os << " - JT257: packing the 72 bytes in 9 8-byte symbols. Otherwise classical. Uses RS(255,9): -j \"JT257::<source text message>\"" << std::endl;
+    os << " - JTCC: packing the 72 bytes in 72 1-byte symbols. Otherwise classical. Uses any 1/n rate CC code: -j \"JTCC::<source text message>\"" << std::endl;
     os << std::endl;
     os << "Forward Error Correction using external libraries -O <FEC scheme>/<FEC options...>:" << std::endl;
     os << std::endl;
@@ -1521,6 +1522,11 @@ bool Options::parse_source_coding_data(std::string source_coding_data_str)
     			_source_codec = new SourceCodec_JT65(SourceCodec_JT65::JT257);
     			status = true;
             }
+            else if (_source_codec_type_str == "JTCC")
+            {
+                _source_codec = new SourceCodec_JT65(SourceCodec_JT65::JTCC);
+                status = true;
+            }
     	}
     }
 
@@ -1922,6 +1928,11 @@ bool Options::adjust_parameters_for_source_coding()
 		}
 
 		status = true;
+    }
+    else if (_source_codec_type_str == "JTCC")
+    {
+        nb_message_symbols = 2;
+        status = true;
     }
 
 	return status;

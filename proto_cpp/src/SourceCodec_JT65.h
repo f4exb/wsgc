@@ -104,6 +104,7 @@ public:
     {
         JT65_Classical,  //!< Original
         JT257,           //!< uses 9 8-bit symbols to pack the 72 bits, otherwise classical
+        JTCC,            //!< sends the 72 bits individually (1 bit symbols) for convolutional coding (JT4 type)
     } JT65_Variants;
 
     SourceCodec_JT65(JT65_Variants _variant = JT65_Classical);
@@ -303,6 +304,34 @@ protected:
         unsigned int& packed_locator,
         bool& arbitrary_text) const;
         
+    /**
+     * Pack 2 packed callsigns and a packed locator into 72 1-bit symbols message
+     * \param packed_callsign_1 Input first packed callsign
+     * \param packed_callsign_2 Input second packed callsign
+     * \param packed_locator Input packed locator
+     * \param message Output 9 8-bit symbols message
+     * \return true if successful
+     */
+    bool pack_message_cc(unsigned int packed_callsign_1,
+        unsigned int packed_callsign_2,
+        unsigned int packed_locator,
+        std::vector<unsigned int>& message) const;
+
+    /**
+     * Unpack 72 1-bit symbols message into 2 packed callsigns and a packed locator
+     * \param message Input 8-bit symbols message
+     * \param packed_callsign_1 Output first packed callsign
+     * \param packed_callsign_2 Output second packed callsign
+     * \param packed_locator Output packed locator
+     * \param arbitrary_text true if this is arbitrary text
+     * \return true if successful
+     */
+    bool unpack_message_cc(const std::vector<unsigned int>& message,
+        unsigned int& packed_callsign_1,
+        unsigned int& packed_callsign_2,
+        unsigned int& packed_locator,
+        bool& arbitrary_text) const;
+
     /**
      * Compose the decoded formatted message from its decoded elements
      * \param out_msg formatted message

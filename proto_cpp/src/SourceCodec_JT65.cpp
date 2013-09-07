@@ -345,6 +345,10 @@ bool SourceCodec_JT65::encode(const std::string& in_msg, std::vector<unsigned in
     {
         pack_message_256(packed_callsign_1, packed_callsign_2, packed_locator, out_msg);
     }
+    else if (variant == JTCC)
+    {
+        pack_message_cc(packed_callsign_1, packed_callsign_2, packed_locator, out_msg);
+    }
 	return true;
 }  
 
@@ -372,6 +376,10 @@ bool SourceCodec_JT65::decode(const std::vector<unsigned int>& in_msg, std::stri
     {
         unpack_message_256(in_msg, packed_callsign_1, packed_callsign_2, packed_locator, is_arbitrary_text);
     }
+    else if (variant == JTCC)
+    {
+        unpack_message_cc(in_msg, packed_callsign_1, packed_callsign_2, packed_locator, is_arbitrary_text);
+    }
     //std::cout << packed_callsign_1 << ":" << packed_callsign_2 << ":" << packed_locator << (is_arbitrary_text ? ":freetext" : "") << std::endl;
     
     if (is_arbitrary_text)
@@ -382,7 +390,7 @@ bool SourceCodec_JT65::decode(const std::vector<unsigned int>& in_msg, std::stri
     {
         for (unsigned int n_field = 0; (n_field < 3) && success; n_field++)
         {
-        	//std::cout << "n_field = " << n_field << std::endl;
+        	//std::cout << "n_field = " << n_field << ":";
             if (n_field == 0)
             {
                 success = unpack_callsign_1(packed_callsign_1, field_1, pfxsfx_v2_str, pfxsfx_v2);
@@ -395,13 +403,13 @@ bool SourceCodec_JT65::decode(const std::vector<unsigned int>& in_msg, std::stri
             {
                 success = unpack_locator(packed_locator, field_3, pfxsfx_v1_str, pfxsfx_v1);
             }
+            //std::cout << (success ? "ok" : "ko") << std::endl;
         }
-        
-        //std::cout << (success ? "ok" : "ko") << std::endl;
+
+        //std::cout << "field_1 = " << field_1 << ", field_2 = " << field_2 << ", field_3 = " << field_3 << ", pfxsfx_v1 = " << pfxsfx_v1 << ", pfxsfx_v2 = " << pfxsfx_v2 << ", pfxsfx_v1_str = " << pfxsfx_v1_str << ", pfxsfx_v2_str = " << pfxsfx_v2_str << std::endl;
 
         if (success)
         {
-        	//std::cout << "field_1 = " << field_1 << ", field_2 = " << field_2 << ", field_3 = " << field_3 << ", pfxsfx_v1 = " << pfxsfx_v1 << ", pfxsfx_v2 = " << pfxsfx_v2 << ", pfxsfx_v1_str = " << pfxsfx_v1_str << ", pfxsfx_v2_str = " << pfxsfx_v2_str << std::endl;
             compose_formatted_message(out_msg, field_1, field_2, field_3, pfxsfx_v1, pfxsfx_v2, pfxsfx_v1_str, pfxsfx_v2_str);
             return true;
         }
@@ -1354,6 +1362,75 @@ bool SourceCodec_JT65::unpack_message_256(const std::vector<unsigned int>& messa
         
         arbitrary_text = (packed_locator > 0x7FFF);
     }
+
+    return true;
+}
+
+//=================================================================================================
+bool SourceCodec_JT65::pack_message_cc(unsigned int packed_callsign_1,
+        unsigned int packed_callsign_2,
+        unsigned int packed_locator,
+        std::vector<unsigned int>& message) const
+{
+    // 28 + 28 + 16 bits into 1 bit symbols
+    // bits are entered MSB first
+    unsigned int code_byte = 0;
+
+    for (int i=27; i>=0; i--) // callsign_1
+    {
+        code_byte = (packed_callsign_1 >> i) & 0x01;
+        message.push_back(code_byte);
+    }
+
+    for (int i=27; i>=0; i--) // callsign_2
+    {
+        code_byte = (packed_callsign_2 >> i) & 0x01;
+        message.push_back(code_byte);
+    }
+
+    for (int i=15; i>=0; i--) // locator
+    {
+        code_byte = (packed_locator >> i) & 0x01;
+        message.push_back(code_byte);
+    }
+    return true;
+}
+
+//=================================================================================================
+bool SourceCodec_JT65::unpack_message_cc(const std::vector<unsigned int>& message,
+        unsigned int& packed_callsign_1,
+        unsigned int& packed_callsign_2,
+        unsigned int& packed_locator,
+        bool& arbitrary_text) const
+{
+    packed_callsign_1 = 0;
+    packed_callsign_2 = 0;
+    packed_locator = 0;
+
+    if (message.size() < 72)
+    {
+        return false;
+    }
+    else
+    {
+        for (int i=27; i>=0; i--) // callsign_1
+        {
+            packed_callsign_1 += (message[27-i] << i);
+        }
+
+        for (int i=27; i>=0; i--) // callsign_2
+        {
+            packed_callsign_2 += (message[28+27-i] << i);
+        }
+
+        for (int i=15; i>=0; i--) // locator
+        {
+            packed_locator += (message[28+28+15-i] << i);
+        }
+
+    }
+
+    return true;
 }
 
 //=================================================================================================
@@ -1366,6 +1443,9 @@ void SourceCodec_JT65::print_source_codec_data(std::ostringstream& os) const
             break;
         case JT257:
             os << "JT65 classic with 9 8-bits symbols";
+            break;
+        case JTCC:
+            os << "JT65 classic with 72 1-bit symbols";
             break;
         default:
             os << "JT65 unrecognized variant";
