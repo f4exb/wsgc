@@ -113,6 +113,10 @@ void Reception_FEC::run_ccsoft_decoding(Options& options, ccsoft::CC_Reliability
     }
     
 	//ccsoft_engine.reset();
+    if (options.cc_interleave)
+    {
+    	relmat.deinterleave();
+    }
     
     CCSoft_DecisionBox ccsoft_decision_box(ccsoft_engine, options._source_codec);
     ccsoft_decision_box.run(relmat);

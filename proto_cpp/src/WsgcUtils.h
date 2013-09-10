@@ -42,37 +42,8 @@ template<typename TElement> bool extract_vector(std::vector<TElement>& velements
 {
     std::string element_str;
     TElement element;
-    
+
     boost::char_separator<char> sep(",");
-    boost::tokenizer<boost::char_separator<char> > tokens(cs_string, sep);
-    
-    boost::tokenizer<boost::char_separator<char> >::iterator tok_iter = tokens.begin();
-    boost::tokenizer<boost::char_separator<char> >::iterator toks_end = tokens.end();
-    
-    try
-    {
-        for (; tok_iter != toks_end; ++tok_iter)
-        {
-            element = boost::lexical_cast<TElement>(*tok_iter); 
-            velements.push_back(element);
-        }
-        return true;
-    }
-    catch (boost::bad_lexical_cast &)
-    {
-        std::cout << "wrong element in comma separated string argument: " << *tok_iter << std::endl;
-        return false;
-    }
-}
-
-// ================================================================================================
-// template to extract a vector of elements from a delimiter separated string
-template<typename TElement> bool extract_vector(std::vector<TElement>& velements, const char *separator, std::string cs_string)
-{
-    std::string element_str;
-    TElement element;
-
-    boost::char_separator<char> sep(separator);
     boost::tokenizer<boost::char_separator<char> > tokens(cs_string, sep);
 
     boost::tokenizer<boost::char_separator<char> >::iterator tok_iter = tokens.begin();
@@ -89,6 +60,43 @@ template<typename TElement> bool extract_vector(std::vector<TElement>& velements
     }
     catch (boost::bad_lexical_cast &)
     {
+        std::cout << "wrong element in comma separated string argument: " << *tok_iter << std::endl;
+        return false;
+    }
+}
+
+// ================================================================================================
+// template to extract a vector of elements from a delimiter separated string
+template<typename TElement> bool extract_vector(std::vector<TElement>& velements, const char *separator, std::string cs_string, bool keep_empty_tokens = false)
+{
+    std::string element_str;
+    TElement element;
+
+    boost::empty_token_policy _empty_token_policy = boost::drop_empty_tokens;
+
+    if (keep_empty_tokens)
+    {
+    	_empty_token_policy = boost::keep_empty_tokens;
+    }
+
+    boost::char_separator<char> sep(separator, "", _empty_token_policy);
+    boost::tokenizer<boost::char_separator<char> > tokens(cs_string, sep);
+
+    boost::tokenizer<boost::char_separator<char> >::iterator tok_iter = tokens.begin();
+    boost::tokenizer<boost::char_separator<char> >::iterator toks_end = tokens.end();
+
+    try
+    {
+        for (; tok_iter != toks_end; ++tok_iter)
+        {
+            element = boost::lexical_cast<TElement>(*tok_iter);
+            velements.push_back(element);
+        }
+
+        return true;
+    }
+    catch (boost::bad_lexical_cast &)
+    {
         std::cout << "wrong element in delimiter separated string argument: " << *tok_iter << std::endl;
         return false;
     }
@@ -99,24 +107,24 @@ template<typename TElement> bool extract_vector(std::vector<TElement>& velements
 template<typename TElement, typename TDisplay, typename TStream> void print_vector(const std::vector<TElement>& v, unsigned int width, TStream& os)
 {
     os << "[";
-    
+
     typename std::vector<TElement>::const_iterator it = v.begin();
     const typename std::vector<TElement>::const_iterator v_end = v.end();
-        
+
     try
     {
         for (; it != v_end; ++it)
-        {        
-            
+        {
+
             os << std::setw(width) << (TDisplay)(*it);
-            
+
             if (it != v.begin()+v.size()-1)
             {
                 os << ", ";
             }
 
         }
-    
+
         os << "]";
     }
     catch (boost::bad_lexical_cast &)
@@ -182,7 +190,7 @@ class WsgcUtils
         static void print_interval(std::ostringstream& os, unsigned int start, unsigned int length, unsigned int wrap_limit = 0);
         static unsigned long timenow_usec();
         static unsigned int timenow_usec_hour();
-        
+
     private:
         static const wsgc_float magnitude_estimation_alpha;
         static const wsgc_float magnitude_estimation_beta;

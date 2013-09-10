@@ -63,6 +63,13 @@ public:
         float init_threshold_delta);
 
     /**
+     * Interleave/Deinterleave
+     * \param symbols Symbols to process
+     * \param true if forward direction i.e. interleave, false for de-interleave
+     */
+    void interleave(std::vector<unsigned int>& symbols, bool forward=true);
+
+    /**
      * Set a metric limit for the decoder
      */
     void set_metric_limit(float metric_limit)

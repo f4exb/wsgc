@@ -27,6 +27,7 @@
 #include "Reception.h"
 #include "CodeModulator_BPSK.h"
 
+/*
 #ifdef _RSSOFT
 class RSSoft_Engine;
 namespace rssoft
@@ -42,6 +43,7 @@ namespace ccsoft
     class CC_ReliabilityMatrix;
 }
 #endif
+*/
 
 class Reception_WSGCD : public Reception
 {

@@ -1428,6 +1428,7 @@ bool SourceCodec_JT65::unpack_message_cc(const std::vector<unsigned int>& messag
             packed_locator += (message[28+28+15-i] << i);
         }
 
+        arbitrary_text = (packed_locator > 0x7FFF);
     }
 
     return true;

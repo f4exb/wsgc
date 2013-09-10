@@ -120,6 +120,7 @@ Options::Options(std::string& _binary_name, Options_Executable _options_executab
     cc_use_node_limit(false),
     cc_metric_limit(0.0),
     cc_use_metric_limit(false),
+    cc_interleave(true),
     cc_fano_init_metric(0.0),
     cc_fano_delta_metric(1.0),
     cc_fano_tree_cache_size(0),
@@ -1246,6 +1247,7 @@ void Options::print_reed_solomon_data(std::ostringstream& os)
 void Options::print_convolutional_code_data(std::ostringstream& os)
 {
     os << "Edge metric bias ..................: " << std::setw(5) << std::setprecision(2) << cc_edge_bias << std::endl;
+    os << "Symbol interleaving ...............: " << (cc_interleave ? "Yes" : "No") << std::endl;
 
     if (cc_use_node_limit)
     {
@@ -1733,7 +1735,7 @@ bool Options::parse_convolutional_code_data(std::vector<std::string> coding_data
     if (coding_data_strings.size() < 4)
     {
         std::cout << "Invalid specification for convolutional code" << std::endl;
-        status = false;
+        return false;
     }
     else
     {
@@ -1746,28 +1748,30 @@ bool Options::parse_convolutional_code_data(std::vector<std::string> coding_data
         else
         {
             std::cout << "Invalid convolutional code constraints specification" << std::endl;
+            return false;
         }
         
         if (status)
         {
             std::vector<std::string> algo_specs;
             
-            if (extract_vector(algo_specs, ":", coding_data_strings[3])) 
+            if (extract_vector(algo_specs, ":", coding_data_strings[3], true))
             {
-                if (algo_specs.size() < 2)
+                if (algo_specs.size() < 3)
                 {
                     std::cout << "Invalid convolutional code decoding algorithm specification" << std::endl;
-                    status = false;
+                    return false;
                 }
                 else
                 {
                     std::transform(algo_specs[0].begin(), algo_specs[0].end(), algo_specs[0].begin(), ::toupper);
+                    std::transform(algo_specs[1].begin(), algo_specs[1].end(), algo_specs[1].begin(), ::toupper);
                     std::vector<float> algo_parms;
                     
-                    if (!extract_vector<float>(algo_parms, ",", algo_specs[1]))
+                    if (!extract_vector<float>(algo_parms, ",", algo_specs[2]))
                     {
                         std::cout << "Invalid convolutional code decoding algorithm parameters specification" << std::endl;
-                        status = false;
+                        return false;
                     }
                     else
                     {
@@ -1789,7 +1793,6 @@ bool Options::parse_convolutional_code_data(std::vector<std::string> coding_data
                                 cc_metric_limit = algo_parms[2];
                                 cc_use_metric_limit = true;
                             }
-                            status = true;
                         }
                         else if (algo_specs[0] == "FANO")
                         {
@@ -1825,12 +1828,16 @@ bool Options::parse_convolutional_code_data(std::vector<std::string> coding_data
                                 cc_use_metric_limit = true;
                                 cc_metric_limit = algo_parms[6];
                             }
-                            status = true;
                         }
                         else
                         {
                             std::cout << "Unrecognised convolutional code decoding algorithm code " << algo_specs[0] << std::endl;
-                            status = false;
+                            return false;
+                        }
+
+                        if (algo_specs[1] == "NI")
+                        {
+                        	cc_interleave = false;
                         }
                     }
                 }
@@ -1838,16 +1845,17 @@ bool Options::parse_convolutional_code_data(std::vector<std::string> coding_data
             else
             {
                 std::cout << "Invalid convolutional code decoding algorithm specification" << std::endl;
-                status = false;
+                return false;
             }
         }
         else
         {
             std::cout << "Invalid convolutional code generator polynomials specification" << std::endl;
+            return false;
         }
+
+        return true;
     }
-    
-    return status;
 }
 
 //=================================================================================================

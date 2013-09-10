@@ -295,6 +295,11 @@ void Transmission::apply_fec(std::vector<unsigned int>& symbols)
         ccsoft_engine.zero_pad(options.source_prns);
         symbols.clear();
         ccsoft_engine.encode(options.source_prns, symbols);
+
+        if (options.cc_interleave)
+        {
+        	ccsoft_engine.interleave(symbols);
+        }
 #else
         std::cout << "Program not linked with CCSoft library, ignoring FEC with CCSoft" << std::endl;
 #endif

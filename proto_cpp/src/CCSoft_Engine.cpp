@@ -31,7 +31,7 @@
 #include "CC_StackDecoding_FA.h"
 #include "CC_FanoDecoding_FA.h"
 
-
+#include <cmath>
 
 //=================================================================================================
 CCSoft_Engine::CCSoft_Engine(const std::vector<unsigned int>& _k_constraints,
@@ -142,4 +142,13 @@ bool CCSoft_Engine::decode(ccsoft::CC_ReliabilityMatrix& relmat, std::vector<uns
     }
     
     return success;
+}
+
+//=================================================================================================
+void CCSoft_Engine::interleave(std::vector<unsigned int>& symbols, bool forward)
+{
+	if (cc_decoding)
+	{
+		cc_decoding->interleave(symbols, forward);
+	}
 }

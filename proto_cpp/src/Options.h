@@ -160,6 +160,7 @@ public:
     bool cc_use_node_limit;
     float cc_metric_limit;
     bool cc_use_metric_limit;
+    bool cc_interleave;
     float cc_fano_init_metric;
     float cc_fano_delta_metric;
     unsigned int cc_fano_tree_cache_size;

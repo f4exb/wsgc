@@ -33,6 +33,7 @@
 #include <iostream>
 #include <iomanip>
 
+/*
 #ifdef _RSSOFT
 #include "RS_ReliabilityMatrix.h"
 #endif
@@ -40,6 +41,7 @@
 #ifdef _CCSOFT
 #include "CC_ReliabilityMatrix.h"
 #endif
+*/
 
 //=================================================================================================
 Reception_WSGCO::Reception_WSGCO(Options& _options, const GoldCodeGenerator& _gc_generator) :
