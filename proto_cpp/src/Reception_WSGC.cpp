@@ -41,14 +41,12 @@
 #include "PilotedTrainingMessageCorrelator_Cuda.h"
 #include "LocalCodes_Cuda.h"
 #include "PilotCorrelator_Cuda.h"
-#include "SourceFFT_Cuda.h"
 #endif
 #include "SinglePrnCorrelator_FreqDep_Host.h"
 #include "PilotedMessageCorrelator_Host.h"
 #include "PilotedTrainingMessageCorrelator_Host.h"
 #include "LocalCodes_Host.h"
 #include "PilotCorrelator_Host.h"
-#include "SourceFFT_Host.h"
 
 #ifdef _RSSOFT
 #include "RS_ReliabilityMatrix.h"

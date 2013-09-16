@@ -155,6 +155,7 @@ public:
     std::vector<std::vector<unsigned int> > cc_generator_polys;
 #ifdef _CCSOFT
     CCSoft_Engine_defs::AlgoritmType cc_algorithm_type;
+    CCSoft_Engine_defs::DecodingMode cc_decoding_mode;
     float cc_edge_bias;
     unsigned int cc_node_limit;
     bool cc_use_node_limit;
@@ -165,6 +166,9 @@ public:
     float cc_fano_delta_metric;
     unsigned int cc_fano_tree_cache_size;
     float cc_fano_delta_init_threshold;
+    std::string cc_match_str;
+    unsigned int cc_nb_retries;
+    float cc_edge_bias_decrement;
 #endif
 
 private:

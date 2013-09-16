@@ -87,6 +87,7 @@ wsgc_test_SOURCES += CodeModulator_BPSK.cpp \
     SinglePrnCorrelator_FreqDep_Host.cpp \
     PrnAutocorrelator.cpp \
     PrnAutocorrelator_Host.cpp \
+    ExhaustivePrnCorrelator.h \
     UnpilotedMultiplePrnCorrelator.cpp \
     UnpilotedMultiplePrnCorrelator_Host.cpp \
     UnpilotedTrainingMessageCorrelator.cpp \
@@ -112,6 +113,7 @@ wsgc_test_SOURCES += CodeModulator_BPSK.cpp \
     Reception_WSGC.cpp \
     Reception_WSGCO.cpp \
     Reception_WSGCD.cpp \
+    Reception_WSGCE.cpp \
     Reception_MFSK.cpp \
     CudaManager.cu \
     CudaDeviceManager.cu \
@@ -190,6 +192,7 @@ wsgc_test_SOURCES += CodeModulator_BPSK.cpp \
     SinglePrnCorrelator_FreqDep_Host.cpp \
     PrnAutocorrelator.cpp \
     PrnAutocorrelator_Host.cpp \
+    ExhaustivePrnCorrelator.h \
     UnpilotedMultiplePrnCorrelator.cpp \
     UnpilotedMultiplePrnCorrelator_Host.cpp \
     UnpilotedTrainingMessageCorrelator.cpp \
@@ -215,6 +218,7 @@ wsgc_test_SOURCES += CodeModulator_BPSK.cpp \
     Reception_WSGC.cpp \
     Reception_WSGCO.cpp \
     Reception_WSGCD.cpp \
+    Reception_WSGCE.cpp \
     Reception_MFSK.cpp
 endif
 

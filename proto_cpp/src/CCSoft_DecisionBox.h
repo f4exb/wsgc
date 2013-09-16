@@ -28,6 +28,8 @@
 #include "CCSoft_Engine.h"
 #include "WsgcUtils.h"
 #include <iostream>
+#include <string>
+#include <vector>
 
 class SourceCodec;
 
@@ -43,6 +45,9 @@ public:
     ~CCSoft_DecisionBox();
     
     void run(ccsoft::CC_ReliabilityMatrix& relmat);
+    void run_regex(ccsoft::CC_ReliabilityMatrix& relmat, const std::string& regex);
+    void run_match_str(ccsoft::CC_ReliabilityMatrix& relmat, const std::string& match_str);
+    void run_match_msg(ccsoft::CC_ReliabilityMatrix& relmat, const std::vector<unsigned int>& match_msg);
     void print_retrieved_message(std::ostream& os);
     void print_stats(const std::vector<unsigned int>& sent_message, const std::vector<unsigned int>& sent_codeword, std::ostream& os);
     

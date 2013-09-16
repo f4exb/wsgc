@@ -36,6 +36,14 @@ public:
         Algorithm_Stack,
         Algorithm_Fano
     } AlgoritmType;
+
+    typedef enum DecodingMode_e
+    {
+    	Decoding_normal,
+    	Decoding_regex,
+    	Decoding_match_str,
+    	Decoding_match_msg
+    } DecodingMode;
 };
 
 #endif // __CCSOFT_ENGINE_DEFS_H__

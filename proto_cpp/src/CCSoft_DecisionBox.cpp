@@ -45,6 +45,26 @@ void CCSoft_DecisionBox::run(ccsoft::CC_ReliabilityMatrix& relmat)
 }
 
 //=================================================================================================
+void CCSoft_DecisionBox::run_regex(ccsoft::CC_ReliabilityMatrix& relmat, const std::string& regex)
+{
+    std::string retrieved_text_msg;
+    decode_success = ccsoft_engine.decode_regex(relmat, retrieved_message, retrieved_message_score, retrieved_text_msg, *source_codec, regex);
+}
+
+//=================================================================================================
+void CCSoft_DecisionBox::run_match_str(ccsoft::CC_ReliabilityMatrix& relmat, const std::string& match_str)
+{
+    decode_success = ccsoft_engine.decode_match_str(relmat, retrieved_message, retrieved_message_score, *source_codec, match_str);
+}
+
+//=================================================================================================
+void CCSoft_DecisionBox::run_match_msg(ccsoft::CC_ReliabilityMatrix& relmat, const std::vector<unsigned int>& match_msg)
+{
+    decode_success = ccsoft_engine.decode_match_msg(relmat, retrieved_message, retrieved_message_score, match_msg);
+}
+
+
+//=================================================================================================
 void CCSoft_DecisionBox::print_retrieved_message(std::ostream& os)
 {
     if (decode_success)

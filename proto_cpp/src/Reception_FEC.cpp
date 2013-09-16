@@ -106,6 +106,9 @@ void Reception_FEC::run_ccsoft_decoding(Options& options, ccsoft::CC_Reliability
         ccsoft_engine.set_metric_limit(options.cc_metric_limit);
     }
 
+    ccsoft_engine.set_max_nb_retries(options.cc_nb_retries);
+    ccsoft_engine.set_edge_bias_decrement(options.cc_edge_bias_decrement);
+
     if (1<<(ccsoft_engine.get_k()) != options.nb_message_symbols)
     {
         std::cout << "Invalid size of symbols alphabet (" << options.nb_message_symbols << ") for a (n,k,m) CC code with k = " << ccsoft_engine.get_k() << std::endl;
@@ -119,7 +122,25 @@ void Reception_FEC::run_ccsoft_decoding(Options& options, ccsoft::CC_Reliability
     }
     
     CCSoft_DecisionBox ccsoft_decision_box(ccsoft_engine, options._source_codec);
-    ccsoft_decision_box.run(relmat);
+
+    switch (options.cc_decoding_mode)
+    {
+    case CCSoft_Engine_defs::Decoding_normal:
+        ccsoft_decision_box.run(relmat);
+        break;
+    case CCSoft_Engine_defs::Decoding_regex:
+        ccsoft_decision_box.run_regex(relmat, options.cc_match_str);
+        break;
+    case CCSoft_Engine_defs::Decoding_match_str:
+        ccsoft_decision_box.run_match_str(relmat, options.cc_match_str);
+        break;
+    case CCSoft_Engine_defs::Decoding_match_msg:
+        ccsoft_decision_box.run_match_msg(relmat, options.source_prns);
+        break;
+    default:
+        std::cout << "Unknown CCSoft decoding options" << std::endl;
+    }
+
     ccsoft_decision_box.print_retrieved_message(std::cout);
     ccsoft_decision_box.print_stats(options.source_prns, options.prns, std::cout);
 }

@@ -115,6 +115,7 @@ Options::Options(std::string& _binary_name, Options_Executable _options_executab
     rs_k(0)
 #ifdef _CCSOFT
     ,cc_algorithm_type(CCSoft_Engine_defs::Algorithm_Fano),
+    cc_decoding_mode(CCSoft_Engine_defs::Decoding_normal),
     cc_edge_bias(0.0),
     cc_node_limit(0),
     cc_use_node_limit(false),
@@ -124,7 +125,9 @@ Options::Options(std::string& _binary_name, Options_Executable _options_executab
     cc_fano_init_metric(0.0),
     cc_fano_delta_metric(1.0),
     cc_fano_tree_cache_size(0),
-    cc_fano_delta_init_threshold(0.0)
+    cc_fano_delta_init_threshold(0.0),
+    cc_nb_retries(1),
+    cc_edge_bias_decrement(0.0)
 #endif
 {
     srand(time(0));
@@ -1275,6 +1278,33 @@ void Options::print_convolutional_code_data(std::ostringstream& os)
         os << "Unknown algorithm" << std::endl;
         break;
     }
+
+    switch (cc_decoding_mode)
+    {
+    case CCSoft_Engine_defs::Decoding_normal:
+        os << "Using normal decoding" << std::endl;
+        break;
+    case CCSoft_Engine_defs::Decoding_regex:
+        os << "Using regexp decoding" << std::endl;
+        os << "  Nb retries ......................: " << cc_nb_retries << std::endl;
+        os << "  Edge bias decrement .............: " << cc_edge_bias_decrement << std::endl;
+        os << "  Regexp ..........................: " << cc_match_str << std::endl;
+        break;
+    case CCSoft_Engine_defs::Decoding_match_str:
+        os << "Using match exact string decoding" << std::endl;
+        os << "  Nb retries ......................: " << cc_nb_retries << std::endl;
+        os << "  Edge bias decrement .............: " << cc_edge_bias_decrement << std::endl;
+        os << "  Matching string .................: " << cc_match_str << std::endl;
+        break;
+    case CCSoft_Engine_defs::Decoding_match_msg:
+        os << "Using match source message decoding" << std::endl;
+        os << "  Nb retries ......................: " << cc_nb_retries << std::endl;
+        os << "  Edge bias decrement .............: " << cc_edge_bias_decrement << std::endl;
+        break;
+    default:
+        os << "Unknown decoding mode" << std::endl;
+        break;
+    }
 }
 #endif
 
@@ -1753,32 +1783,91 @@ bool Options::parse_convolutional_code_data(std::vector<std::string> coding_data
         
         if (status)
         {
-            std::vector<std::string> algo_specs;
+            std::vector<std::string> cc_specs;
             
-            if (extract_vector(algo_specs, ":", coding_data_strings[3], true))
+            if (extract_vector(cc_specs, ":", coding_data_strings[3]))
             {
-                if (algo_specs.size() < 3)
+                if (cc_specs.size() < 2)
                 {
-                    std::cout << "Invalid convolutional code decoding algorithm specification" << std::endl;
+                    std::cout << "Invalid convolutional code specification" << std::endl;
                     return false;
                 }
                 else
                 {
-                    std::transform(algo_specs[0].begin(), algo_specs[0].end(), algo_specs[0].begin(), ::toupper);
-                    std::transform(algo_specs[1].begin(), algo_specs[1].end(), algo_specs[1].begin(), ::toupper);
+                    std::vector<std::string> algo_specs;
+
+                    if (extract_vector(algo_specs, ",", cc_specs[0], true))
+                    {
+                        if (algo_specs.size() < 1)
+                        {
+                            std::cout << "Invalid convolutional code decoding algorithm specification" << std::endl;
+                            return false;
+                        }
+                        else
+                        {
+                            std::transform(algo_specs[0].begin(), algo_specs[0].end(), algo_specs[0].begin(), ::toupper);
+
+                            if (algo_specs[0] == "STACK")
+                            {
+                                cc_algorithm_type = CCSoft_Engine_defs::Algorithm_Stack;
+                            }
+                            else if (algo_specs[0] == "FANO")
+                            {
+                                cc_algorithm_type = CCSoft_Engine_defs::Algorithm_Fano;
+                            }
+
+                            if (algo_specs.size() > 1)
+                            {
+                                std::transform(algo_specs[1].begin(), algo_specs[1].end(), algo_specs[1].begin(), ::toupper);
+
+                                if (algo_specs[1] == "NI")
+                                {
+                                    cc_interleave = false;
+                                }
+                            }
+
+                            if (algo_specs.size() > 2)
+                            {
+                                std::transform(algo_specs[2].begin(), algo_specs[2].end(), algo_specs[2].begin(), ::toupper);
+
+                                if (algo_specs[2] == "REGEX")
+                                {
+                                    cc_decoding_mode = CCSoft_Engine_defs::Decoding_regex;
+                                }
+                                else if (algo_specs[2] == "MATCHSTR")
+                                {
+                                    cc_decoding_mode = CCSoft_Engine_defs::Decoding_match_str;
+                                }
+                                else if (algo_specs[2] == "MATCHMSG")
+                                {
+                                    cc_decoding_mode = CCSoft_Engine_defs::Decoding_match_msg;
+                                }
+                                else
+                                {
+                                    cc_decoding_mode = CCSoft_Engine_defs::Decoding_normal;
+                                }
+                            }
+
+                            if (algo_specs.size() > 3)
+                            {
+                                cc_match_str = algo_specs[3];
+                            }
+                        }
+                    }
+
+
+
                     std::vector<float> algo_parms;
                     
-                    if (!extract_vector<float>(algo_parms, ",", algo_specs[2]))
+                    if (!extract_vector<float>(algo_parms, ",", cc_specs[1]))
                     {
                         std::cout << "Invalid convolutional code decoding algorithm parameters specification" << std::endl;
                         return false;
                     }
                     else
                     {
-                        if (algo_specs[0] == "STACK")
+                        if (cc_algorithm_type == CCSoft_Engine_defs::Algorithm_Stack)
                         {
-                            cc_algorithm_type = CCSoft_Engine_defs::Algorithm_Stack;
-
                             if (algo_parms.size() > 0)
                             {
                                 cc_edge_bias = algo_parms[0];
@@ -1793,11 +1882,17 @@ bool Options::parse_convolutional_code_data(std::vector<std::string> coding_data
                                 cc_metric_limit = algo_parms[2];
                                 cc_use_metric_limit = true;
                             }
+                            if (algo_parms.size() > 3)
+                            {
+                                cc_nb_retries = algo_parms[3];
+                            }
+                            if (algo_parms.size() > 4)
+                            {
+                                cc_edge_bias_decrement = algo_parms[4];
+                            }
                         }
-                        else if (algo_specs[0] == "FANO")
+                        else if (cc_algorithm_type == CCSoft_Engine_defs::Algorithm_Fano)
                         {
-                            cc_algorithm_type = CCSoft_Engine_defs::Algorithm_Fano;
-
                             if (algo_parms.size() > 0)
                             {
                                 cc_edge_bias = algo_parms[0];
@@ -1820,24 +1915,27 @@ bool Options::parse_convolutional_code_data(std::vector<std::string> coding_data
                             }
                             if (algo_parms.size() > 5)
                             {
-                                cc_use_node_limit = true;
-                                cc_node_limit = algo_parms[5];
+                                cc_nb_retries = algo_parms[5];
                             }
                             if (algo_parms.size() > 6)
                             {
+                                cc_edge_bias_decrement = algo_parms[6];
+                            }
+                            if (algo_parms.size() > 7)
+                            {
+                                cc_use_node_limit = true;
+                                cc_node_limit = algo_parms[7];
+                            }
+                            if (algo_parms.size() > 8)
+                            {
                                 cc_use_metric_limit = true;
-                                cc_metric_limit = algo_parms[6];
+                                cc_metric_limit = algo_parms[8];
                             }
                         }
                         else
                         {
                             std::cout << "Unrecognised convolutional code decoding algorithm code " << algo_specs[0] << std::endl;
                             return false;
-                        }
-
-                        if (algo_specs[1] == "NI")
-                        {
-                        	cc_interleave = false;
                         }
                     }
                 }
