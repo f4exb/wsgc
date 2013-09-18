@@ -104,6 +104,17 @@ void Transmission::generate_samples(std::vector<unsigned int>& symbols)
         source_mixer.get_samples(&signal_samples);
         nb_signal_samples = source_mixer.get_nb_samples();
     }
+    else if (options.transmission_scheme == Options::OptionTrans_WSGCE)
+    {
+        CodeModulator_BPSK code_modulator;
+        unsigned int nb_prns_per_symbol = options.nb_prns_per_symbol;
+        
+        SimulatedSource message_source(gc_generator, symbols, options.f_sampling, options.f_chip,
+                                       options.f_tx, options.code_shift, nb_prns_per_symbol, 0.0);
+        message_source.set_code_modulator(&code_modulator);  
+        message_source.create_samples(&signal_samples);
+        nb_signal_samples = message_source.get_nb_samples();
+    }
     else if (options.transmission_scheme == Options::OptionTrans_WSGCD)
     {
         CodeModulator_DBPSK code_modulator;

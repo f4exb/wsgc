@@ -29,15 +29,12 @@
 #include "SampleSequencer.h"
 #include "ExhaustivePrnCorrelator.h"
 
-#ifdef _CUDA
-#include "SinglePrnCorrelator_FreqDep_Cuda.h"
-#include "LocalCodes_Cuda.h"
-#endif
-#include "SinglePrnCorrelator_FreqDep_Host.h"
+#include "MultiplePrnCorrelator_FreqDep_Host.h"
 #include "LocalCodes_Host.h"
 
 #ifdef _CCSOFT
 #include "CC_ReliabilityMatrix.h"
+#include "CC_Encoding_base.h"
 #endif
 #include "PilotCorrelationRecord.h"
 
@@ -85,78 +82,44 @@ void Reception_WSGCE::message_processing(wsgc_complex *faded_source_samples, uns
     timespec time1, time2;
     int time_option = CLOCK_REALTIME;
     LocalCodes *local_codes = 0;
-    SinglePrnCorrelator_FreqDep *ifft_correlator = 0;
+    MultiplePrnCorrelator_FreqDep *ifft_correlator = 0;
     
 #ifdef _CCSOFT
-    ccsoft::CC_ReliabilityMatrix cc_relmat(options.nb_message_symbols, options.prns.size()-1);
+    unsigned int tmp_n, tmp_k, tmp_m;
+    ccsoft::get_cc_parameters<unsigned int>(options.cc_k_constraints, 
+        options.cc_generator_polys,
+        tmp_n,
+        tmp_k,
+        tmp_m);
+    ccsoft::CC_ReliabilityMatrix cc_relmat(tmp_n, options.prns.size());
+    std::ostringstream os;
+    print_vector<unsigned int, unsigned int>(options.prns, 4, os); os << std::endl;
+    std::cout << os.str() << std::endl;
 #endif
     std::vector<PilotCorrelationRecord> correlation_records;
 
     std::vector<unsigned int> message_prn_numbers;
     generate_message_prn_list(message_prn_numbers);
 
-#ifdef _CUDA
-    if (options.use_cuda)
-    {
-        std::cout << "!!! USING CUDA !!!" << std::endl;
-        unsigned int cuda_device = cuda_manager.get_pilot_device();
-        local_codes = new LocalCodes_Cuda(localCodeModulator,
-        		gc_generator,
-        		options.f_sampling,
-        		options.f_chip,
-        		message_prn_numbers,
-        		cuda_device); // make local codes time domain
-        ifft_correlator = new SinglePrnCorrelator_FreqDep_Cuda(gc_generator,
-        		localCodeModulator,
-        		options.f_sampling,
-        		options.f_chip,
-        		message_prn_numbers,
-        		options.df_steps,
-        		cuda_device,
-        		options.nb_prns_per_symbol,
-        		options.batch_size,
-        		options.f_step_division);
-    }
-    else
-    {
-        local_codes = new LocalCodes_Host(localCodeModulator,
-        		gc_generator,
-        		options.f_sampling,
-        		options.f_chip,
-        		message_prn_numbers); // make local codes time domain
-        ifft_correlator = new SinglePrnCorrelator_FreqDep_Host(gc_generator,
-        		localCodeModulator,
-        		options.f_sampling,
-        		options.f_chip,
-        		message_prn_numbers,
-        		options.df_steps,
-        		options.nb_prns_per_symbol,
-        		options.batch_size,
-        		options.f_step_division);
-    }
-#else
     local_codes = new LocalCodes_Host(localCodeModulator,
     		gc_generator,
     		options.f_sampling,
     		options.f_chip,
     		message_prn_numbers); // make local codes time domain
-    ifft_correlator = new SinglePrnCorrelator_FreqDep_Host(gc_generator,
+    ifft_correlator = new MultiplePrnCorrelator_FreqDep_Host(gc_generator,
     		localCodeModulator,
     		options.f_sampling,
     		options.f_chip,
+    		gc_generator.get_nb_message_codes(),
     		message_prn_numbers,
     		options.df_steps,
     		options.nb_prns_per_symbol,
     		options.batch_size,
     		options.f_step_division);
-#endif
     // Do the correlation
     ExhaustivePrnCorrelator wsgce_correlator(local_codes, ifft_correlator);
 
     wsgc_complex *signal_samples;
-
-    std::cout << "Do the correlation..." << std::endl;
-    clock_gettime(time_option, &time1);
 
     bool use_ccsoft = false;
 
@@ -169,6 +132,9 @@ void Reception_WSGCE::message_processing(wsgc_complex *faded_source_samples, uns
     
     SampleSequencer sample_sequencer(faded_source_samples, nb_faded_source_samples, fft_N);
     unsigned int prn_i = 0;
+
+    std::cout << "Do the correlation..." << std::endl;
+    clock_gettime(time_option, &time1);
 
     while (sample_sequencer.get_next_code_samples(&signal_samples)) // pseudo real time loop, one PRN length at a time
     {
@@ -189,10 +155,8 @@ void Reception_WSGCE::message_processing(wsgc_complex *faded_source_samples, uns
     clock_gettime(time_option, &time2);
     std::cout << "Message correlation time: " << std::setw(12) << std::setprecision(9) << WsgcUtils::get_time_difference(time2,time1) << " s" << std::endl << std::endl;
     
-    // Do the decoding with the decision box
-    std::cout << "Do the decoding with the decision box..." << std::endl;
-
-    std::ostringstream corr_os;
+    // Do the decoding
+    std::cout << "Do the decoding..." << std::endl;
 
 #ifdef _CCSOFT
     if (use_ccsoft)
@@ -201,10 +165,10 @@ void Reception_WSGCE::message_processing(wsgc_complex *faded_source_samples, uns
     }
     else
     {
-        print_correlation_records(corr_os, correlation_records);
+        print_correlation_records(std::cout, correlation_records);
     }
 #else
-    print_correlation_records(corr_os, correlation_records);
+    print_correlation_records(std::cout, correlation_records);
 #endif
 
     if (ifft_correlator)
@@ -222,6 +186,15 @@ void Reception_WSGCE::message_processing(wsgc_complex *faded_source_samples, uns
 //=================================================================================================
 void Reception_WSGCE::print_correlation_records(std::ostream& os, const std::vector<PilotCorrelationRecord>& correlation_records)
 {
+    std::ostringstream oss;
+    PilotCorrelationRecord::dump_oneline_banner(oss);
+    std::vector<PilotCorrelationRecord>::const_iterator r_it = correlation_records.begin();
 
+    for (; r_it != correlation_records.end(); ++r_it)
+    {
+        r_it->dump_oneline(oss);
+    }
+
+    os << oss.str();
 }
 

@@ -31,7 +31,7 @@
 #include <vector>
 
 class LocalCodes;
-class SinglePrnCorrelator_FreqDep;
+class MultiplePrnCorrelator_FreqDep;
 
 #ifdef _CCSOFT
 namespace ccsoft
@@ -45,7 +45,7 @@ class ExhaustivePrnCorrelator
 {
 public:
 	ExhaustivePrnCorrelator(const LocalCodes *_local_codes,
-			const SinglePrnCorrelator_FreqDep *_ifft_correlator);
+			MultiplePrnCorrelator_FreqDep *_ifft_correlator);
 
 	~ExhaustivePrnCorrelator();
 
@@ -55,8 +55,17 @@ public:
     void make_correlation(wsgc_complex *one_prn_samples, std::vector<PilotCorrelationRecord>& correlation_records);
 
 protected:
+#ifdef _CCSOFT
+    void update_reliability_matrix(ccsoft::CC_ReliabilityMatrix& relmat);
+#endif
+    void update_correlation_records(std::vector<PilotCorrelationRecord>& correlation_records);
+    
 	const LocalCodes *local_codes; //!< Pointer reference to the local codes
-	const SinglePrnCorrelator_FreqDep *ifft_correlator; //!< Frequency and time domain for one PRN correlator
+	MultiplePrnCorrelator_FreqDep *ifft_correlator; //!< Frequency and time domain for one PRN correlator
+    unsigned int prn_count; //!< Count of PRNs processed. Ever increasing.
+#ifdef _CCSOFT
+    float *relmat_column;              //!< Reliability matrix column temporary storage
+#endif
 };
 
 

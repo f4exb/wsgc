@@ -85,6 +85,8 @@ wsgc_test_SOURCES += CodeModulator_BPSK.cpp \
     SimulatedSource.cpp \
     SinglePrnCorrelator_FreqDep.cpp \
     SinglePrnCorrelator_FreqDep_Host.cpp \
+    MultiplePrnCorrelator_FreqDep.cpp \
+    MultiplePrnCorrelator_FreqDep_Host.cpp \
     PrnAutocorrelator.cpp \
     PrnAutocorrelator_Host.cpp \
     ExhaustivePrnCorrelator.cpp \
@@ -190,6 +192,8 @@ wsgc_test_SOURCES += CodeModulator_BPSK.cpp \
     SimulatedSource.cpp \
     SinglePrnCorrelator_FreqDep.cpp \
     SinglePrnCorrelator_FreqDep_Host.cpp \
+    MultiplePrnCorrelator_FreqDep.cpp \
+    MultiplePrnCorrelator_FreqDep_Host.cpp \
     PrnAutocorrelator.cpp \
     PrnAutocorrelator_Host.cpp \
     ExhaustivePrnCorrelator.cpp \

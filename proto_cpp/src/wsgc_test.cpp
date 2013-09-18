@@ -34,9 +34,14 @@
 #include "WsgcUtils.h"
 #include "Transmission.h"
 #include "Reception_WSGC.h"
+#include "Reception_WSGCE.h"
 #include "Reception_WSGCO.h"
 #include "Reception_WSGCD.h"
 #include "Reception_MFSK.h"
+
+#ifdef _CCSOFT
+#include "CC_Encoding_base.h"
+#endif
 
 //=================================================================================================
 int main(int argc, char *argv[])
@@ -52,8 +57,28 @@ int main(int argc, char *argv[])
         options.print_options(os);
         std::cout << os.str() << std::endl;
 
-        GoldCodeGenerator gc_generator(options.gc_nb_stages, options.nb_message_symbols, options.nb_service_symbols, options.nb_training_symbols, options.g1_poly_powers, options.g2_poly_powers);
+        unsigned int nb_message_symbols;
 
+#ifdef _CCSOFT
+        if (options.fec_scheme == Options::OptionFEC_CCSoft)
+        {
+            unsigned int tmp_n, tmp_k, tmp_m;
+            ccsoft::get_cc_parameters<unsigned int>(options.cc_k_constraints, 
+                options.cc_generator_polys,
+                tmp_n,
+                tmp_k,
+                tmp_m);
+            nb_message_symbols = 1<<tmp_n;
+        }
+        else
+        {
+            nb_message_symbols = options.nb_message_symbols;
+        }
+#else
+        nb_message_symbols = options.nb_message_symbols;
+#endif
+
+        GoldCodeGenerator gc_generator(options.gc_nb_stages, nb_message_symbols, options.nb_service_symbols, options.nb_training_symbols, options.g1_poly_powers, options.g2_poly_powers);
         Transmission transmission(options, gc_generator);
         transmission.generate_samples(options.prns);
         wsgc_complex *faded_source_samples = transmission.get_samples();
@@ -77,6 +102,19 @@ int main(int argc, char *argv[])
                 else
                 {
                     reception_WSGC.message_processing(faded_source_samples, nb_faded_source_samples);
+                }
+            }
+            else if (options.transmission_scheme == Options::OptionTrans_WSGCE)
+            {
+                Reception_WSGCE reception_WSGCE(options, gc_generator);
+
+                if (options.simulate_training)
+                {
+                    std::cerr << "Simulating training sequence is not implemented" << std::endl;
+                }
+                else
+                {
+                    reception_WSGCE.message_processing(faded_source_samples, nb_faded_source_samples);
                 }
             }
             else if (options.transmission_scheme == Options::OptionTrans_WSGCO)

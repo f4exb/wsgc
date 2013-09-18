@@ -61,6 +61,7 @@ public:
     {
         OptionTrans_None,   //!< Dummy: don't do anything and exit
         OptionTrans_WSGC,   //!< Correlation, BPSK, Pilot
+        OptionTrans_WSGCE,  //!< Correlation, BPSK, Exhaustive search
         OptionTrans_WSGCD,  //!< Correlation, DBPSK
         OptionTrans_WSGCO,  //!< Correlation, OOK
         OptionTrans_MFSK    //!< No correlation, MFSK
@@ -184,6 +185,7 @@ private:
 	bool parse_fir_filter_model_data(std::string fir_data_str);
 	bool parse_source_coding_data(std::string coding_data_str);
 	void print_standard_options(std::ostringstream& os);
+	void print_transmission_scheme(std::ostringstream& os);
 	void print_mfsk_options(std::ostringstream& os);
 	bool adjust_parameters_for_source_coding();
 	bool source_codec_create_message_prns();

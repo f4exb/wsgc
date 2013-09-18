@@ -106,7 +106,14 @@ public:
      */
     unsigned int get_n() const
     {
-        return n;
+        if (cc_decoding)
+        {
+            cc_decoding->get_encoding().get_n();
+        }        
+        else
+        {
+            return 0;
+        }
     }
 
     /**
@@ -248,7 +255,6 @@ protected:
     const std::vector<unsigned int>& k_constraints;
     const std::vector<std::vector<unsigned int> >& generator_polys;
     unsigned int k;
-    unsigned int n;
     AlgoritmType algorithm_type; //!< Type of algorithm used
     ccsoft::CC_SequentialDecoding_FA<unsigned int, unsigned int, 1> *cc_decoding;
     float fano_init_metric;

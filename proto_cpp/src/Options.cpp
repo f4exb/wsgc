@@ -944,6 +944,7 @@ void Options::print_standard_options(std::ostringstream& os)
 #endif
 
     os << "Modulation ................: "; modulation.print_modulation_data(os); os << std::endl;
+    os << "Transmission scheme .......: "; print_transmission_scheme(os); os << std::endl;
     //os << "Nb phase averaging cycles .: " << std::setw(6) << std::right << tracking_phase_average_cycles << std::endl;
     os << "Nb message symbols ........: " << std::setw(6) << std::right << nb_message_symbols << std::endl;
     os << "Nb service symbols ........: " << std::setw(6) << std::right << nb_service_symbols << std::endl;
@@ -1058,6 +1059,34 @@ void Options::print_standard_options(std::ostringstream& os)
     print_vector<unsigned int, unsigned int>(prns, 4, os); os << std::endl;
 }
 
+//=================================================================================================
+void Options::print_transmission_scheme(std::ostringstream& os)
+{
+    switch (transmission_scheme)
+    {
+    case OptionTrans_None:
+        os << "None";
+        break;
+    case OptionTrans_WSGC:
+        os << "WSGC";
+        break;
+    case OptionTrans_WSGCE:
+        os << "WSGCE";
+        break;
+    case OptionTrans_WSGCD:
+        os << "WSGCD";
+        break;
+    case OptionTrans_WSGCO:
+        os << "WSGCO";
+        break;
+    case OptionTrans_MFSK:
+        os << "MFSK";
+        break;
+    default:
+        os << "Unknown";
+        break;
+    }
+}
 
 //=================================================================================================
 void Options::print_mfsk_options(std::ostringstream& os)
@@ -1440,6 +1469,12 @@ bool Options::parse_modulation_data(std::string modulation_data_str)
         transmission_scheme = OptionTrans_WSGC;
 		return true;
 	}
+    if (modulation_data_str == "WSGCE")
+    {
+        modulation.setScheme(Modulation::Modulation_BPSK);
+        transmission_scheme = OptionTrans_WSGCE;
+        return true;
+    }
 	if (modulation_data_str == "DBPSK")
 	{
 		modulation.setScheme(Modulation::Modulation_DBPSK);
